@@ -467,9 +467,9 @@ The production website should follow ADR-001 by keeping public-page rendering, n
 
 The website should follow ADR-002 by emitting stable, attributable funnel events; retaining version identifiers for demo, message, CTA, pricing, and experiment variants; preserving deterministic experiment assignment and control groups; and measuring downstream conversion and economic outcomes. The approved prototype is the initial visual baseline, and future changes should be evaluated as explicit, measurable hypotheses rather than bundled into implementation modernization.
 
-## Production Frontend Requirements — framework decision deferred
+## Production Frontend Requirements — framework decision recorded
 
-Framework selection must be evidence-based and occur in a separate task. Evaluate candidates against:
+[ADR-003 — Production Web Runtime and Frontend Architecture](decisions/ADR-003-production-web-runtime.md) records the evidence-based runtime decision. It evaluated candidates against:
 
 - Reliable SEO output and metadata control.
 - Fast marketing delivery, Core Web Vitals, caching, and minimal client JavaScript.
@@ -480,25 +480,24 @@ Framework selection must be evidence-based and occur in a separate task. Evaluat
 - Experiment assignment, analytics, attribution, and stable identifiers.
 - Deployment, preview environments, observability, headers, secrets, and rollback.
 - Compatibility with the future admin application and SaltBox backend boundaries.
-- Shared TypeScript contracts if TypeScript is selected later, without forcing shared UI/deployment coupling.
+- Shared TypeScript contracts without forcing shared UI/deployment coupling.
 - Package-manager/workspace fit, developer experience, testing, reproducibility, cost, operational complexity, and maintainability.
 
-Do not select a framework merely because it is popular, and do not assume the marketing site, admin application, and demo delivery surface must use the same rendering or deployment strategy.
+ADR-003 selected the architecture against these requirements rather than framework popularity, and it does not assume the marketing site, admin application, and demo delivery surface must use the same rendering or deployment strategy.
 
 ## Recommended migration phases
 
 ### Phase 1 — Preserve
 
-- Keep the root source and `reference/marketing-prototype` import intact.
+- Keep the `reference/marketing-prototype` import intact.
 - Record hashes and provenance.
 - Capture rendered desktop/tablet/mobile and interaction baselines when browser tooling is available.
 - Establish the Visual Preservation Contract as an acceptance criterion.
+- Runtime selection is decided by [ADR-003](decisions/ADR-003-production-web-runtime.md); no runtime has been implemented.
 
-### Phase 2 — Establish Runtime
+### Phase 2 — Establish Runtime (not started)
 
-- Confirm public-site, personalized-demo, backend, authentication, experimentation, deployment, and shared-contract requirements.
-- Evaluate runtime, frontend, package manager, workspace, and hosting options against those requirements.
-- Document the decision separately; create the minimum application shell only after approval.
+- When separately authorized, establish the runtime and deployment foundation accepted in [ADR-003](decisions/ADR-003-production-web-runtime.md) without changing the Visual Preservation Contract.
 
 ### Phase 3 — Faithful Port
 
