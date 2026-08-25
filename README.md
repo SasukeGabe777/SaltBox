@@ -5,7 +5,7 @@ SaltBox is intended to become an end-to-end autonomous website sales and fulfill
 The goal is high automation with clear operator visibility. Important decisions, unusual cases, failures, and sensitive conversations must remain inspectable and capable of human escalation.
 
 > [!IMPORTANT]
-> The existing SaltBox marketing website was designed in a separate project and is pending import. This repository does not select a frontend framework or replace that work. Its structure and tooling will be adapted after the existing application has been inspected.
+> The original SaltBox marketing prototype has been imported and preserved under `reference/marketing-prototype/`. It serves as the approved visual and interaction reference. The production implementation under `apps/website/` has not yet been selected or built.
 
 ## Intelligence policy
 
@@ -88,7 +88,7 @@ At maturity, SaltBox should track discovery and enrichment, analysis and scoring
 ```text
 saltbox/
 ├── apps/
-│   ├── website/          # Existing marketing website, pending import
+│   ├── website/          # Future production marketing website
 │   ├── admin/            # Future operator dashboard
 │   └── demo-sites/       # Future demo-site delivery surface
 ├── services/
@@ -107,6 +107,8 @@ saltbox/
 │   └── shared/
 ├── assets/
 │   └── brand/
+├── reference/
+│   └── marketing-prototype/ # Approved visual and interaction reference
 ├── docs/
 ├── scripts/
 ├── .env.example

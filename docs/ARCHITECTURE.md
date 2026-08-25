@@ -2,7 +2,7 @@
 
 ## Status and intent
 
-This document proposes domain boundaries and system behavior without selecting implementation technologies. The existing SaltBox marketing website is pending import, so framework, language, package manager, database, queue, hosting, and deployment decisions remain open.
+This document proposes domain boundaries and system behavior without selecting implementation technologies. The original SaltBox marketing prototype is preserved at `reference/marketing-prototype/` as the approved visual and interaction reference for the future public website. It is not the production implementation; `apps/website` remains future work, and framework, language, package manager, database, queue, hosting, and deployment decisions remain open.
 
 The architecture should support an autonomous pipeline while preserving human oversight. Automation owns routine execution; operators need enough context to understand decisions, intervene safely, and recover failed work.
 
