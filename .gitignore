@@ -1,0 +1,64 @@
+# Environment files (keep the documented template)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*.local
+!.env.example
+
+# Dependencies
+node_modules/
+
+# Framework and build output
+.next/
+.nuxt/
+.output/
+.svelte-kit/
+.astro/
+dist/
+build/
+out/
+coverage/
+
+# Package-manager and tool caches
+.npm/
+.pnpm-store/
+.yarn/cache/
+.yarn/unplugged/
+.turbo/
+.nx/
+.cache/
+.parcel-cache/
+.eslintcache
+*.tsbuildinfo
+
+# Logs and diagnostic output
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Editors and IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Operating-system files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Local certificates and keys
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
