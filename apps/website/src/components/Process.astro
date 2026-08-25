@@ -1,0 +1,201 @@
+---
+import BrowserFrame from "./BrowserFrame.astro";
+import { processSteps } from "../data/site";
+---
+
+<section class="story" id="story" aria-labelledby="story-heading" data-process>
+  <div class="story-track" data-process-track>
+    <div class="story-sticky">
+      <div class="story-progress" data-process-progress aria-hidden="true"></div>
+      <h2 class="story-head" id="story-heading">How it works</h2>
+      <div class="story-inner">
+        <div class="beats">
+          {processSteps.map((step, index) => (
+            <article
+              class:list={["beat-text", { active: index === 0 }]}
+              data-process-text={index}
+              aria-hidden={index === 0 ? "false" : "true"}
+            >
+              <span class="beat-num">{String(index + 1).padStart(2, "0")} / 05 — {step.label}</span>
+              <h3>{step.headingLines[0]}<br />{step.headingLines[1]}</h3>
+              <p>{step.description}</p>
+            </article>
+          ))}
+        </div>
+        <div class="story-stage" aria-hidden="true">
+          <BrowserFrame url={processSteps[0].url} urlId="process-url" status={processSteps[0].status} statusId="process-status">
+            <div class="story-screen">
+              <div class="beat-vis active" data-process-visual="0">
+                <div class="chat incoming">Hi! Tell us about your business 👋</div>
+                <div class="chat outgoing">We're a coffee shop — need to show our menu and take orders.</div>
+                <div class="chat incoming">Perfect. Free quote back to you within 48 hours.</div>
+              </div>
+              <div class="beat-vis" data-process-visual="1">
+                <div class="brandkit">
+                  <div class="bk-top"><div class="bk-logo"></div><div class="bk-name">Birch &amp; Bean</div></div>
+                  <div class="sw"><span></span><span></span><span></span><span></span></div>
+                  <div class="type-line">Bricolage Grotesque<small>Display / Headlines</small></div>
+                </div>
+              </div>
+              <div class="beat-vis" data-process-visual="2">
+                <div class="wire"><div class="wbar"></div><div class="wrow"><div></div><div></div><div></div></div><div class="wblock"></div></div>
+              </div>
+              <div class="beat-vis" data-process-visual="3">
+                <div class="launch"><div class="l-body"><div class="l-h">Mornings, sorted.</div><div class="l-img"></div><span class="l-btn">See the menu</span></div></div>
+                <span class="confetti c1"></span><span class="confetti c2"></span><span class="confetti c3"></span>
+              </div>
+              <div class="beat-vis" data-process-visual="4">
+                <div class="care">
+                  <div class="care-row"><span>Updates this month</span><b>4</b></div>
+                  <div class="care-row"><span>Uptime</span><b>100%</b></div>
+                  <div class="care-row"><span>Backups</span><b>Daily</b></div>
+                  <span class="care-tag">● Care plan active</span>
+                </div>
+              </div>
+            </div>
+          </BrowserFrame>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  import { processSteps } from "../data/site";
+
+  const process = document.querySelector<HTMLElement>("[data-process]");
+  const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  if (process) {
+    const track = process.querySelector<HTMLElement>("[data-process-track]");
+    const progress = process.querySelector<HTMLElement>("[data-process-progress]");
+    const texts = [...process.querySelectorAll<HTMLElement>("[data-process-text]")];
+    const visuals = [...process.querySelectorAll<HTMLElement>("[data-process-visual]")];
+    const url = process.querySelector<HTMLElement>("#process-url");
+    const status = process.querySelector<HTMLElement>("#process-status [data-status-text]");
+    let current = -1;
+    let frame = 0;
+
+    const setStep = (index: number) => {
+      if (index === current) return;
+      current = index;
+      texts.forEach((element, itemIndex) => {
+        const active = itemIndex === index;
+        element.classList.toggle("active", active);
+        element.setAttribute("aria-hidden", String(!active));
+      });
+      visuals.forEach((element, itemIndex) => element.classList.toggle("active", itemIndex === index));
+      if (url) url.textContent = processSteps[index].url;
+      if (status) status.textContent = processSteps[index].status;
+    };
+
+    const update = () => {
+      frame = 0;
+      if (!track) return;
+      const bounds = track.getBoundingClientRect();
+      const total = bounds.height - innerHeight;
+      const value = Math.max(0, Math.min(1, total > 0 ? -bounds.top / total : 0));
+      if (progress) progress.style.width = `${value * 100}%`;
+      setStep(Math.min(processSteps.length - 1, Math.floor(value * processSteps.length)));
+    };
+
+    const scheduleUpdate = () => {
+      if (!frame) frame = requestAnimationFrame(update);
+    };
+
+    if (reduceMotion) {
+      texts.forEach((element) => element.setAttribute("aria-hidden", "false"));
+      visuals.forEach((element, index) => element.classList.toggle("active", index === 0));
+    } else {
+      setStep(0);
+      addEventListener("scroll", scheduleUpdate, { passive: true });
+      addEventListener("resize", scheduleUpdate);
+      update();
+    }
+  }
+</script>
+
+<style>
+  .story { position: relative; background: var(--ink); }
+  .story-track { position: relative; height: 480vh; }
+  .story-sticky { position: sticky; top: 0; overflow: hidden; height: 100vh; }
+  .story-progress { position: absolute; z-index: 6; top: 0; left: 0; width: 0; height: 3px; background: var(--green); box-shadow: 0 0 12px var(--green); }
+  .story-head {
+    display: flex;
+    position: absolute;
+    z-index: 5;
+    top: 42px;
+    left: 44px;
+    align-items: center;
+    gap: 11px;
+    color: var(--green);
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    font-weight: 400;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+  .story-head::before { width: 30px; height: 1px; background: var(--green); content: ""; }
+  .story-inner { display: grid; position: relative; grid-template-columns: 1fr 1.06fr; align-items: center; gap: 56px; max-width: 1320px; height: 100%; margin: 0 auto; padding: 0 44px; }
+  .beats { position: relative; min-height: 300px; }
+  .beat-text { display: flex; position: absolute; inset: 0; flex-direction: column; justify-content: center; opacity: 0; pointer-events: none; transform: translateY(26px); transition: opacity 0.55s, transform 0.55s; }
+  .beat-text.active { opacity: 1; pointer-events: auto; transform: none; }
+  .beat-num { color: var(--green); font-family: var(--mono); font-size: 0.8rem; letter-spacing: 0.14em; }
+  .beat-text h3 { margin: 16px 0 20px; font-family: var(--display); font-size: clamp(2.3rem, 4.4vw, 3.6rem); font-weight: 800; line-height: 1; letter-spacing: -0.03em; }
+  .beat-text p { max-width: 38ch; color: var(--salt-dim); font-size: 1.12rem; line-height: 1.62; }
+  .story-stage { position: relative; perspective: 1500px; }
+  .story-screen { position: relative; height: clamp(330px, 52vh, 440px); background: var(--ink-2); }
+  .beat-vis { display: flex; position: absolute; inset: 0; flex-direction: column; justify-content: center; gap: 12px; padding: 34px 38px; opacity: 0; pointer-events: none; transform: scale(0.97); transition: opacity 0.55s, transform 0.55s; }
+  .beat-vis.active { opacity: 1; transform: none; }
+  .chat { max-width: 78%; padding: 12px 16px; border-radius: 14px; font-size: 0.92rem; line-height: 1.4; }
+  .chat.incoming { align-self: flex-start; border-bottom-left-radius: 4px; background: #212a25; color: var(--salt); }
+  .chat.outgoing { align-self: flex-end; border-bottom-right-radius: 4px; background: var(--green); color: #06150d; font-weight: 500; }
+  .brandkit { display: flex; flex-direction: column; gap: 18px; }
+  .bk-top { display: flex; align-items: center; gap: 14px; }
+  .bk-logo { display: grid; width: 54px; height: 54px; border-radius: 13px; background: linear-gradient(150deg, var(--green), var(--green-2)); box-shadow: 0 8px 24px rgba(42, 224, 138, 0.3); place-items: center; }
+  .bk-logo::after { width: 18px; height: 18px; border-radius: 5px; background: var(--ink); content: ""; }
+  .bk-name { font-family: var(--display); font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; }
+  .sw { display: flex; gap: 10px; }
+  .sw span { width: 54px; height: 54px; border-radius: 12px; }
+  .sw span:nth-child(1) { background: #2c6e4a; }.sw span:nth-child(2) { background: #c9892e; }.sw span:nth-child(3) { background: #e9dec9; }.sw span:nth-child(4) { background: #1a1410; }
+  .type-line { color: var(--salt); font-family: var(--display); font-size: 1.6rem; font-weight: 700; }
+  .type-line small { display: block; margin-top: 4px; color: var(--salt-dim); font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; }
+  .wire { display: flex; flex-direction: column; gap: 13px; }
+  .wire .wbar { width: 42%; height: 18px; border-radius: 6px; background: #262f29; }
+  .wire .wrow { display: flex; gap: 12px; }
+  .wire .wrow div { flex: 1; height: 54px; border: 1px dashed rgba(42, 224, 138, 0.3); border-radius: 9px; background: #222b26; }
+  .wire .wblock { height: 120px; border-radius: 11px; background: repeating-linear-gradient(135deg, #1f2823 0 12px, #243029 12px 24px); }
+  .launch { overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: #fbf8f1; color: #16201a; }
+  .l-body { padding: 22px 22px 24px; }.l-h { font-family: var(--display); font-size: 1.35rem; font-weight: 800; letter-spacing: -0.02em; }.l-img { height: 84px; margin: 12px 0; border-radius: 9px; background: linear-gradient(120deg, #26543b, #3c7e58 60%, #a7d8bc); }.l-btn { display: inline-block; padding: 8px 14px; border-radius: 7px; background: #1fb873; color: #04150c; font-size: 0.72rem; font-weight: 700; }
+  .confetti { position: absolute; width: 8px; height: 8px; border-radius: 2px; opacity: 0; }.c1 { top: 30%; left: 30%; background: #2ae08a; }.c2 { top: 24%; left: 60%; background: #e9b24c; animation-delay: 0.1s !important; }.c3 { top: 40%; left: 75%; background: #ff3da6; animation-delay: 0.2s !important; }.beat-vis.active .confetti { animation: pop 0.9s ease forwards; }
+  @keyframes pop { 0% { opacity: 0; transform: translateY(10px) scale(0.4); } 40% { opacity: 1; } 100% { opacity: 0; transform: translateY(-40px) scale(1) rotate(40deg); } }
+  .care { display: flex; flex-direction: column; gap: 12px; }.care-row { display: flex; align-items: center; justify-content: space-between; padding: 15px 18px; border: 1px solid var(--line); border-radius: 11px; background: #161d18; color: var(--salt-dim); font-size: 0.95rem; }.care-row b { color: var(--salt); font-family: var(--display); font-size: 1.2rem; }.care-tag { align-self: flex-start; padding: 7px 13px; border: 1px solid rgba(42, 224, 138, 0.4); border-radius: 999px; color: var(--green); font-family: var(--mono); font-size: 0.66rem; letter-spacing: 0.12em; text-transform: uppercase; }
+
+  @media (max-width: 920px) {
+    .story-track { height: 440vh; }
+    .story-sticky { display: flex; flex-direction: column; justify-content: center; }
+    .story-head { position: static; margin: 0 14px 14px; font-size: 0.72rem; }
+    .story-inner { grid-template-columns: 1fr; align-content: start; gap: 16px; height: auto; padding: 0 14px; }
+    .beats { min-height: 210px; }
+    .beat-text h3 { margin: 10px 0 12px; font-size: clamp(1.75rem, 6.6vw, 2.3rem); }
+    .beat-text p { max-width: none; font-size: 1rem; line-height: 1.55; }
+    .story-screen { height: clamp(196px, 31vh, 280px); }
+    .beat-vis { gap: 10px; padding: 16px 18px; }
+    .chat { max-width: 88%; padding: 9px 13px; font-size: 0.86rem; line-height: 1.38; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .story-track { height: auto; }
+    .story-sticky { position: static; overflow: visible; height: auto; padding: 74px 0; }
+    .story-progress { display: none; }
+    .story-head { position: static; max-width: 1320px; margin: 0 auto 36px; padding: 0 44px; }
+    .story-inner { display: block; height: auto; }
+    .beats { display: grid; min-height: 0; gap: 42px; }
+    .beat-text { position: static; opacity: 1; pointer-events: auto; transform: none; }
+    .story-stage { display: none; }
+  }
+
+  @media (max-width: 920px) and (prefers-reduced-motion: reduce) {
+    .story-head { margin: 0 22px 36px; padding: 0; }
+  }
+</style>

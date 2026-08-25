@@ -1,0 +1,55 @@
+---
+import FeatureTooltip from "./FeatureTooltip.astro";
+import type { PricingPlan } from "../data/site";
+
+interface Props {
+  plan: PricingPlan;
+}
+
+const { plan } = Astro.props;
+const planId = plan.name.toLowerCase();
+---
+
+<article class:list={["pkg", "reveal", { feature: plan.featured }]}>
+  {plan.featured && <span class="ribbon">Most popular</span>}
+  <span class="pkg-tag">Package {plan.number}</span>
+  <h3>{plan.name}</h3>
+  <p class="pkg-sub">{plan.subtitle}</p>
+  <div class="price">{plan.price} {plan.priceSuffix && <small>{plan.priceSuffix}</small>}</div>
+  {plan.lead && <p class="plus-lead">{plan.lead}</p>}
+  <ul class="feats">
+    {plan.features.map((feature, index) => (
+      <li>
+        <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>
+        <span class="ft">{feature.label} {feature.detail && <span class="dim">({feature.detail})</span>}</span>
+        <FeatureTooltip feature={feature} id={`${planId}-feature-${index + 1}-tip`} />
+      </li>
+    ))}
+  </ul>
+  <button class:list={["btn-pkg", { primary: plan.featured }]} type="button" data-scroll="contact">{plan.action}</button>
+</article>
+
+<style>
+  .pkg { position: relative; padding: 36px 30px; border: 1px solid var(--line); border-radius: 22px; background: var(--ink-2); }
+  .pkg.feature { border-color: rgba(42, 224, 138, 0.5); background: linear-gradient(180deg, rgba(42, 224, 138, 0.06), transparent 40%), var(--ink-2); box-shadow: 0 0 0 1px rgba(42, 224, 138, 0.18), 0 40px 90px -40px rgba(42, 224, 138, 0.35); }
+  .ribbon { position: absolute; top: -13px; left: 30px; padding: 6px 13px; border-radius: 999px; background: var(--green); color: #06150d; font-family: var(--mono); font-size: 0.64rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
+  .pkg-tag { color: var(--salt-dim); font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase; }
+  h3 { margin: 10px 0 4px; font-family: var(--display); font-size: 2rem; font-weight: 800; letter-spacing: -0.02em; }
+  .pkg-sub { margin-bottom: 22px; color: var(--green); font-weight: 600; }
+  .price { margin-bottom: 24px; font-family: var(--display); font-size: 2.5rem; font-weight: 800; letter-spacing: -0.02em; }
+  .price small { color: var(--salt-dim); font-family: var(--body); font-size: 0.92rem; font-weight: 400; letter-spacing: 0; }
+  .plus-lead { margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--line); color: var(--salt-dim); font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; }
+  .feats { display: flex; flex-direction: column; gap: 15px; margin-bottom: 30px; list-style: none; }
+  .feats li { display: flex; align-items: flex-start; gap: 11px; font-size: 0.95rem; line-height: 1.4; }
+  .feats li > svg { flex: none; margin-top: 2px; color: var(--green); }
+  .ft { flex: 1; }
+  .dim { color: var(--salt-dim); }
+  .btn-pkg { width: 100%; padding: 14px; border: 1px solid var(--line); border-radius: 999px; background: var(--ink-3); color: var(--salt); cursor: pointer; font-family: var(--body); font-size: 0.98rem; font-weight: 600; transition: 0.25s; }
+  .btn-pkg:hover { border-color: var(--green); color: var(--green); }
+  .btn-pkg.primary { border: 0; background: var(--green); color: #06150d; }
+  .btn-pkg.primary:hover { color: #06150d; filter: brightness(1.05); }
+
+  @media (max-width: 920px) {
+    .pkg.feature { order: -1; }
+  }
+</style>

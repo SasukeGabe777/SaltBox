@@ -1,0 +1,220 @@
+---
+import Brand from "./Brand.astro";
+import { navigationItems } from "../data/site";
+---
+
+<header class="nav" id="top" data-navigation>
+  <div class="nav-inner">
+    <Brand href="#top" />
+    <nav class="nav-links" id="primary-navigation" aria-label="Primary navigation" data-menu>
+      {navigationItems.map((item) => <a href={item.href}>{item.label}</a>)}
+    </nav>
+    <button class="nav-cta" type="button" data-scroll="contact">Get a free quote</button>
+    <button
+      class="menu-btn"
+      type="button"
+      aria-label="Open menu"
+      aria-expanded="false"
+      aria-controls="primary-navigation"
+      data-menu-button
+    >
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</header>
+
+<script>
+  const navigation = document.querySelector<HTMLElement>("[data-navigation]");
+
+  if (navigation) {
+    const menuButton = navigation.querySelector<HTMLButtonElement>("[data-menu-button]");
+    const menu = navigation.querySelector<HTMLElement>("[data-menu]");
+    const pageContent = document.querySelector<HTMLElement>("[data-page-content]");
+    const footer = document.querySelector<HTMLElement>("[data-site-footer]");
+
+    const setOpen = (open: boolean, restoreFocus = false) => {
+      navigation.classList.toggle("menu-open", open);
+      document.body.classList.toggle("menu-open", open);
+      menuButton?.setAttribute("aria-expanded", String(open));
+      menuButton?.setAttribute("aria-label", open ? "Close menu" : "Open menu");
+
+      if (pageContent) pageContent.inert = open;
+      if (footer) footer.inert = open;
+
+      if (open) {
+        menu?.querySelector<HTMLAnchorElement>("a")?.focus();
+      } else if (restoreFocus) {
+        menuButton?.focus();
+      }
+    };
+
+    menuButton?.addEventListener("click", () => {
+      setOpen(!navigation.classList.contains("menu-open"));
+    });
+
+    menu?.querySelectorAll("a").forEach((link) => {
+      link.addEventListener("click", () => setOpen(false));
+    });
+
+    navigation.addEventListener("keydown", (event) => {
+      if (!navigation.classList.contains("menu-open")) return;
+
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setOpen(false, true);
+        return;
+      }
+
+      if (event.key !== "Tab" || !menuButton || !menu) return;
+      const focusable = [...menu.querySelectorAll<HTMLAnchorElement>("a"), menuButton];
+      const first = focusable[0];
+      const last = focusable.at(-1);
+
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last?.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first?.focus();
+      }
+    });
+
+    matchMedia("(min-width: 921px)").addEventListener("change", (event) => {
+      if (event.matches) setOpen(false);
+    });
+  }
+</script>
+
+<style>
+  .nav {
+    position: relative;
+    z-index: 60;
+    border-bottom: 1px solid transparent;
+  }
+
+  .nav-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    max-width: 1320px;
+    height: 84px;
+    margin: 0 auto;
+    padding: 0 44px;
+  }
+
+  .nav-links {
+    display: flex;
+    align-items: center;
+    gap: 32px;
+  }
+
+  .nav-links a {
+    position: relative;
+    color: var(--salt-dim);
+    font-size: 0.94rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: color 0.25s;
+  }
+
+  .nav-links a::after {
+    position: absolute;
+    bottom: -5px;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--green);
+    content: "";
+    transform: scaleX(0);
+    transform-origin: right;
+    transition: transform 0.3s cubic-bezier(0.6, 0, 0.2, 1);
+  }
+
+  .nav-links a:hover,
+  .nav-links a:focus-visible {
+    color: var(--salt);
+  }
+
+  .nav-links a:hover::after,
+  .nav-links a:focus-visible::after {
+    transform: scaleX(1);
+    transform-origin: left;
+  }
+
+  .nav-cta {
+    padding: 12px 22px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--green);
+    color: #06150d;
+    cursor: pointer;
+    font-family: var(--body);
+    font-size: 0.92rem;
+    font-weight: 600;
+  }
+
+  .menu-btn {
+    display: none;
+    flex-direction: column;
+    gap: 5px;
+    padding: 8px;
+    border: 0;
+    background: none;
+    cursor: pointer;
+  }
+
+  .menu-btn span {
+    width: 24px;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--salt);
+    transition: 0.3s;
+  }
+
+  @media (max-width: 920px) {
+    .nav-inner {
+      height: 72px;
+      padding: 0 22px;
+    }
+
+    .nav-cta { display: none; }
+
+    .menu-btn {
+      position: relative;
+      z-index: 60;
+      display: flex;
+    }
+
+    .nav-links {
+      position: fixed;
+      z-index: 55;
+      inset: 0;
+      flex-direction: column;
+      justify-content: center;
+      gap: 30px;
+      background: rgba(11, 15, 13, 0.97);
+      backdrop-filter: blur(10px);
+      font-size: 1.4rem;
+      transform: translateX(100%);
+      transition: transform 0.4s cubic-bezier(0.5, 0, 0.2, 1), visibility 0s linear 0.4s;
+      visibility: hidden;
+    }
+
+    .nav-links a { color: var(--salt); }
+
+    .nav.menu-open .nav-links {
+      transform: none;
+      transition-delay: 0s;
+      visibility: visible;
+    }
+
+    .nav.menu-open .menu-btn span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .nav.menu-open .menu-btn span:nth-child(2) { opacity: 0; }
+    .nav.menu-open .menu-btn span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .nav-links { transition: none; }
+  }
+</style>

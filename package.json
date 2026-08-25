@@ -1,0 +1,17 @@
+{
+  "name": "saltbox",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@11.24.0",
+  "engines": {
+    "node": ">=24.0.0 <25",
+    "pnpm": ">=11.24.0 <12"
+  },
+  "scripts": {
+    "dev": "pnpm dev:website",
+    "dev:website": "pnpm --filter @saltbox/website dev",
+    "build": "pnpm build:website",
+    "build:website": "pnpm --filter @saltbox/website build",
+    "check": "pnpm --filter @saltbox/website check"
+  }
+}

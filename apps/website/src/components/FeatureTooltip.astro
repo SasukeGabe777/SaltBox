@@ -1,0 +1,90 @@
+---
+import type { PricingFeature } from "../data/site";
+
+interface Props {
+  feature: PricingFeature;
+  id: string;
+}
+
+const { feature, id } = Astro.props;
+---
+
+<button
+  class="info"
+  type="button"
+  aria-label={`Why ${feature.label} matters`}
+  aria-describedby={id}
+  aria-expanded="false"
+  data-tooltip-button
+  data-claim-review={feature.claimReview}
+>
+  <span class="ic" aria-hidden="true">i</span>
+  <span class="tip" id={id} role="tooltip">{feature.tooltip}</span>
+</button>
+
+<style>
+  .info {
+    display: inline-grid;
+    position: relative;
+    flex: none;
+    width: 18px;
+    height: 18px;
+    margin-top: 1px;
+    padding: 0;
+    border: 1px solid var(--line);
+    border-radius: 50%;
+    background: none;
+    color: var(--salt-dim);
+    cursor: pointer;
+    transition: 0.25s;
+    place-items: center;
+  }
+
+  .ic { font-family: var(--mono); font-size: 10px; font-style: italic; font-weight: 700; line-height: 1; }
+  .info:hover,
+  .info:focus-visible,
+  .info.open { border-color: var(--green); color: var(--green); }
+
+  .tip {
+    position: absolute;
+    z-index: 30;
+    right: -2px;
+    bottom: calc(100% + 11px);
+    width: min(232px, calc(100vw - 40px));
+    padding: 12px 14px;
+    border: 1px solid rgba(42, 224, 138, 0.25);
+    border-radius: 11px;
+    background: var(--ink-3);
+    box-shadow: 0 20px 46px rgba(0, 0, 0, 0.55);
+    color: var(--salt);
+    font-size: 0.8rem;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 1.5;
+    letter-spacing: 0;
+    opacity: 0;
+    pointer-events: none;
+    text-align: left;
+    text-transform: none;
+    transform: translateY(6px);
+    transition: 0.25s;
+    visibility: hidden;
+  }
+
+  .tip::after {
+    position: absolute;
+    top: 100%;
+    right: 7px;
+    border: 6px solid transparent;
+    border-top-color: var(--ink-3);
+    content: "";
+  }
+
+  .info:hover .tip,
+  .info:focus-visible .tip,
+  .info.open .tip {
+    opacity: 1;
+    transform: translateY(0);
+    visibility: visible;
+  }
+</style>

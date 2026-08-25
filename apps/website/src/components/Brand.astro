@@ -1,0 +1,17 @@
+---
+interface Props {
+  href?: string;
+}
+
+const { href } = Astro.props;
+---
+
+{href ? (
+  <a class="brand" href={href} aria-label="Saltbox home">
+    <span class="brand-mark" aria-hidden="true"></span>Saltbox
+  </a>
+) : (
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true"></span>Saltbox
+  </div>
+)}

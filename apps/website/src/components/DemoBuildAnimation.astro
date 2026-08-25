@@ -1,0 +1,390 @@
+---
+import BrowserFrame from "./BrowserFrame.astro";
+import { demoBusinesses } from "../data/site";
+
+const firstDemo = demoBusinesses[0];
+---
+
+<div class="stage rise" data-demo-build aria-hidden="true">
+  <div class="ticker">
+    <span class="dot"></span>Now building — <b data-demo-name>{firstDemo.name}</b>
+  </div>
+  <BrowserFrame
+    id="hero-browser"
+    url={firstDemo.url}
+    urlId="hero-browser-url"
+    status="BUILDING"
+    statusId="hero-browser-status"
+  >
+    <div class="site" data-demo-site>
+      <div class="s-nav">
+        <div class="s-brand"><b></b><span data-demo-brand>{firstDemo.brand}</span></div>
+        <div class="s-links"><span>Menu</span><span>Visit</span><span>Order</span></div>
+      </div>
+      <div class="s-body">
+        <div class="s-eyebrow" data-demo-eyebrow>{firstDemo.eyebrow}</div>
+        <div class="s-h"><span data-demo-heading></span><span class="cur" data-demo-cursor></span></div>
+      </div>
+      <div class="s-hero-img"></div>
+      <div class="s-body s-body-bottom">
+        <p class="s-sub" data-demo-description>{firstDemo.description}</p>
+        <div class="s-row">
+          <button class="s-btn" type="button" tabindex="-1" data-demo-button>{firstDemo.button}</button>
+          <span class="s-stars"><b>★★★★★</b> <span data-demo-proof>{firstDemo.proof}</span></span>
+        </div>
+      </div>
+      <svg class="b-cursor" data-demo-pointer viewBox="0 0 24 24" fill="#0B0F0D" stroke="#fff" stroke-width="1.4">
+        <path d="M4 2l6 16 2.5-6.5L19 9 4 2z"></path>
+      </svg>
+    </div>
+  </BrowserFrame>
+</div>
+
+<script>
+  import { demoBusinesses } from "../data/site";
+
+  const root = document.querySelector<HTMLElement>("[data-demo-build]");
+  const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  if (root) {
+    const site = root.querySelector<HTMLElement>("[data-demo-site]");
+    const heading = root.querySelector<HTMLElement>("[data-demo-heading]");
+    const typeCursor = root.querySelector<HTMLElement>("[data-demo-cursor]");
+    const pointer = root.querySelector<SVGElement>("[data-demo-pointer]");
+    const demoButton = root.querySelector<HTMLButtonElement>("[data-demo-button]");
+    const glow = document.querySelector<HTMLElement>("#glow");
+    let stopped = false;
+
+    const sleep = (milliseconds: number) =>
+      new Promise<void>((resolve) => window.setTimeout(resolve, milliseconds));
+
+    const setText = (selector: string, value: string) => {
+      const element = root.querySelector<HTMLElement>(selector);
+      if (element) element.textContent = value;
+    };
+
+    const setStatus = (value: string) => {
+      setText("#hero-browser-status [data-status-text]", value);
+    };
+
+    const applyDemo = (demo: (typeof demoBusinesses)[number]) => {
+      if (!site) return;
+      Object.entries(demo.theme).forEach(([token, value]) => site.style.setProperty(token, value));
+      setText("[data-demo-name]", demo.name);
+      setText("#hero-browser-url", demo.url);
+      setText("[data-demo-brand]", demo.brand);
+      setText("[data-demo-eyebrow]", demo.eyebrow);
+      setText("[data-demo-description]", demo.description);
+      setText("[data-demo-button]", demo.button);
+      setText("[data-demo-proof]", demo.proof);
+      glow?.style.setProperty("--glowc", demo.glow);
+      setStatus("BUILDING");
+    };
+
+    const typeHeading = async (value: string) => {
+      if (!heading) return;
+      heading.textContent = "";
+      for (let index = 1; index <= value.length && !stopped; index += 1) {
+        heading.innerHTML = value.slice(0, index).replaceAll("\n", "<br>");
+        await sleep(46);
+      }
+    };
+
+    const completeImmediately = (demo: (typeof demoBusinesses)[number]) => {
+      if (!site || !heading || !typeCursor) return;
+      applyDemo(demo);
+      heading.innerHTML = demo.headingLines.join("<br>");
+      typeCursor.hidden = true;
+      site.querySelectorAll<HTMLElement>(".s-nav, .s-eyebrow").forEach((element) => {
+        element.style.opacity = "1";
+        element.style.transform = "none";
+      });
+      site.classList.add("built");
+      setStatus("LIVE");
+    };
+
+    const buildDemo = async (demo: (typeof demoBusinesses)[number]) => {
+      if (!site || !heading || !typeCursor || !pointer || !demoButton) return;
+      site.classList.remove("built", "clicked");
+      heading.textContent = "";
+      typeCursor.hidden = false;
+      pointer.style.opacity = "0";
+      applyDemo(demo);
+
+      await sleep(280);
+      site.querySelectorAll<HTMLElement>(".s-nav, .s-eyebrow").forEach((element) => {
+        element.style.opacity = "1";
+        element.style.transform = "none";
+      });
+      await sleep(300);
+      await typeHeading(demo.headingLines.join("\n"));
+      typeCursor.hidden = true;
+      await sleep(120);
+      site.classList.add("built");
+      await sleep(650);
+
+      const siteRect = site.getBoundingClientRect();
+      const buttonRect = demoButton.getBoundingClientRect();
+      const x = buttonRect.left - siteRect.left + buttonRect.width * 0.5;
+      const y = buttonRect.top - siteRect.top + buttonRect.height * 0.6;
+      pointer.style.transition = "none";
+      pointer.style.left = "14%";
+      pointer.style.top = "42%";
+      pointer.style.opacity = "0";
+      await sleep(20);
+      pointer.style.transition =
+        "left .65s cubic-bezier(.5,0,.2,1), top .65s cubic-bezier(.5,0,.2,1), opacity .3s";
+      pointer.style.opacity = "1";
+      pointer.style.left = `${x}px`;
+      pointer.style.top = `${y}px`;
+      await sleep(700);
+      site.classList.add("clicked");
+      await sleep(140);
+      site.classList.remove("clicked");
+      setStatus("LIVE");
+      await sleep(400);
+      pointer.style.opacity = "0";
+    };
+
+    if (reduceMotion) {
+      completeImmediately(demoBusinesses[0]);
+    } else {
+      void (async () => {
+        let index = 0;
+        while (!stopped) {
+          await buildDemo(demoBusinesses[index]);
+          await sleep(2400);
+          if (!site || stopped) break;
+          site.style.transition = "opacity .45s ease";
+          site.style.opacity = "0";
+          await sleep(460);
+          site.style.opacity = "1";
+          site.style.transition = "";
+          index = (index + 1) % demoBusinesses.length;
+        }
+      })();
+    }
+
+    addEventListener("pagehide", () => { stopped = true; }, { once: true });
+  }
+</script>
+
+<style>
+  .stage { perspective: 1500px; }
+
+  .stage.rise { transform: translateY(28px) scale(0.985); }
+
+  :global(.in) .stage.rise {
+    transform: none;
+    transition:
+      opacity 1.05s cubic-bezier(0.2, 0.7, 0.2, 1) 0.38s,
+      transform 1.05s cubic-bezier(0.2, 0.7, 0.2, 1) 0.38s;
+  }
+
+  .ticker {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+    color: var(--salt-dim);
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+
+  .ticker b { color: var(--green); font-weight: 700; }
+
+  .ticker .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 9px var(--green);
+    animation: pulse 1.4s infinite;
+  }
+
+  .site {
+    position: relative;
+    overflow: hidden;
+    padding-bottom: 6px;
+    background: var(--s-bg, #fbf8f1);
+    color: var(--s-ink, #16201a);
+    transition: background 0.5s ease, color 0.5s ease;
+  }
+
+  .s-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 22px;
+    opacity: 0;
+    transform: translateY(-6px);
+    transition: 0.5s;
+  }
+
+  .s-brand {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--s-ink, #14241a);
+    font-family: var(--display);
+    font-size: 1rem;
+    font-weight: 700;
+  }
+
+  .s-brand b {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border-radius: 5px;
+    background: var(--s-accent, #2c6e4a);
+  }
+
+  .s-links {
+    display: flex;
+    gap: 14px;
+    color: var(--s-muted, #5c6b62);
+    font-size: 0.66rem;
+    font-weight: 600;
+  }
+
+  .s-body { padding: 6px 26px 14px; }
+  .s-body-bottom { padding-top: 8px; }
+
+  .s-eyebrow {
+    color: var(--s-accent, #2c6e4a);
+    font-family: var(--mono);
+    font-size: 0.56rem;
+    letter-spacing: 0.18em;
+    opacity: 0;
+    text-transform: uppercase;
+    transform: translateY(-6px);
+    transition: 0.5s;
+  }
+
+  .s-h {
+    min-height: 2em;
+    margin-top: 8px;
+    color: var(--s-ink, #13231a);
+    font-family: var(--display);
+    font-size: clamp(1.25rem, 3vw, 1.85rem);
+    font-weight: 800;
+    line-height: 1.04;
+    letter-spacing: -0.02em;
+  }
+
+  .cur {
+    display: inline-block;
+    width: 3px;
+    height: 0.95em;
+    margin-left: 2px;
+    background: var(--s-accent, #2c6e4a);
+    vertical-align: -8%;
+    animation: blink 0.8s steps(1) infinite;
+  }
+
+  @keyframes blink { 50% { opacity: 0; } }
+
+  .s-sub {
+    max-width: 32ch;
+    margin-top: 6px;
+    color: var(--s-muted, #54635a);
+    font-size: 0.72rem;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: 0.5s;
+  }
+
+  .s-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 11px;
+  }
+
+  .s-btn {
+    padding: 9px 15px;
+    border: 0;
+    border-radius: 8px;
+    background: var(--s-accent, #1fb873);
+    color: var(--s-accent-ink, #04150c);
+    font-size: 0.72rem;
+    font-weight: 700;
+    opacity: 0;
+    transform: scale(0.7);
+    transition: transform 0.45s cubic-bezier(0.3, 1.4, 0.5, 1), opacity 0.3s, background 0.5s;
+  }
+
+  .s-stars {
+    color: var(--s-ink, #16201a);
+    font-size: 0.7rem;
+    opacity: 0;
+    transform: translateX(-6px);
+    transition: 0.5s;
+  }
+
+  .s-stars b { color: var(--s-star, #e2a32e); letter-spacing: 1px; }
+
+  .s-hero-img {
+    position: relative;
+    overflow: hidden;
+    height: clamp(104px, 15vw, 144px);
+    margin: 11px 26px 0;
+    border-radius: 10px;
+    background: var(--s-img, linear-gradient(120deg, #26543b, #3c7e58 60%, #a7d8bc));
+    opacity: 0;
+    transform: translateY(14px) scale(0.98);
+    transition: 0.6s;
+  }
+
+  .s-hero-img::after {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    content: "";
+    transform: translateX(-100%);
+  }
+
+  .built .s-nav,
+  .built .s-eyebrow,
+  .built .s-sub,
+  .built .s-hero-img,
+  .built .s-btn,
+  .built .s-stars {
+    opacity: 1;
+    transform: none;
+  }
+
+  .built .s-hero-img::after { animation: shimmer 1s ease 0.1s 1; }
+  @keyframes shimmer { to { transform: translateX(100%); } }
+
+  .b-cursor {
+    position: absolute;
+    z-index: 5;
+    top: 0;
+    left: 0;
+    width: 18px;
+    height: 18px;
+    opacity: 0;
+    filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.4));
+    pointer-events: none;
+  }
+
+  .clicked .s-btn { transform: scale(0.94); }
+
+  @media (max-width: 920px) {
+    .stage { order: 2; }
+    .stage :global(.browser) { transform: none !important; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .stage.rise { transform: none; }
+    .s-sub,
+    .s-hero-img,
+    .s-btn,
+    .s-stars,
+    .s-nav,
+    .s-eyebrow { opacity: 1; transform: none; }
+  }
+</style>

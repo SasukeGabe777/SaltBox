@@ -2,13 +2,13 @@
 
 ## Document purpose and scope
 
-This document inventories the original SaltBox marketing prototype and plans a future migration into `apps/website`. It does not select a framework, create a runtime, split the prototype into components, revise content, or implement production integrations.
+This document inventories the original SaltBox marketing prototype and tracks its migration into `apps/website`. Prototype inventory sections describe the preserved reference; implementation status is recorded in the migration phases below.
 
 The source reviewed for this plan was the repository-root `index.html`, imported on 2026-08-25 as `reference/marketing-prototype/index.html`. The file is a self-contained static document containing HTML, inline CSS, inline JavaScript, inline SVG iconography, and a data-URL noise texture. Google Fonts are its only page-level external asset dependency.
 
-The review was performed against the complete source. A rendered browser inspection was attempted but could not be completed because the available local browser-control environment failed to connect. Consequently, exact visual regression baselines and device screenshots must be captured before the faithful port begins. The source-level inventory below is authoritative for declared values and behavior; any rendering-dependent observation should be validated in Phase 2.
+The review was performed against the complete source. Rendered browser inspection was attempted during the original review and again during Phase 2, but the available browser-control environment had no connected browser instance. Consequently, exact visual regression baselines and device screenshots remain pending. The source-level inventory below is authoritative for declared values and behavior; rendering-dependent observations still require browser validation.
 
-## Current implementation summary
+## Preserved prototype implementation summary
 
 - One static `index.html`, 69,789 bytes at import.
 - Semantic sectioning is partial: `header`, sections, `article`, and `footer` are used, but there is no `main` element and the quote UI is not a `form`.
@@ -495,18 +495,19 @@ ADR-003 selected the architecture against these requirements rather than framewo
 - Establish the Visual Preservation Contract as an acceptance criterion.
 - Runtime selection is decided by [ADR-003](decisions/ADR-003-production-web-runtime.md); no runtime has been implemented.
 
-### Phase 2 — Establish Runtime (not started)
+### Phase 2 — Faithful Port (implemented locally; pending review)
 
-- When separately authorized, establish the runtime and deployment foundation accepted in [ADR-003](decisions/ADR-003-production-web-runtime.md) without changing the Visual Preservation Contract.
+- Established a Node.js 24 LTS and pnpm TypeScript workspace without a monorepo orchestration platform.
+- Created `apps/website` as an Astro 6 static-first application compatible with the Cloudflare Workers direction in ADR-003; no deployment or account configuration was performed.
+- Reproduced the approved prototype in section-level Astro components with typed navigation, service, process, pricing, fictional-demo, and portfolio content boundaries.
+- Preserved content, pricing, design tokens, layout, responsive behavior, browser treatments, animation timing/personality, portfolio presentation, and mailto quote intent.
+- Migrated interactions to scoped vanilla TypeScript using native DOM APIs, `IntersectionObserver`, and guarded `requestAnimationFrame` updates.
+- Added semantics, keyboard/focus behavior, a real labeled form, accessible mobile navigation and tooltips, progressive enhancement, and coherent reduced-motion behavior without redesigning the site.
+- Added baseline public-page SEO/social metadata structure, a robots-friendly homepage, and canonical output that activates when an approved production `site` URL is configured.
+- Isolated pricing and statistical tooltip claims in typed presentation data with internal pre-launch review markers.
+- Added local check/build commands. Browser visual QA was attempted but could not run because no browser instance was connected; viewport baselines remain required before this phase is considered accepted.
 
-### Phase 3 — Faithful Port
-
-- Reproduce the approved prototype in maintainable components and explicit content boundaries.
-- Keep content, design tokens, layout, responsive behavior, browser treatments, animation timing/personality, portfolio presentation, and CTA intent faithful.
-- Build visual regression and interaction tests around captured baselines.
-- Make accessibility improvements that preserve the intended look and behavior.
-
-### Phase 4 — Productionize
+### Phase 3 — Productionize
 
 - Add complete SEO/social/discovery metadata and indexing controls.
 - Finish accessibility, reduced-motion, keyboard, screen-reader, zoom, and contrast work.
@@ -514,13 +515,13 @@ ADR-003 selected the architecture against these requirements rather than framewo
 - Add analytics/events, attribution, CRM association, and consent/privacy behavior.
 - Establish authoritative content/configuration boundaries, tests, performance budgets, security headers, monitoring, and deployment/rollback.
 
-### Phase 5 — SaltBox Product Integration
+### Phase 4 — SaltBox Product Integration
 
 - Connect personalized demos, prospect journeys, CRM lifecycle, outreach attribution, customer conversion, experimentation, and SaltBox backend capabilities.
 - Add safe demo routing/access/indexing, versioning, expiry, and customer handoff.
 - Connect authoritative pricing/offers and any approved checkout or sales flow.
 
-### Phase 6 — Evidence-Based Optimization
+### Phase 5 — Evidence-Based Optimization
 
 - Use ADR-002-governed data to improve messaging, CTAs, pricing presentation, demo experiences, and conversion.
 - Preserve control groups, stable assignments, guardrails, and the ability to explain why performance changed.

@@ -20,6 +20,8 @@ dist/
 build/
 out/
 coverage/
+.wrangler/
+.dev.vars
 
 # Package-manager and tool caches
 .npm/

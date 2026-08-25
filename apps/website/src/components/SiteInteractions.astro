@@ -1,0 +1,30 @@
+<script>
+  const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  document.querySelectorAll<HTMLElement>("[data-scroll]").forEach((control) => {
+    control.addEventListener("click", () => {
+      const id = control.dataset.scroll;
+      const target = id ? document.getElementById(id) : null;
+      target?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+    });
+  });
+
+  const reveals = [...document.querySelectorAll<HTMLElement>(".reveal")];
+  if (reduceMotion || !("IntersectionObserver" in window)) {
+    reveals.forEach((element) => element.classList.add("shown"));
+  } else {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        const element = entry.target as HTMLElement;
+        const siblings = element.parentElement
+          ? [...element.parentElement.children].filter((sibling) => sibling.classList.contains("reveal"))
+          : [];
+        element.style.transitionDelay = `${Math.max(0, siblings.indexOf(element)) * 0.08}s`;
+        element.classList.add("shown");
+        observer.unobserve(element);
+      });
+    }, { threshold: 0.14, rootMargin: "0px 0px -8% 0px" });
+    reveals.forEach((element) => observer.observe(element));
+  }
+</script>

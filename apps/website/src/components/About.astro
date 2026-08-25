@@ -1,0 +1,42 @@
+<section class="about" id="about" aria-labelledby="about-heading">
+  <div class="wrap">
+    <div class="about-grid">
+      <div class="about-left reveal">
+        <span class="eyebrow with-line">Who it's for</span>
+        <h2 class="sec-h2" id="about-heading">Mom-and-pop or<br />growing fast — <span>you're in.</span></h2>
+      </div>
+      <div class="about-right reveal">
+        <p>Whether you're a one-person shop getting online for the first time or an established business ready for a serious upgrade, we scale the work to fit. Same care, same attention, either way.</p>
+        <div class="about-stats">
+          <div><b>48h</b><span>Free quote turnaround</span></div>
+          <div><b>1</b><span>Place for branding, web &amp; care</span></div>
+          <div><b>Always</b><span>Here after launch, not just at it</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .about { position: relative; z-index: 2; padding: 130px 0; }
+  .about-grid { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 54px; }
+  .about-left .eyebrow { margin-bottom: 22px; }
+  .about-left h2 span { color: var(--green); }
+  .about-right > p { color: var(--salt-dim); font-size: 1.18rem; line-height: 1.66; }
+  .about-stats { display: flex; flex-wrap: nowrap; gap: 24px; margin-top: 36px; }
+  .about-stats b { display: block; color: var(--salt); font-family: var(--display); font-size: 2.4rem; font-weight: 800; letter-spacing: -0.03em; }
+  .about-stats span { display: block; max-width: 14ch; margin-top: 4px; color: var(--salt-dim); font-size: 0.86rem; }
+
+  @media (max-width: 920px) {
+    .about { padding: 74px 0; }
+    .about-grid { grid-template-columns: 1fr; gap: 30px; }
+    .about-stats { gap: 12px; }
+    .about-stats b { font-size: 1.6rem; }
+    .about-stats span { max-width: 12ch; }
+  }
+
+  @media (max-width: 420px) {
+    .about-stats { flex-wrap: wrap; gap: 20px 28px; }
+    .about-stats > div { min-width: 28%; }
+  }
+</style>

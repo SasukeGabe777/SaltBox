@@ -1,0 +1,28 @@
+---
+interface Props {
+  id?: string;
+  class?: string;
+  url: string;
+  urlId?: string;
+  status: string;
+  statusId?: string;
+}
+
+const {
+  id,
+  class: className = "",
+  url,
+  urlId,
+  status,
+  statusId,
+} = Astro.props;
+---
+
+<div class:list={["browser", className]} id={id}>
+  <div class="b-chrome" aria-hidden="true">
+    <i></i><i></i><i></i>
+    <span class="b-url" id={urlId}>{url}</span>
+    <span class="b-live" id={statusId}><i></i><span data-status-text>{status}</span></span>
+  </div>
+  <slot />
+</div>

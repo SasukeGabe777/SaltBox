@@ -1,0 +1,92 @@
+<section class="contact" id="contact" aria-labelledby="contact-heading" data-contact>
+  <div class="wrap">
+    <div class="contact-card reveal">
+      <div class="contact-left">
+        <span class="eyebrow with-line">Start here</span>
+        <h2 class="sec-h2" id="contact-heading">Let's build<br />yours.</h2>
+        <p>Tell us a bit about your business and we'll send a free, no-pressure quote within 48 hours.</p>
+        <div class="contact-meta">
+          <a href="mailto:hello@saltbox.design">
+            <svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="m3 7 9 6 9-6"></path></svg>
+            hello@saltbox.design
+          </a>
+          <span>
+            <svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-5.5-7-11a7 7 0 0 1 14 0c0 5.5-7 11-7 11z"></path><circle cx="12" cy="10" r="2.5"></circle></svg>
+            Salt Lake City, UT
+          </span>
+        </div>
+      </div>
+      <form class="contact-form" action="mailto:hello@saltbox.design" method="post" enctype="text/plain" data-quote-form>
+        <div class="field">
+          <label for="quote-name">Your name</label>
+          <input id="quote-name" name="name" type="text" placeholder="Jordan Rivera" autocomplete="name" required />
+        </div>
+        <div class="field">
+          <label for="quote-business">Business name</label>
+          <input id="quote-business" name="business" type="text" placeholder="Birch &amp; Bean" autocomplete="organization" />
+        </div>
+        <div class="field">
+          <label for="quote-email">Email</label>
+          <input id="quote-email" name="email" type="email" placeholder="you@business.com" autocomplete="email" required />
+        </div>
+        <div class="field">
+          <label for="quote-message">What do you need?</label>
+          <textarea id="quote-message" name="message" rows="3" placeholder="A new site, a rebrand, online ordering..."></textarea>
+        </div>
+        <button class="btn btn-primary form-btn" type="submit"><span class="btn-i">Get my free quote</span></button>
+        <p class="sr-only" aria-live="polite" data-form-status></p>
+      </form>
+    </div>
+  </div>
+</section>
+
+<script>
+  const contact = document.querySelector<HTMLElement>("[data-contact]");
+  const form = contact?.querySelector<HTMLFormElement>("[data-quote-form]");
+
+  form?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    if (!form.reportValidity()) return;
+
+    const data = new FormData(form);
+    const value = (name: string) => String(data.get(name) ?? "").trim();
+    const business = value("business");
+    const subject = `Free quote request${business ? ` — ${business}` : ""}`;
+    const body = [
+      `Name: ${value("name") || "—"}`,
+      `Business: ${business || "—"}`,
+      `Email: ${value("email") || "—"}`,
+      "",
+      "What they need:",
+      value("message") || "—",
+    ].join("\n");
+    window.location.href = `mailto:hello@saltbox.design?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  });
+</script>
+
+<style>
+  .contact { position: relative; z-index: 2; padding: 40px 0 120px; }
+  .contact-card { display: grid; grid-template-columns: 1fr 1fr; align-items: start; gap: 54px; padding: 56px; border: 1px solid var(--line); border-radius: 26px; background: var(--ink-2); }
+  .contact-left .eyebrow { margin-bottom: 20px; }
+  .contact-left > p { max-width: 34ch; margin-top: 18px; color: var(--salt-dim); font-size: 1.08rem; line-height: 1.6; }
+  .contact-meta { display: flex; flex-direction: column; gap: 14px; margin-top: 30px; }
+  .contact-meta a,
+  .contact-meta span { display: flex; align-items: center; gap: 11px; color: var(--salt-dim); font-size: 0.96rem; text-decoration: none; }
+  .contact-meta svg { color: var(--green); }
+  .contact-meta a:hover { color: var(--salt); }
+  .field { margin-bottom: 18px; }
+  .field label { display: block; margin-bottom: 8px; color: var(--salt-dim); font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; }
+  .field input,
+  .field textarea { width: 100%; padding: 13px 15px; border: 1px solid var(--line); border-radius: 12px; background: var(--ink); color: var(--salt); font-family: var(--body); font-size: 0.98rem; resize: vertical; transition: border-color 0.25s; }
+  .field input::placeholder,
+  .field textarea::placeholder { color: #5d665f; }
+  .field input:focus,
+  .field textarea:focus { border-color: var(--green); outline: none; }
+  .field input:focus-visible,
+  .field textarea:focus-visible { outline: 3px solid var(--green); outline-offset: 2px; }
+  .form-btn { display: flex; justify-content: center; width: 100%; margin-top: 6px; }
+
+  @media (max-width: 920px) {
+    .contact-card { grid-template-columns: 1fr; gap: 30px; padding: 30px 24px; }
+  }
+</style>

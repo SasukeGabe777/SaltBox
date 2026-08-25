@@ -1,0 +1,113 @@
+---
+import { portfolioProjects } from "../data/site";
+---
+
+<section class="work" id="work" aria-labelledby="work-heading" data-portfolio>
+  <div class="work-track" data-portfolio-track>
+    <div class="work-sticky">
+      <div class="work-head">
+        <span class="eyebrow">Our work</span>
+        <h2 class="sec-h2" id="work-heading">Real businesses, already live.</h2>
+        <p class="work-hint" aria-hidden="true">Scroll to explore
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+        </p>
+      </div>
+      <div class="filmstrip" data-portfolio-strip aria-label="Saltbox portfolio projects">
+        {portfolioProjects.map((project) => (
+          <a class="work-card" href={project.url} target="_blank" rel="noopener noreferrer">
+            <div class="work-card-top">
+              <div class="work-chrome" aria-hidden="true"><i></i><i></i><i></i><span>{project.displayUrl}</span></div>
+              <div class="work-tile" style={`background:${project.background}`}><span>{project.name}</span></div>
+            </div>
+            <div class="work-card-body">
+              <span class="work-tag">{project.category}</span>
+              <h3>{project.name}</h3>
+              <p>{project.description}</p>
+              <span class="work-link">Visit site
+                <svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M7 7h10v10"></path></svg>
+              </span>
+              <span class="sr-only"> (opens in a new tab)</span>
+            </div>
+          </a>
+        ))}
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  const portfolio = document.querySelector<HTMLElement>("[data-portfolio]");
+  const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  if (portfolio && !reduceMotion) {
+    const track = portfolio.querySelector<HTMLElement>("[data-portfolio-track]");
+    const strip = portfolio.querySelector<HTMLElement>("[data-portfolio-strip]");
+    let frame = 0;
+
+    const update = () => {
+      frame = 0;
+      if (!track || !strip || matchMedia("(max-width: 920px)").matches) {
+        if (strip) strip.style.transform = "";
+        return;
+      }
+      const bounds = track.getBoundingClientRect();
+      const total = bounds.height - innerHeight;
+      const progress = Math.max(0, Math.min(1, total > 0 ? -bounds.top / total : 0));
+      const maxX = strip.scrollWidth - innerWidth + 44;
+      strip.style.transform = `translateX(${-progress * Math.max(0, maxX)}px)`;
+    };
+
+    const scheduleUpdate = () => {
+      if (!frame) frame = requestAnimationFrame(update);
+    };
+
+    addEventListener("scroll", scheduleUpdate, { passive: true });
+    addEventListener("resize", scheduleUpdate);
+    update();
+  }
+</script>
+
+<style>
+  .work { position: relative; z-index: 2; background: var(--ink); }
+  .work-track { position: relative; height: 300vh; }
+  .work-sticky { display: flex; position: sticky; top: 0; overflow: hidden; flex-direction: column; justify-content: center; height: 100vh; }
+  .work-head { width: 100%; max-width: 1320px; margin: 0 auto 20px; padding: 0 44px; }
+  .work-head .sec-h2 { font-size: clamp(2rem, 3.4vw, 3.1rem); }
+  .work-head .eyebrow { margin-bottom: 20px; }
+  .work-head .eyebrow::before { display: inline-block; width: 32px; height: 1px; background: var(--green); content: ""; }
+  .work-hint { display: flex; align-items: center; gap: 9px; margin-top: 18px; color: var(--salt-dim); font-family: var(--mono); font-size: 0.74rem; letter-spacing: 0.14em; text-transform: uppercase; }
+  .filmstrip { display: flex; gap: 26px; padding: 0 44px; will-change: transform; }
+  .work-card { flex: 0 0 clamp(310px, 29vw, 400px); overflow: hidden; border: 1px solid var(--line); border-radius: 18px; background: var(--ink-2); color: var(--salt); text-decoration: none; transition: border-color 0.3s, transform 0.3s; }
+  .work-card:hover,
+  .work-card:focus-visible { border-color: rgba(42, 224, 138, 0.4); transform: translateY(-5px); }
+  .work-card-top { padding: 12px; }
+  .work-chrome { display: flex; align-items: center; gap: 7px; padding: 0 4px 11px; }
+  .work-chrome i { width: 9px; height: 9px; border-radius: 50%; background: #39413b; }
+  .work-chrome i:first-child { background: var(--amber); }
+  .work-chrome span { margin-left: 8px; color: var(--salt-dim); font-family: var(--mono); font-size: 0.68rem; }
+  .work-tile { display: flex; align-items: center; justify-content: center; height: clamp(140px, 18vh, 196px); border-radius: 11px; }
+  .work-tile span { color: #fff; font-family: var(--display); font-size: 1.4rem; font-weight: 700; letter-spacing: -0.01em; text-shadow: 0 2px 16px rgba(0, 0, 0, 0.3); }
+  .work-card-body { padding: 6px 22px 20px; }
+  .work-tag { color: var(--green); font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; }
+  .work-card h3 { margin: 9px 0 8px; font-family: var(--display); font-size: 1.4rem; font-weight: 700; letter-spacing: -0.02em; }
+  .work-card p { margin-bottom: 13px; color: var(--salt-dim); font-size: 0.92rem; line-height: 1.55; }
+  .work-link { display: inline-flex; align-items: center; gap: 7px; color: var(--salt); font-size: 0.92rem; font-weight: 600; }
+  .work-card:hover .work-link,
+  .work-card:focus-visible .work-link { color: var(--green); }
+
+  @media (max-width: 920px) {
+    .work-track { height: auto; }
+    .work-sticky { display: block; position: static; overflow: visible; height: auto; padding: 74px 0; }
+    .work-head { margin-bottom: 26px; padding: 0 22px; }
+    .work-hint { display: none; }
+    .filmstrip { overflow-x: auto; padding: 4px 22px 20px; scroll-padding: 22px; scroll-snap-type: x mandatory; transform: none !important; -webkit-overflow-scrolling: touch; }
+    .work-card { flex: 0 0 80vw; scroll-snap-align: start; }
+  }
+
+  @media (prefers-reduced-motion: reduce) and (min-width: 921px) {
+    .work-track { height: auto; }
+    .work-sticky { position: static; overflow: visible; height: auto; padding: 100px 0; }
+    .filmstrip { overflow-x: auto; padding-bottom: 20px; scroll-snap-type: x mandatory; transform: none !important; }
+    .work-card { scroll-snap-align: start; }
+  }
+</style>

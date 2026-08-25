@@ -1,0 +1,42 @@
+---
+import Brand from "./Brand.astro";
+---
+
+<footer class="foot" data-site-footer>
+  <div class="wrap">
+    <div class="foot-top">
+      <div class="foot-brand">
+        <Brand href="#top" />
+        <p>Websites, branding, and care for local shops, makers, and service pros. Built in Salt Lake City.</p>
+      </div>
+      <div class="foot-cols">
+        <nav class="foot-col" aria-label="Explore">
+          <span>Explore</span><a href="#services">Services</a><a href="#packages">Packages</a><a href="#story">How it works</a><a href="#work">Our work</a>
+        </nav>
+        <nav class="foot-col" aria-label="Company">
+          <span>Company</span><a href="#about">About</a><a href="#contact">Contact</a><a href="mailto:hello@saltbox.design">Email us</a>
+        </nav>
+      </div>
+    </div>
+    <div class="foot-bottom"><span>© 2026 Saltbox · Salt Lake City</span><span>Free quote in 48 hours</span></div>
+  </div>
+</footer>
+
+<style>
+  .foot { position: relative; z-index: 2; padding: 64px 0 40px; border-top: 1px solid var(--line); }
+  .foot-top { display: grid; grid-template-columns: 1.6fr 1fr 1fr; align-items: start; gap: 48px; padding-bottom: 44px; border-bottom: 1px solid var(--line); }
+  .foot-brand { max-width: 360px; }
+  .foot-brand p { margin-top: 16px; color: var(--salt-dim); font-size: 0.95rem; line-height: 1.6; }
+  .foot-cols { display: contents; }
+  .foot-col { display: flex; flex-direction: column; gap: 12px; }
+  .foot-col span { margin-bottom: 4px; color: var(--salt-dim); font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; }
+  .foot-col a { color: var(--salt); font-size: 0.95rem; text-decoration: none; transition: color 0.2s; }
+  .foot-col a:hover,
+  .foot-col a:focus-visible { color: var(--green); }
+  .foot-bottom { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; padding-top: 26px; color: var(--salt-dim); font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; }
+
+  @media (max-width: 920px) {
+    .foot-top { grid-template-columns: 1fr; gap: 30px; }
+    .foot-cols { display: flex; gap: 40px; }
+  }
+</style>

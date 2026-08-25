@@ -5,7 +5,7 @@ SaltBox is intended to become an end-to-end autonomous website sales and fulfill
 The goal is high automation with clear operator visibility. Important decisions, unusual cases, failures, and sensitive conversations must remain inspectable and capable of human escalation.
 
 > [!IMPORTANT]
-> The original SaltBox marketing prototype has been imported and preserved under `reference/marketing-prototype/`. It serves as the approved visual and interaction reference. The production implementation under `apps/website/` has not yet been selected or built.
+> The original SaltBox marketing prototype is preserved under `reference/marketing-prototype/` as the approved visual and interaction reference. Its first production port now lives in `apps/website/` as a static-first Astro application.
 
 ## Intelligence policy
 
@@ -88,7 +88,7 @@ At maturity, SaltBox should track discovery and enrichment, analysis and scoring
 ```text
 saltbox/
 ├── apps/
-│   ├── website/          # Future production marketing website
+│   ├── website/          # Astro production marketing website
 │   ├── admin/            # Future operator dashboard
 │   └── demo-sites/       # Future demo-site delivery surface
 ├── services/
@@ -142,8 +142,17 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the proposed system boundar
 17. Prefer economic value and profit over activity metrics.
 18. Treat targeting and strategy rules as hypotheses that must keep learning from evidence.
 
-## Current development status
+## Website development
 
-This is a framework-neutral repository foundation. There are deliberately no dependencies, package-manager workspace files, build commands, or application implementations yet. After the existing website project arrives, its framework, package manager, directory expectations, and deployment model should be inspected before choosing how it fits into this structure.
+The repository uses Node.js 24 LTS and pnpm workspaces. From the repository root:
 
-Copy `.env.example` to an appropriate local environment file only after the application defines its required configuration. Never place real secrets in `.env.example`.
+```text
+pnpm install
+pnpm dev:website
+pnpm check
+pnpm build
+```
+
+`apps/website` is an Astro 6 + TypeScript faithful port of the approved marketing prototype. It builds to static HTML by default and contains no backend, analytics, CMS, deployment credentials, or Cloudflare account configuration. See [apps/website/README.md](apps/website/README.md) for app-specific guidance.
+
+Copy `.env.example` to an appropriate local environment file only after an application defines required configuration. Never place real secrets in `.env.example`.

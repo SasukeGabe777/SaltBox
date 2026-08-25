@@ -1,0 +1,85 @@
+---
+import PricingCard from "./PricingCard.astro";
+import { pricingPlans } from "../data/site";
+---
+
+<section class="packages" id="packages" aria-labelledby="packages-heading" data-pricing>
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="eyebrow">Packages</span>
+      <h2 class="sec-h2" id="packages-heading">Plain and simple.<br />Pick what fits.</h2>
+      <p class="sec-sub">
+        Every package includes your branding and a finished website that's live and working. Not sure? We'll help you choose.
+        Tap any <span class="inline-i" aria-hidden="true">i</span> to see why it matters.
+      </p>
+    </div>
+    <div class="pkgs">
+      {pricingPlans.map((plan) => <PricingCard plan={plan} />)}
+    </div>
+    <div class="care-strip reveal">
+      <div class="care-info">
+        <span class="care-badge">For Saltbox clients only</span>
+        <h3>Keep-it-running plan</h3>
+        <p>Once we've built or taken over your site, keep it fresh: new photos, prices, and hours handled for you, plus hosting and daily backups. Cancel anytime.</p>
+      </div>
+      <div class="care-price">$150<small>/month</small></div>
+    </div>
+    <p class="pkg-note reveal">Prices are a starting point — your final quote depends on what you need, and we'll always tell you up front. Ask about splitting it into monthly payments. Every project starts with a free, no-pressure call.</p>
+  </div>
+</section>
+
+<script>
+  const pricing = document.querySelector<HTMLElement>("[data-pricing]");
+
+  if (pricing) {
+    const buttons = [...pricing.querySelectorAll<HTMLButtonElement>("[data-tooltip-button]")];
+
+    const closeAll = (except?: HTMLButtonElement) => {
+      buttons.forEach((button) => {
+        if (button !== except) {
+          button.classList.remove("open");
+          button.setAttribute("aria-expanded", "false");
+        }
+      });
+    };
+
+    buttons.forEach((button) => {
+      button.addEventListener("click", (event) => {
+        event.stopPropagation();
+        const open = !button.classList.contains("open");
+        closeAll(button);
+        button.classList.toggle("open", open);
+        button.setAttribute("aria-expanded", String(open));
+      });
+
+      button.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+          button.classList.remove("open");
+          button.setAttribute("aria-expanded", "false");
+          button.focus();
+        }
+      });
+    });
+
+    document.addEventListener("click", () => closeAll());
+  }
+</script>
+
+<style>
+  .packages { position: relative; z-index: 2; padding: 130px 0; }
+  .pkgs { display: grid; grid-template-columns: repeat(3, 1fr); align-items: start; gap: 22px; }
+  .inline-i { display: inline-grid; width: 16px; height: 16px; border: 1px solid var(--line); border-radius: 50%; color: var(--salt-dim); font-family: var(--mono); font-size: 10px; font-style: italic; font-weight: 700; line-height: 1; vertical-align: middle; place-items: center; }
+  .care-strip { display: flex; align-items: center; justify-content: space-between; gap: 30px; margin-top: 34px; padding: 32px 38px; border: 1px solid rgba(42, 224, 138, 0.22); border-radius: 20px; background: rgba(42, 224, 138, 0.055); }
+  .care-badge { display: inline-block; margin-bottom: 14px; padding: 6px 12px; border: 1px solid rgba(42, 224, 138, 0.4); border-radius: 999px; color: var(--green); font-family: var(--mono); font-size: 0.66rem; letter-spacing: 0.12em; text-transform: uppercase; }
+  .care-strip h3 { font-family: var(--display); font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; }
+  .care-strip p { max-width: 64ch; margin-top: 8px; color: var(--salt-dim); font-size: 0.96rem; line-height: 1.55; }
+  .care-price { font-family: var(--display); font-size: 2rem; font-weight: 800; white-space: nowrap; }
+  .care-price small { color: var(--salt-dim); font-family: var(--body); font-size: 0.95rem; font-weight: 400; }
+  .pkg-note { max-width: 70ch; margin: 26px auto 0; color: var(--salt-dim); font-size: 0.92rem; line-height: 1.6; text-align: center; }
+
+  @media (max-width: 920px) {
+    .packages { padding: 74px 0; }
+    .pkgs { grid-template-columns: 1fr; }
+    .care-strip { align-items: flex-start; flex-direction: column; }
+  }
+</style>
