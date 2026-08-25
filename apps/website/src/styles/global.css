@@ -22,7 +22,6 @@
 html {
   color-scheme: dark;
   scroll-behavior: smooth;
-  scroll-padding-top: 24px;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
@@ -50,6 +49,9 @@ button,
 input,
 textarea {
   font: inherit;
+  /* The prototype leaves form controls and buttons on the browser-default
+     line height; inheriting the body's 1.5 would make every control taller. */
+  line-height: normal;
 }
 
 button,

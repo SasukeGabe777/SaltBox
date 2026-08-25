@@ -43,5 +43,7 @@ Do not modify that preserved artifact. Implementation modernization is not permi
 - The quote fields use native labels, autocomplete, required name/email validation, and browser validation UI before opening the same prefilled email flow.
 - Reduced-motion mode removes the long pinned-motion tracks, shows every process step as static content, stops auto-cycling, and keeps the portfolio directly scrollable.
 - At widths up to 420px, the three About proof items may wrap to prevent the narrow-screen overflow identified in the prototype review.
+- The mobile portfolio carousel sets `scroll-padding` so the initial snap keeps the first card at the 22px content inset; the prototype's mandatory snap pulls the first card flush against the viewport edge on load.
+- The fictional demo's mock CTA button renders in Inter via `font: inherit`; the prototype leaves it on the browser-default button font (Arial), an inheritance artifact that also wraps its label at very narrow widths.
 
 No other intentional visual differences were introduced. Browser screenshot comparison remains pending when a connected browser is available.
