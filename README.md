@@ -49,6 +49,8 @@ SaltBox should measure before optimizing, preserve explainability and experiment
 
 [ADR-002: Metrics, Experimentation & Continuous Learning](docs/decisions/ADR-002-metrics-experimentation-learning.md) defines the accepted learning-system decision. It complements ADR-001: expected value determines whether an action is worth taking, and local-first routing determines the cheapest sufficient way to perform it.
 
+[ADR-003: Production Web Runtime and Frontend Architecture](docs/decisions/ADR-003-production-web-runtime.md) records the accepted Astro/React Router delivery-surface direction. [ADR-004: Core Data, CRM & Event Architecture](docs/decisions/ADR-004-core-data-crm-event-architecture.md) is the proposed provider-neutral data foundation awaiting review.
+
 ## Autonomous pipeline
 
 ```text

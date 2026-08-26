@@ -2,7 +2,7 @@
 
 ## Status and intent
 
-This document proposes domain boundaries and system behavior without selecting implementation technologies. The original SaltBox marketing prototype is preserved at `reference/marketing-prototype/` as the approved visual and interaction reference for the future public website. It is not the production implementation; `apps/website` remains future work, and framework, language, package manager, database, queue, hosting, and deployment decisions remain open.
+This document describes SaltBox's domain boundaries and system behavior. The approved marketing prototype remains preserved at `reference/marketing-prototype/`, and its production Astro migration now lives in `apps/website`. ADR-003 records the frontend/runtime direction; database, queue, authoritative persistence, and most backend-provider choices remain open.
 
 The architecture should support an autonomous pipeline while preserving human oversight. Automation owns routine execution; operators need enough context to understand decisions, intervene safely, and recover failed work.
 
@@ -596,6 +596,12 @@ LEARN
 BETTER VALUE ESTIMATE
 ```
 
+## Proposed core data foundation
+
+[ADR-004 — Core Data, CRM & Event Architecture](decisions/ADR-004-core-data-crm-event-architecture.md) proposes the authoritative logical model for review. It combines relational current state with append-oriented source observations, feature snapshots, scores, decisions, lifecycle transitions, typed events, experiment exposures, and economic entries. Current records answer operational questions efficiently; historical records preserve what SaltBox knew and why it acted without requiring full event sourcing.
+
+Under that proposal, Business, Prospect, Customer, and Contact remain distinct identities; source conflicts are resolved without deleting evidence; suppression survives rediscovery and entity merges; and training data is reconstructed point in time from information available at the historical decision. The persistence provider and physical schema are intentionally deferred to ADR-005.
+
 ## System domains
 
 ### Prospecting
@@ -745,7 +751,7 @@ Initially this may be no more than SQL, statistics, analytics, and human-reviewe
 
 ## Initial lead lifecycle
 
-The initial lifecycle is a proposal for the authoritative prospect state machine, not a database schema:
+The lifecycle below was the initial broad proposal for the authoritative prospect state machine, not a database schema. Proposed ADR-004 refines it into a smaller acquisition lifecycle and moves demo/job status, engagement facts, suppression, and customer fulfillment into their proper domains. Until ADR-004 is reviewed, this diagram remains historical context rather than a physical-schema prescription:
 
 ```text
 discovered
