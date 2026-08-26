@@ -2,7 +2,7 @@
 
 ## Status and intent
 
-This document describes SaltBox's domain boundaries and system behavior. The approved marketing prototype remains preserved at `reference/marketing-prototype/`, and its production Astro migration now lives in `apps/website`. ADR-003 records the frontend/runtime direction; database, queue, authoritative persistence, and most backend-provider choices remain open.
+This document describes SaltBox's domain boundaries and system behavior. The approved marketing prototype remains preserved at `reference/marketing-prototype/`, and its production Astro migration now lives in `apps/website`. ADR-003 records the frontend/runtime direction; ADR-004 and ADR-005 define the authoritative data and PostgreSQL/Neon foundation. Queue and most other backend-provider choices remain open.
 
 The architecture should support an autonomous pipeline while preserving human oversight. Automation owns routine execution; operators need enough context to understand decisions, intervene safely, and recover failed work.
 
@@ -606,7 +606,9 @@ Business, Prospect, Customer, and Contact remain distinct identities; source con
 
 [ADR-005 — Persistence and Database Selection](decisions/ADR-005-persistence-database-selection.md) defines PostgreSQL as the accepted database technology and Neon as the initial managed provider. SaltBox will begin with one authoritative transactional database, keep PostgreSQL schema and data access provider-portable, connect from Cloudflare Workers through a thin server-side adapter, and store large website/media artifacts outside the relational database.
 
-The decision deliberately does not select an ORM, query builder, migration tool, physical schema, object store, or production database. Those remain implementation decisions after ADR-005.
+The decision deliberately does not select a physical schema, object store, or production database.
+
+[ADR-006 — PostgreSQL Access and Migration Tooling](decisions/ADR-006-postgres-access-migration-tooling.md) defines Kysely over `pg` for typed runtime queries, SQL-first ordered migrations through `node-pg-migrate`, and generated Kysely database types derived from a disposable PostgreSQL database built from those migrations. Migration SQL remains the schema-history authority; Workers and Neon stay behind thin connection adapters. No package, schema, migration, credential, or provider configuration is created by the decision.
 
 ## System domains
 
