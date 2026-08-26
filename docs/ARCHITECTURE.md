@@ -596,11 +596,17 @@ LEARN
 BETTER VALUE ESTIMATE
 ```
 
-## Proposed core data foundation
+## Core data foundation
 
-[ADR-004 — Core Data, CRM & Event Architecture](decisions/ADR-004-core-data-crm-event-architecture.md) proposes the authoritative logical model for review. It combines relational current state with append-oriented source observations, feature snapshots, scores, decisions, lifecycle transitions, typed events, experiment exposures, and economic entries. Current records answer operational questions efficiently; historical records preserve what SaltBox knew and why it acted without requiring full event sourcing.
+[ADR-004 — Core Data, CRM & Event Architecture](decisions/ADR-004-core-data-crm-event-architecture.md) defines the accepted authoritative logical model. It combines relational current state with append-oriented source observations, feature snapshots, scores, decisions, lifecycle transitions, typed events, experiment exposures, and economic entries. Current records answer operational questions efficiently; historical records preserve what SaltBox knew and why it acted without requiring full event sourcing.
 
-Under that proposal, Business, Prospect, Customer, and Contact remain distinct identities; source conflicts are resolved without deleting evidence; suppression survives rediscovery and entity merges; and training data is reconstructed point in time from information available at the historical decision. The persistence provider and physical schema are intentionally deferred to ADR-005.
+Business, Prospect, Customer, and Contact remain distinct identities; source conflicts are resolved without deleting evidence; suppression survives rediscovery and entity merges; and training data is reconstructed point in time from information available at the historical decision.
+
+## Persistence decision
+
+[ADR-005 — Persistence and Database Selection](decisions/ADR-005-persistence-database-selection.md) defines PostgreSQL as the accepted database technology and Neon as the initial managed provider. SaltBox will begin with one authoritative transactional database, keep PostgreSQL schema and data access provider-portable, connect from Cloudflare Workers through a thin server-side adapter, and store large website/media artifacts outside the relational database.
+
+The decision deliberately does not select an ORM, query builder, migration tool, physical schema, object store, or production database. Those remain implementation decisions after ADR-005.
 
 ## System domains
 
@@ -751,7 +757,7 @@ Initially this may be no more than SQL, statistics, analytics, and human-reviewe
 
 ## Initial lead lifecycle
 
-The lifecycle below was the initial broad proposal for the authoritative prospect state machine, not a database schema. Proposed ADR-004 refines it into a smaller acquisition lifecycle and moves demo/job status, engagement facts, suppression, and customer fulfillment into their proper domains. Until ADR-004 is reviewed, this diagram remains historical context rather than a physical-schema prescription:
+The lifecycle below was the initial broad proposal for the authoritative prospect state machine, not a database schema. ADR-004 refines it into a smaller acquisition lifecycle and moves demo/job status, engagement facts, suppression, and customer fulfillment into their proper domains. This diagram remains historical context rather than a physical-schema prescription:
 
 ```text
 discovered
