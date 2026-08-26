@@ -19,6 +19,7 @@
     "db:migrate": "pnpm --filter @saltbox/database db:migrate",
     "db:migrate:create": "pnpm --filter @saltbox/database db:migrate:create",
     "db:codegen": "pnpm --filter @saltbox/database db:codegen",
-    "db:verify": "pnpm --filter @saltbox/database db:verify"
+    "db:verify": "pnpm --filter @saltbox/database db:verify",
+    "prospect:qualify": "pnpm --filter @saltbox/prospecting qualify"
   }
 }

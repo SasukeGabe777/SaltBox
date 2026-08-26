@@ -47,6 +47,24 @@ export async function createBusiness(db: Database, input: CreateBusinessInput): 
   return mapBusiness(row);
 }
 
+/** Attach a namespaced external identifier; a rediscovered identity is a no-op. */
+export async function addBusinessIdentifier(
+  db: Database,
+  input: { businessId: string; provider: string; dataset?: string; identifierType: string; value: string }
+): Promise<void> {
+  await db
+    .insertInto("business_identifier")
+    .values({
+      business_id: input.businessId,
+      provider: input.provider,
+      dataset: input.dataset ?? null,
+      identifier_type: input.identifierType,
+      value: input.value,
+    })
+    .onConflict((oc) => oc.constraint("business_identifier_namespace_uq").doNothing())
+    .execute();
+}
+
 export async function getBusinessById(db: Database, id: string): Promise<BusinessRecord | undefined> {
   const row = await db.selectFrom("business").selectAll().where("id", "=", id).executeTakeFirst();
   return row ? mapBusiness(row) : undefined;

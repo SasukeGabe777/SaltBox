@@ -157,4 +157,33 @@ pnpm build
 
 `apps/website` is an Astro 6 + TypeScript faithful port of the approved marketing prototype. It builds to static HTML by default and contains no backend, analytics, CMS, deployment credentials, or Cloudflare account configuration. See [apps/website/README.md](apps/website/README.md) for app-specific guidance.
 
+The database foundation lives in [packages/database](packages/database/README.md) (`pnpm db:up`, `db:migrate`, `db:verify`). The deterministic prospect-qualification slice lives in [services/prospecting](services/prospecting/README.md); exercise it locally with `pnpm prospect:qualify --fixture roofing-good`.
+
+## Fresh-machine bootstrap
+
+Prerequisites:
+
+1. **Node.js 24 LTS** (the workspace pins `>=24.0.0 <25`; install from nodejs.org, nvm, or winget) with pnpm 11.24+ via Corepack: `corepack enable`.
+2. **Docker Desktop** running (WSL2 backend on Windows) for the local PostgreSQL 18 container.
+3. Git access to this repository.
+
+Then, from a clone (or after `git pull`):
+
+```text
+pnpm install
+pnpm db:up          # start local PostgreSQL 18 (Docker, port 5433)
+pnpm db:migrate     # apply the ordered SQL migration history
+pnpm db:verify      # regenerate types from a disposable DB; must match generated/db.ts
+pnpm check          # type-check every workspace package
+pnpm test           # database + prospecting suites (requires db:up)
+pnpm prospect:qualify --fixture roofing-good   # run the Phase 4 pipeline visibly
+```
+
+The local PostgreSQL Docker volume is intentionally **machine-local and
+disposable**: every machine rebuilds its database from the committed
+migrations (`pnpm db:up && pnpm db:migrate`). No database dump or copied
+volume is ever needed — do not transfer one between machines. `DATABASE_URL`
+defaults to the local container and only needs setting for non-default
+setups (see `.env.example`).
+
 Copy `.env.example` to an appropriate local environment file only after an application defines required configuration. Never place real secrets in `.env.example`.

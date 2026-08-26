@@ -96,6 +96,28 @@ export async function getProspectById(db: Database, id: string): Promise<Prospec
   return row ? mapProspect(row) : undefined;
 }
 
+/**
+ * Find the pursuit for a business and market/offer scope: the active prospect
+ * if one exists, otherwise the most recently opened closed one. Used to keep
+ * reprocessing idempotent instead of accidentally opening duplicate pursuits.
+ */
+export async function findProspectForPursuit(
+  db: Database,
+  input: { businessId: string; marketScope?: string; offerScope?: string }
+): Promise<ProspectRecord | undefined> {
+  const rows = await db
+    .selectFrom("prospect")
+    .selectAll()
+    .where("business_id", "=", input.businessId)
+    .where("market_scope", "=", input.marketScope ?? "default")
+    .where("offer_scope", "=", input.offerScope ?? "default")
+    .orderBy("opened_at", "desc")
+    .execute();
+  const active = rows.find((row) => !TERMINAL_STATES.includes(row.lifecycle_state));
+  const chosen = active ?? rows[0];
+  return chosen ? mapProspect(chosen) : undefined;
+}
+
 export interface TransitionProspectInput {
   prospectId: string;
   expectedRevision: number;

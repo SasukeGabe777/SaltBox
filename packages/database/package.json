@@ -6,6 +6,14 @@
   "engines": {
     "node": ">=24.0.0 <25"
   },
+  "exports": {
+    "./client": "./client/kysely.ts",
+    "./client/config": "./client/config.ts",
+    "./generated": "./generated/db.ts",
+    "./repositories/*": "./repositories/*.ts",
+    "./queries/*": "./queries/*.ts",
+    "./testing/harness": "./testing/harness.ts"
+  },
   "scripts": {
     "db:up": "docker compose up -d --wait",
     "db:down": "docker compose down -v",
