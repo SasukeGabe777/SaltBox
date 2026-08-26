@@ -12,6 +12,13 @@
     "dev:website": "pnpm --filter @saltbox/website dev",
     "build": "pnpm build:website",
     "build:website": "pnpm --filter @saltbox/website build",
-    "check": "pnpm --filter @saltbox/website check"
+    "check": "pnpm -r check",
+    "test": "pnpm -r test",
+    "db:up": "pnpm --filter @saltbox/database db:up",
+    "db:down": "pnpm --filter @saltbox/database db:down",
+    "db:migrate": "pnpm --filter @saltbox/database db:migrate",
+    "db:migrate:create": "pnpm --filter @saltbox/database db:migrate:create",
+    "db:codegen": "pnpm --filter @saltbox/database db:codegen",
+    "db:verify": "pnpm --filter @saltbox/database db:verify"
   }
 }

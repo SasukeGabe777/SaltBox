@@ -1,0 +1,28 @@
+# Local development PostgreSQL for SaltBox (ADR-005: PostgreSQL 18 to match
+# Neon's current default major version; glibc image, not alpine, for collation
+# parity with managed providers).
+#
+# Port 5433 is used instead of 5432 so an unrelated local PostgreSQL
+# installation never collides with the SaltBox development database.
+name: saltbox-database
+
+services:
+  postgres:
+    image: postgres:18
+    container_name: saltbox-postgres
+    environment:
+      POSTGRES_USER: saltbox
+      POSTGRES_PASSWORD: saltbox
+      POSTGRES_DB: saltbox
+    ports:
+      - "5433:5432"
+    volumes:
+      - saltbox-pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U saltbox -d saltbox"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+volumes:
+  saltbox-pgdata:
