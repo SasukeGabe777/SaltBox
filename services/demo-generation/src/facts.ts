@@ -27,7 +27,7 @@ export async function collectDemoSourceFacts(db: Database, prospectId: string): 
     .executeTakeFirst();
   if (!header) return undefined;
 
-  const [contacts, discoveryRecord, website, intelligence, qualification, suppressionIds] = await Promise.all([
+  const [contacts, discoveryRecord, website, intelligence, brand, qualification, suppressionIds] = await Promise.all([
     db
       .selectFrom("contact_method")
       .select(["id", "channel", "normalized_value", "display_value"])
@@ -59,6 +59,15 @@ export async function collectDemoSourceFacts(db: Database, prospectId: string): 
       .select(["wa.id", "wa.analyzer_version", "wa.calculated_at", "wa.structured_findings"])
       .where("bw.business_id", "=", header.business_id)
       .where("wa.analyzer_version", "like", "website-intelligence-%")
+      .orderBy("wa.calculated_at", "desc")
+      .limit(1)
+      .executeTakeFirst(),
+    db
+      .selectFrom("website_analysis as wa")
+      .innerJoin("business_website as bw", "bw.website_id", "wa.website_id")
+      .select(["wa.id", "wa.calculated_at", "wa.structured_findings"])
+      .where("bw.business_id", "=", header.business_id)
+      .where("wa.analyzer_version", "=", "brand-intelligence-v1")
       .orderBy("wa.calculated_at", "desc")
       .limit(1)
       .executeTakeFirst(),
@@ -125,6 +134,7 @@ export async function collectDemoSourceFacts(db: Database, prospectId: string): 
   if (street !== undefined) facts.street = street;
   if (postalCode !== undefined) facts.postalCode = postalCode;
   if (website?.canonical_url) facts.websiteUrl = website.canonical_url;
+  if (website) facts.websiteId = website.id;
   if (discoveryRecord) {
     facts.discoverySourceRecordId = discoveryRecord.id;
     facts.discoverySourceName = discoveryRecord.source_name;
@@ -135,6 +145,14 @@ export async function collectDemoSourceFacts(db: Database, prospectId: string): 
       analyzerVersion: intelligence.analyzer_version,
       calculatedAt: toIso(intelligence.calculated_at),
       findings: asRecord(intelligence.structured_findings) ?? {},
+    };
+  }
+  const brandProfile = asRecord(brand?.structured_findings);
+  if (brand && brandProfile && brandProfile.kind === "brand-intelligence") {
+    facts.brand = {
+      analysisId: brand.id,
+      calculatedAt: toIso(brand.calculated_at),
+      profile: brandProfile,
     };
   }
   if (qualification && qualification.decision_id && qualification.result_code && qualification.policy_version) {

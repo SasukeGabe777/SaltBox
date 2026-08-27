@@ -10,7 +10,13 @@
     ".": "./src/types.ts",
     "./analyzer": "./src/analyze-website.ts",
     "./persistence": "./src/persist.ts",
-    "./batch-result": "./src/batch-result.ts"
+    "./batch-result": "./src/batch-result.ts",
+    "./brand": "./src/brand/analyze-brand.ts",
+    "./brand/types": "./src/brand/types.ts",
+    "./brand/derive": "./src/brand/derive.ts",
+    "./brand/color": "./src/brand/color.ts",
+    "./brand/assets": "./src/brand/assets.ts",
+    "./brand/persistence": "./src/brand/persist-brand.ts"
   },
   "scripts": {
     "intelligence": "node scripts/intelligence.ts",
@@ -21,7 +27,8 @@
     "@saltbox/database": "workspace:*",
     "@saltbox/prospecting": "workspace:*",
     "lighthouse": "13.4.1",
-    "puppeteer": "25.9.0"
+    "puppeteer": "25.9.0",
+    "sharp": "^0.34.5"
   },
   "devDependencies": {
     "@types/node": "^26.3.0",

@@ -80,6 +80,17 @@ try {
     const response = await page.goto(url, { waitUntil: "networkidle0", timeout: 30_000 });
     record(viewport.name, "HTTP 200", response?.status() === 200, `status ${response?.status() ?? "none"}`);
 
+    // Scroll through the page so lazy-loaded below-fold images actually load.
+    await page.evaluate(async () => {
+      const step = window.innerHeight;
+      for (let y = 0; y <= document.body.scrollHeight; y += step) {
+        window.scrollTo(0, y);
+        await new Promise((resolve) => setTimeout(resolve, 120));
+      }
+      window.scrollTo(0, 0);
+      await new Promise((resolve) => setTimeout(resolve, 400));
+    });
+
     const overflow = await page.evaluate(
       () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
     );
@@ -93,6 +104,43 @@ try {
     const contactPath =
       (await page.$('a[href^="tel:"]')) !== null || (await page.$('[data-section="contact"] form')) !== null;
     record(viewport.name, "contact path present", contactPath);
+
+    // Phase 9: brand mark (real logo or logotype fallback) must render.
+    record(viewport.name, "brand mark renders", await isVisible(page, '[data-qa="brand-mark"]'));
+    // Every image (logo, hero, gallery) must actually load — no broken local assets.
+    const brokenImages = await page.evaluate(() =>
+      Array.from(document.images)
+        .filter((img) => !img.complete || img.naturalWidth === 0)
+        .map((img) => img.getAttribute("src") ?? "?")
+        .slice(0, 4),
+    );
+    record(
+      viewport.name,
+      "all images load",
+      brokenImages.length === 0,
+      brokenImages.length > 0 ? brokenImages.join(" | ") : undefined,
+    );
+    const serviceCount = await page.evaluate(
+      () => document.querySelectorAll('[data-section="services"] h3, [data-section="services"] article').length,
+    );
+    record(viewport.name, "services visible", serviceCount >= 1, `${serviceCount} entries`);
+    record(viewport.name, "demo disclosure present", (await page.$('[data-qa="demo-disclosure"]')) !== null);
+    const noindex = await page.evaluate(
+      () => document.querySelector('meta[name="robots"]')?.getAttribute("content") ?? "",
+    );
+    record(viewport.name, "noindex directive", /noindex/.test(noindex), noindex);
+    // No prospect script can ever execute: every script must be inline (no src).
+    const externalScripts = await page.evaluate(() =>
+      Array.from(document.scripts)
+        .map((script) => script.src)
+        .filter((src) => src !== ""),
+    );
+    record(
+      viewport.name,
+      "no external scripts",
+      externalScripts.length === 0,
+      externalScripts.length > 0 ? externalScripts.slice(0, 3).join(" | ") : undefined,
+    );
     record(
       viewport.name,
       "no console errors",

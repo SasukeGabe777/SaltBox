@@ -208,18 +208,24 @@ See [docs/QUALIFICATION_V2.md](docs/QUALIFICATION_V2.md) and
 analysis failures are `completed_with_target_failures` and exit 0 by default;
 `--strict` makes them non-zero for CI/debugging.
 
-Phase 8 automated demo generation turns a qualified-v2 prospect into a
+Phases 8–9 automated demo generation turn a qualified-v2 prospect into a
 personalized, viewable website demo — deterministic copy, no AI, no outreach,
-no fabricated claims. One renderer serves every demo at an unguessable
-`noindex` locator URL, and the admin shows a read-only `VIEW DEMO` link:
+no fabricated claims. Phase 9 brand/asset intelligence extracts the
+business's real logo, colors, photography, and services through the hardened
+website-intelligence boundary and selects one of three polished layout
+compositions deterministically. One renderer serves every demo at an
+unguessable `noindex` locator URL, and the admin shows a read-only
+`VIEW DEMO` link plus the brand evidence used:
 
 ```text
 pnpm demos:dev                                   # demo renderer on http://127.0.0.1:5175/
 pnpm demo:generate --latest-qualified --limit 1  # or --prospect <uuid>
-pnpm demo:qa --token <public-locator>            # Chromium desktop/mobile QA + screenshots
+pnpm demo:brand --prospect <uuid>                # inspect brand/asset extraction
+pnpm demo:qa --token <public-locator>            # 28 Chromium desktop/mobile checks + screenshots
 ```
 
 See [docs/DEMO_GENERATION.md](docs/DEMO_GENERATION.md),
+[docs/BRAND_ASSET_INTELLIGENCE.md](docs/BRAND_ASSET_INTELLIGENCE.md),
 [services/demo-generation/README.md](services/demo-generation/README.md), and
 [apps/demos/README.md](apps/demos/README.md).
 

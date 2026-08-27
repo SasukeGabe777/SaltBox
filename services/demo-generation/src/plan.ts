@@ -5,9 +5,10 @@
  * why, the CTA/contact strategy, and every fallback taken for missing data.
  */
 
-import { DEMO_PLAN_VERSION, selectDemoTemplate, type TemplateSelection } from "./config/demo-v1.ts";
+import { parseBrandProfile, type BrandProfileView } from "./brand-view.ts";
+import { DEMO_PLAN_VERSION, selectComposition, selectDemoTemplate } from "./config/demo-v1.ts";
 import { CTA_LABELS } from "./config/local-service-copy-v1.ts";
-import type { DemoCta, DemoDeficiency, DemoPlan, DemoSourceFacts } from "./types.ts";
+import type { DemoCta, DemoDeficiency, DemoPlan, DemoPlanBrandSummary, DemoSourceFacts } from "./types.ts";
 
 /**
  * Derive addressable deficiencies from persisted website-intelligence
@@ -89,13 +90,36 @@ export interface BuildDemoPlanOptions {
   override?: { flag: string; note: string };
 }
 
+/** Typed view of the facts' persisted brand profile (undefined when absent/malformed). */
+export function brandViewFromFacts(facts: DemoSourceFacts): BrandProfileView | undefined {
+  if (!facts.brand) return undefined;
+  return parseBrandProfile(facts.brand.analysisId, facts.brand.calculatedAt, facts.brand.profile);
+}
+
 export function buildDemoPlan(facts: DemoSourceFacts, options: BuildDemoPlanOptions = {}): DemoPlan {
-  const template = selectDemoTemplate(facts.category);
-  if (!template) {
+  // Category gate: the local-service family is still the eligibility boundary.
+  if (!selectDemoTemplate(facts.category)) {
     throw new Error(`No demo template is available for category "${facts.category ?? "unknown"}".`);
   }
+  const brand = brandViewFromFacts(facts);
+  const heroImage = brand?.images.find((image) => image.role === "hero");
+  const composition = selectComposition({
+    ...(heroImage ? { heroImageWidth: heroImage.width } : {}),
+    usableImageCount: brand?.images.length ?? 0,
+    logoConfidence: brand?.logo ? brand.logoConfidence : "none",
+    paletteConfidence: brand?.palette ? brand.paletteConfidence : "none",
+    extractedServiceCount: brand?.services.length ?? 0,
+  });
+  const template = {
+    templateName: composition.templateName,
+    templateVersion: composition.templateVersion,
+    reason: composition.reasons[0] ?? "deterministic composition selection",
+    selectionReasons: composition.reasons,
+  };
   const deficiencies = deriveDemoDeficiencies(facts);
   const fallbacks: string[] = [];
+  if (!brand) fallbacks.push("no brand intelligence exists: category theme, logotype, and asset-free layout");
+  for (const fallback of brand?.fallbacks ?? []) fallbacks.push(`brand: ${fallback}`);
 
   const phoneAvailable = facts.phone !== undefined;
   const emailAvailable = facts.email !== undefined;
@@ -112,12 +136,40 @@ export function buildDemoPlan(facts: DemoSourceFacts, options: BuildDemoPlanOpti
     "header",
     "hero",
     "services",
+    ...(brand !== undefined && brand.images.length > 1 ? ["gallery"] : []),
     "trust",
     ...(facts.city !== undefined || facts.state !== undefined ? ["service-area"] : []),
     "about",
     "contact",
     "footer",
   ];
+
+  const brandSummary: DemoPlanBrandSummary | null = brand
+    ? {
+        analysisId: brand.analysisId,
+        profileVersion: brand.profileVersion,
+        collectedAt: brand.collectedAt,
+        logo: {
+          status: brand.logoStatus,
+          confidence: brand.logoConfidence,
+          ...(brand.logo?.sourceUrl !== undefined ? { sourceUrl: brand.logo.sourceUrl } : {}),
+        },
+        palette: { status: brand.paletteStatus, confidence: brand.paletteConfidence, sources: brand.paletteSources },
+        ...(brand.palette
+          ? {
+              paletteColors: {
+                primary: brand.palette.primary,
+                secondary: brand.palette.secondary,
+                accent: brand.palette.accent,
+              },
+            }
+          : {}),
+        imageryCount: brand.images.length,
+        extractedServices: brand.services.map((service) => service.name),
+        artifactRef: brand.artifactRef,
+        fallbacks: brand.fallbacks,
+      }
+    : null;
 
   const plan: DemoPlan = {
     planVersion: DEMO_PLAN_VERSION,
@@ -141,7 +193,8 @@ export function buildDemoPlan(facts: DemoSourceFacts, options: BuildDemoPlanOpti
         }
       : null,
     deficiencies,
-    template: templateSelectionView(template),
+    template,
+    brand: brandSummary,
     sections,
     ctaStrategy: {
       primary: primaryCta,
@@ -170,14 +223,6 @@ export function buildDemoPlan(facts: DemoSourceFacts, options: BuildDemoPlanOpti
     ...(options.override ? { override: options.override } : {}),
   };
   return plan;
-}
-
-function templateSelectionView(selection: TemplateSelection) {
-  return {
-    templateName: selection.templateName,
-    templateVersion: selection.templateVersion,
-    reason: selection.reason,
-  };
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {

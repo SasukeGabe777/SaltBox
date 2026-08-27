@@ -25,12 +25,10 @@ import {
 } from "@saltbox/database/repositories/demos";
 import { appendEvent } from "@saltbox/database/repositories/events";
 import {
+  COMPOSITIONS,
   DEMO_CONTENT_VERSION,
   DEMO_COPY_VERSION,
   DEMO_PIPELINE_VERSION,
-  LOCAL_SERVICE_TEMPLATE_ARTIFACT_REF,
-  LOCAL_SERVICE_TEMPLATE_NAME,
-  LOCAL_SERVICE_TEMPLATE_VERSION,
 } from "./config/demo-v1.ts";
 import { buildDemoContent } from "./content.ts";
 import { evaluateDemoEligibility, type DemoEligibility } from "./eligibility.ts";
@@ -41,6 +39,13 @@ import type { DemoContent, DemoPlan, DemoSourceFacts } from "./types.ts";
 export const DEFAULT_DEMOS_BASE_URL = "http://127.0.0.1:5175";
 
 export type GenerateDemoLog = (stage: string, detail?: Record<string, unknown>) => void;
+
+/**
+ * Runs brand extraction for a prospect and persists the profile. Injected by
+ * the CLI (real Chromium extraction) or by tests; generation itself never
+ * touches the network.
+ */
+export type BrandExtractor = (facts: DemoSourceFacts) => Promise<void>;
 
 export interface GenerateDemoOptions {
   /** Append a new version even when content and template are unchanged. */
@@ -53,6 +58,10 @@ export interface GenerateDemoOptions {
   overrideIneligible?: { note: string };
   /** Base URL used only for reporting the viewable demo URL. */
   baseUrl?: string;
+  /** Runs and persists brand intelligence when none exists (or when refreshing). */
+  brandExtractor?: BrandExtractor;
+  /** Re-run brand extraction even when a persisted profile exists. */
+  refreshBrand?: boolean;
   log?: GenerateDemoLog;
 }
 
@@ -87,9 +96,21 @@ export async function generateDemoForProspect(
   const log = options.log ?? (() => {});
   const baseUrl = (options.baseUrl ?? DEFAULT_DEMOS_BASE_URL).replace(/\/+$/, "");
 
-  const facts = await collectDemoSourceFacts(db, prospectId);
+  let facts = await collectDemoSourceFacts(db, prospectId);
   if (!facts) return { status: "not_found", prospectId };
-  log("FACTS", { businessName: facts.businessName, category: facts.category });
+  log("FACTS", { businessName: facts.businessName, category: facts.category, brand: facts.brand !== undefined });
+
+  // Brand intelligence: run once when missing (or when explicitly refreshed).
+  // Failure is never fatal — generation proceeds on deterministic fallbacks.
+  if (options.brandExtractor && facts.websiteUrl && (facts.brand === undefined || options.refreshBrand === true)) {
+    try {
+      log("BRAND EXTRACTION", { websiteUrl: facts.websiteUrl, refresh: options.refreshBrand === true });
+      await options.brandExtractor(facts);
+      facts = (await collectDemoSourceFacts(db, prospectId)) ?? facts;
+    } catch (error) {
+      log("BRAND EXTRACTION FAILED", { message: error instanceof Error ? error.message : String(error) });
+    }
+  }
 
   const eligibility = evaluateDemoEligibility(facts);
   let override: { flag: string; note: string } | undefined;
@@ -114,11 +135,14 @@ export async function generateDemoForProspect(
     sections: plan.sections.length,
   });
 
+  const compositionEntry = Object.values(COMPOSITIONS).find(
+    (composition) => composition.templateName === plan.template.templateName,
+  );
   const template = await ensureDemoTemplateVersion(db, {
     name: plan.template.templateName,
-    description: "Reusable local-service-business demo template (Phase 8).",
+    description: "Reusable local-service-business demo composition (Phase 9).",
     version: plan.template.templateVersion,
-    artifactRef: LOCAL_SERVICE_TEMPLATE_ARTIFACT_REF,
+    ...(compositionEntry ? { artifactRef: compositionEntry.artifactRef } : {}),
   });
   const contentHash = demoContentHash(content, plan.template.templateName, plan.template.templateVersion);
 
@@ -260,6 +284,7 @@ function planSummary(plan: DemoPlan): Record<string, unknown> {
       code: deficiency.code,
       addressedBy: deficiency.addressedBy,
     })),
+    ...(plan.brand !== undefined ? { brand: plan.brand } : {}),
     sections: plan.sections,
     ctaRationale: plan.ctaStrategy.rationale,
     fallbacks: plan.fallbacks,

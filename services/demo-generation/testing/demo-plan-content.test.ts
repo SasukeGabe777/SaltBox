@@ -140,7 +140,7 @@ test("deficiencies derive from persisted intelligence and the plan addresses eac
   }
 
   const plan = buildDemoPlan(facts);
-  assert.equal(plan.planVersion, "demo-plan-v1");
+  assert.equal(plan.planVersion, "demo-plan-v2");
   assert.equal(plan.qualification?.score, 65);
   assert.equal(plan.intelligence?.analysisId, "wa-1");
   assert.equal(plan.ctaStrategy.primary.kind, "contact");

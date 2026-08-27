@@ -8,16 +8,20 @@
  * no AI or paid APIs, and never sends outreach.
  */
 
+import { resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { createDatabase } from "@saltbox/database/client";
 import { resolveDatabaseUrl } from "@saltbox/database/client/config";
 import { listProspects } from "@saltbox/database/queries/admin";
+import { createBrandExtractor } from "../src/brand-extraction.ts";
 import { ELIGIBLE_POLICY_VERSION } from "../src/config/demo-v1.ts";
 import {
   DEFAULT_DEMOS_BASE_URL,
   generateDemoForProspect,
   type GenerateDemoResult,
 } from "../src/generate.ts";
+
+const DEMO_ASSET_ROOT = resolve(process.cwd(), "../../.data/demo-assets");
 
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
 const DEFAULT_LIMIT = 1;
@@ -31,6 +35,8 @@ const { values } = parseArgs({
     category: { type: "string" },
     limit: { type: "string", default: String(DEFAULT_LIMIT) },
     "force-regenerate": { type: "boolean", default: false },
+    "skip-brand": { type: "boolean", default: false },
+    "refresh-brand": { type: "boolean", default: false },
     "override-ineligible": { type: "string" },
     "base-url": { type: "string", default: process.env.SALTBOX_DEMOS_BASE_URL ?? DEFAULT_DEMOS_BASE_URL },
     help: { type: "boolean", short: "h", default: false },
@@ -56,8 +62,8 @@ if (!LOCAL_HOSTS.has(new URL(databaseUrl).hostname) && process.env.SALTBOX_ALLOW
   fail("Refusing to run demo generation against a non-local database.");
 }
 
-console.log("\nSALTBOX DEMO GENERATION - PHASE 8");
-console.log("Deterministic local-service demos | Cost: $0 | AI: none | Outreach: disabled\n");
+console.log("\nSALTBOX DEMO GENERATION");
+console.log("Deterministic brand-aware local-service demos | Cost: $0 | AI: none | Outreach: disabled\n");
 
 const db = createDatabase({ connectionString: databaseUrl, maxConnections: 4 });
 let failures = 0;
@@ -84,6 +90,15 @@ try {
     try {
       const result = await generateDemoForProspect(db, prospectId, {
         ...(values["force-regenerate"] ? { forceRegenerate: true } : {}),
+        ...(values["skip-brand"]
+          ? {}
+          : {
+              brandExtractor: createBrandExtractor(db, {
+                assetRoot: DEMO_ASSET_ROOT,
+                log: (stage, detail) => console.log(`    brand: ${stage}${detail ? ` ${JSON.stringify(detail)}` : ""}`),
+              }),
+            }),
+        ...(values["refresh-brand"] ? { refreshBrand: true } : {}),
         ...(values["override-ineligible"] !== undefined
           ? { overrideIneligible: { note: values["override-ineligible"] || "operator controlled-testing override" } }
           : {}),
@@ -133,7 +148,7 @@ function fail(message: string): never {
 function printUsage() {
   console.error(
     "Usage:\n" +
-      "  pnpm demo:generate --prospect <uuid> [--force-regenerate] [--override-ineligible [note]]\n" +
+      "  pnpm demo:generate --prospect <uuid> [--force-regenerate] [--skip-brand] [--refresh-brand] [--override-ineligible <note>]\n" +
       `  pnpm demo:generate --latest-qualified [--category <category>] [--limit ${DEFAULT_LIMIT}]\n\n` +
       `Safe limits: max ${MAX_LIMIT} demos per run. Only latest ${ELIGIBLE_POLICY_VERSION} qualified prospects\n` +
       "are eligible by default; --override-ineligible is a controlled-testing bypass that never\n" +

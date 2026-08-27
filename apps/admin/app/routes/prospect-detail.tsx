@@ -453,6 +453,49 @@ function DemoPanel({ demo, demosBaseUrl }: { demo: ProspectDemoView | null; demo
   );
 }
 
+function DemoBrandSummary({ brand }: { brand: Record<string, unknown> }) {
+  const logo = asStringRecord(brand.logo);
+  const palette = asStringRecord(brand.palette);
+  const swatchSource = asStringRecord(brand.paletteColors) ?? {};
+  const paletteColors = ["primary", "secondary", "accent"]
+    .map((key) => swatchSource[key])
+    .filter((color): color is string => typeof color === "string" && /^#[0-9a-f]{6}$/i.test(color));
+  const services = Array.isArray(brand.extractedServices)
+    ? (brand.extractedServices as unknown[]).filter((item): item is string => typeof item === "string")
+    : [];
+  const imageryCount = typeof brand.imageryCount === "number" ? brand.imageryCount : 0;
+  return (
+    <div className="demo-brand-summary">
+      <h3>Brand intelligence</h3>
+      <dl className="fact-list demo-facts">
+        <Fact
+          label="Logo"
+          value={logo ? `${String(logo.status ?? "fallback")} · ${String(logo.confidence ?? "none")} confidence` : "fallback"}
+        />
+        <Fact
+          label="Palette"
+          value={palette ? `${String(palette.status ?? "fallback")} · ${String(palette.confidence ?? "none")} confidence` : "fallback"}
+        />
+        <Fact label="Usable imagery" value={`${imageryCount} photo${imageryCount === 1 ? "" : "s"}`} />
+        <Fact label="Services from their site" value={services.length > 0 ? services.join(", ") : "None extracted"} />
+      </dl>
+      {paletteColors.length > 0 ? (
+        <div className="demo-swatches" aria-label="Extracted brand colors">
+          {paletteColors.map((color) => (
+            <span key={color} className="demo-swatch" style={{ backgroundColor: color }} title={color} />
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function asStringRecord(value: unknown): Record<string, unknown> | null {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
 function DemoPlanSummary({ summary }: { summary: Record<string, unknown> }) {
   const deficiencies = Array.isArray(summary.deficiencies)
     ? (summary.deficiencies as Array<{ code?: unknown; addressedBy?: unknown }>)
@@ -464,8 +507,24 @@ function DemoPlanSummary({ summary }: { summary: Record<string, unknown> }) {
     typeof summary.override === "object" && summary.override !== null
       ? (summary.override as { note?: unknown })
       : null;
+  const brand = asStringRecord(summary.brand);
+  const template = asStringRecord(summary.template);
+  const selectionReasons = Array.isArray(template?.selectionReasons)
+    ? (template.selectionReasons as unknown[]).filter((item): item is string => typeof item === "string")
+    : [];
   return (
     <div className="demo-plan-summary">
+      {brand ? <DemoBrandSummary brand={brand} /> : null}
+      {selectionReasons.length > 0 ? (
+        <div className="demo-composition-reasons">
+          <h3>Why this composition</h3>
+          <ul>
+            {selectionReasons.map((reason, index) => (
+              <li key={index}>{reason}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
       <h3>Demo-plan decisions</h3>
       {override ? (
         <p className="demo-override-note">

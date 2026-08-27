@@ -741,3 +741,46 @@ details summary { cursor: pointer; color: var(--green); font-size: 0.65rem; }
   color: var(--muted);
   font-size: 0.88rem;
 }
+
+/* Phase 9: brand-intelligence display ------------------------------------- */
+
+.demo-brand-summary { margin-bottom: 18px; }
+
+.demo-brand-summary h3,
+.demo-composition-reasons h3 {
+  margin: 0 0 10px;
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
+}
+
+.demo-swatches {
+  display: flex;
+  gap: 8px;
+  margin: 10px 0 4px;
+}
+
+.demo-swatch {
+  width: 34px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1px solid var(--line-strong);
+}
+
+.demo-composition-reasons { margin-bottom: 18px; }
+
+.demo-composition-reasons ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
+
+.demo-composition-reasons li {
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(242, 238, 228, 0.03);
+  color: var(--muted);
+  font-size: 0.88rem;
+}

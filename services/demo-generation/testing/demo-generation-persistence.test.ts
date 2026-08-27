@@ -6,6 +6,9 @@ import { activateSuppression } from "@saltbox/database/repositories/suppressions
 import { createTestDatabase, type TestDatabase } from "@saltbox/database/testing/harness";
 import { qualifyBusinessV2 } from "@saltbox/qualification/pipeline";
 import type { WebsiteIntelligenceResult } from "@saltbox/website-intelligence";
+import { persistBrandIntelligence } from "@saltbox/website-intelligence/brand/persistence";
+import type { BrandProfile } from "@saltbox/website-intelligence/brand/types";
+import { collectDemoSourceFacts } from "../src/facts.ts";
 import { generateDemoForProspect } from "../src/generate.ts";
 
 /**
@@ -110,7 +113,7 @@ function poorSiteIntelligence(url: string): WebsiteIntelligenceResult {
   };
 }
 
-async function seedQualifiedProspect(ctx: TestDatabase, name: string, externalId: string) {
+async function seedQualifiedProspect(ctx: TestDatabase, name: string, externalId: string, phone = "+1 801 555 0123") {
   const url = `https://${externalId}.test/`;
   const outcome = await qualifyBusinessV2(
     ctx.db,
@@ -120,7 +123,7 @@ async function seedQualifiedProspect(ctx: TestDatabase, name: string, externalId
       externalId,
       industry: "roofing",
       websiteUrl: url,
-      phone: "+1 801 555 0123",
+      phone,
       email: `hello@${externalId}.test`,
       sourceMetadata: { city: "Ogden", state: "UT", street: "238 25th St #5", postalCode: "84401" },
     },
@@ -140,7 +143,7 @@ test("full generation: qualified v2 prospect -> plan -> content -> Demo -> DemoV
     if (result.status !== "generated") return;
     const summary = result.summary;
     assert.equal(summary.versionNumber, 1);
-    assert.equal(summary.templateName, "local-service");
+    assert.equal(summary.templateName, "local-service-clean", "no brand evidence: typography-led composition");
     assert.equal(summary.templateVersion, "1.0.0");
     assert.ok(summary.deficiencyCodes.includes("CTA_MISSING"));
     assert.ok(summary.deficiencyCodes.includes("CONTACT_FORM_MISSING"));
@@ -161,8 +164,8 @@ test("full generation: qualified v2 prospect -> plan -> content -> Demo -> DemoV
       .selectAll()
       .where("id", "=", summary.demoVersionId)
       .executeTakeFirstOrThrow();
-    assert.equal(versionRow.content_input_version, "demo-content-v1");
-    assert.equal(versionRow.generated_content_version, "demo-copy-v1");
+    assert.equal(versionRow.content_input_version, "demo-content-v2");
+    assert.equal(versionRow.generated_content_version, "demo-copy-v2");
     assert.equal(versionRow.feature_set_id, outcome.featureSetId);
     assert.ok(versionRow.published_at !== null);
 
@@ -179,7 +182,7 @@ test("full generation: qualified v2 prospect -> plan -> content -> Demo -> DemoV
     const resolved = await resolveDemoByLocator(ctx.db, summary.locatorToken);
     assert.ok(resolved);
     assert.equal(resolved.version.demoVersionId, summary.demoVersionId);
-    assert.equal(resolved.version.content?.contentVersion, "demo-content-v1");
+    assert.equal(resolved.version.content?.contentVersion, "demo-content-v2");
     assert.equal(await resolveDemoByLocator(ctx.db, "unknown-token-000000000000"), undefined);
 
     // Admin read model exposes the demo with plan summary and lineage.
@@ -316,6 +319,192 @@ test("active suppression blocks generation even with the override", async () => 
       .where("prospect_id", "=", outcome.prospectId)
       .executeTakeFirstOrThrow();
     assert.equal(Number(demos.count), 0);
+  } finally {
+    await ctx.destroy();
+  }
+});
+
+function testBrandProfile(): BrandProfile {
+  return {
+    kind: "brand-intelligence",
+    profileVersion: "brand-profile-v1",
+    analyzerVersion: "brand-intelligence-v1",
+    websiteUrl: "https://brand-enhanced.test/",
+    finalUrl: "https://brand-enhanced.test/",
+    collectedAt: "2026-08-27T18:00:00.000Z",
+    durationMs: 15_000,
+    pagesInspected: [{ url: "https://brand-enhanced.test/", role: "homepage" }],
+    logo: {
+      status: "selected",
+      confidence: "high",
+      sourceUrl: "https://brand-enhanced.test/logo.png",
+      assetFile: "logo.png",
+      width: 320,
+      height: 96,
+      kind: "image",
+      reasons: ["placed in the site header"],
+      candidatesConsidered: 2,
+    },
+    palette: {
+      status: "extracted",
+      confidence: "high",
+      colors: {
+        primary: "#14395c",
+        secondary: "#0f2c47",
+        accent: "#c96f1e",
+        background: "#ffffff",
+        surface: "#f6f7f9",
+        text: "#1c2430",
+        onPrimary: "#ffffff",
+        onAccent: "#ffffff",
+      },
+      sources: ["header background"],
+      candidatesConsidered: 5,
+    },
+    imagery: {
+      selected: [
+        {
+          role: "hero",
+          sourceUrl: "https://brand-enhanced.test/photos/roof.jpg",
+          sourcePage: "https://brand-enhanced.test/",
+          assetFile: "image-1.jpg",
+          width: 1600,
+          height: 900,
+          alt: "Completed roof",
+          reasons: ["prominent above-the-fold placement"],
+        },
+      ],
+      consideredCount: 3,
+      rejectedExamples: [],
+    },
+    services: {
+      extracted: [
+        { name: "Roof Replacement", sourceText: "Roof Replacement", sourcePage: "https://brand-enhanced.test/", evidence: "heading" },
+        { name: "Solar", sourceText: "Solar", sourcePage: "https://brand-enhanced.test/", evidence: "nav" },
+      ],
+      consideredCount: 8,
+    },
+    identity: { displayName: "Brand Enhanced Roofing", metaDescription: null },
+    artifactRef: "20260827180000-brand-enhanced-roofing",
+    fallbacks: [],
+    assetBytesDownloaded: 250_000,
+  };
+}
+
+test("brand-enhanced regeneration: same Demo identity and locator, new v2 version with premium composition", async () => {
+  const ctx = await createTestDatabase();
+  try {
+    const outcome = await seedQualifiedProspect(ctx, "Brand Enhanced Roofing", "brand-enhanced");
+    // Phase-8-style generation first (no brand profile persisted yet).
+    const before = await generateDemoForProspect(ctx.db, outcome.prospectId);
+    assert.equal(before.status, "generated");
+    if (before.status !== "generated") return;
+    assert.equal(before.summary.templateName, "local-service-clean", "no brand evidence selects the clean composition");
+
+    // Persist brand intelligence (as the extractor would) and regenerate.
+    const facts = await collectDemoSourceFacts(ctx.db, outcome.prospectId);
+    assert.ok(facts?.websiteId);
+    await persistBrandIntelligence(ctx.db, {
+      businessId: outcome.businessId,
+      websiteId: facts.websiteId,
+      profile: testBrandProfile(),
+    });
+    const after = await generateDemoForProspect(ctx.db, outcome.prospectId);
+    assert.equal(after.status, "generated", "brand evidence changes the content hash, so a new version appends");
+    if (after.status !== "generated") return;
+
+    // Acceptance: same business, prospect, Demo, and public locator — new version.
+    assert.equal(after.summary.demoId, before.summary.demoId);
+    assert.equal(after.summary.locatorToken, before.summary.locatorToken);
+    assert.equal(after.summary.versionNumber, before.summary.versionNumber + 1);
+    assert.equal(after.summary.templateName, "local-service-premium", "hero photography selects the image-forward composition");
+    assert.equal(after.summary.plan.planVersion, "demo-plan-v2");
+    assert.equal(after.summary.plan.brand?.logo.confidence, "high");
+    assert.deepEqual(after.summary.plan.brand?.extractedServices, ["Roof Replacement", "Solar"]);
+
+    // The locator resolves the NEW current version with v2 content and assets.
+    const resolved = await resolveDemoByLocator(ctx.db, after.summary.locatorToken);
+    assert.ok(resolved);
+    assert.equal(resolved.version.demoVersionId, after.summary.demoVersionId);
+    assert.equal(resolved.version.templateName, "local-service-premium");
+    assert.equal(resolved.version.content?.contentVersion, "demo-content-v2");
+    const brandBlock = resolved.version.content?.brand as { logo?: { url?: string } } | undefined;
+    assert.match(brandBlock?.logo?.url ?? "", /^\/demo-assets\/20260827180000-brand-enhanced-roofing\/logo\.png$/);
+
+    // The old version is untouched history and still renderable content.
+    const versions = await ctx.db
+      .selectFrom("demo_version")
+      .select(["id", "version_number", "content_hash"])
+      .where("demo_id", "=", before.summary.demoId)
+      .orderBy("version_number")
+      .execute();
+    assert.equal(versions.length, 2);
+    assert.equal(versions[0]?.content_hash, before.summary.contentHash);
+
+    // Admin exposes the brand plan summary.
+    const detail = await getProspectDetail(ctx.db, outcome.prospectId);
+    const planBrand = (detail?.demo?.planSummary as { brand?: { imageryCount?: number } } | null)?.brand;
+    assert.equal(planBrand?.imageryCount, 1);
+  } finally {
+    await ctx.destroy();
+  }
+});
+
+test("the injected brand extractor runs only when needed and its failure is never fatal", async () => {
+  const ctx = await createTestDatabase();
+  try {
+    const outcome = await seedQualifiedProspect(ctx, "Extractor Roofing", "extractor-roofing");
+    let calls = 0;
+    const extractor = async () => {
+      calls += 1;
+      const facts = await collectDemoSourceFacts(ctx.db, outcome.prospectId);
+      await persistBrandIntelligence(ctx.db, {
+        businessId: outcome.businessId,
+        websiteId: facts!.websiteId!,
+        profile: testBrandProfile(),
+      });
+    };
+    const first = await generateDemoForProspect(ctx.db, outcome.prospectId, { brandExtractor: extractor });
+    assert.equal(first.status, "generated");
+    assert.equal(calls, 1, "extractor runs when no profile exists");
+    if (first.status !== "generated") return;
+    assert.equal(first.summary.templateName, "local-service-premium", "the fresh profile is used in the same run");
+
+    const second = await generateDemoForProspect(ctx.db, outcome.prospectId, { brandExtractor: extractor });
+    assert.equal(second.status, "unchanged");
+    assert.equal(calls, 1, "a persisted profile is reused without re-extraction");
+
+    const third = await generateDemoForProspect(ctx.db, outcome.prospectId, {
+      brandExtractor: extractor,
+      refreshBrand: true,
+    });
+    assert.equal(calls, 2, "--refresh-brand forces re-extraction");
+    // The re-extracted profile is a NEW evidence row, so provenance lineage
+    // changes and history appends — append-only evidence semantics.
+    assert.equal(third.status, "generated");
+    if (third.status === "generated" && second.status === "unchanged") {
+      assert.equal(third.summary.versionNumber, second.summary.versionNumber + 1);
+      assert.equal(third.summary.locatorToken, second.summary.locatorToken);
+    }
+
+    // A failing extractor degrades to fallback generation instead of failing.
+    const failing = await generateDemoForProspect(ctx.db, "99999999-9999-4999-8999-999999999999", {
+      brandExtractor: async () => {
+        throw new Error("network down");
+      },
+    });
+    assert.equal(failing.status, "not_found");
+    // A distinct phone keeps this a separate business identity (the shared
+    // fixture phone would legitimately cross-source-link it to the first).
+    const outcome2 = await seedQualifiedProspect(ctx, "Extractor Fallback Roofing", "extractor-fallback", "+1 801 555 0177");
+    const degraded = await generateDemoForProspect(ctx.db, outcome2.prospectId, {
+      brandExtractor: async () => {
+        throw new Error("network down");
+      },
+    });
+    assert.equal(degraded.status, "generated", "extractor failure still yields a high-quality fallback demo");
+    if (degraded.status !== "generated") return;
+    assert.equal(degraded.summary.templateName, "local-service-clean");
   } finally {
     await ctx.destroy();
   }

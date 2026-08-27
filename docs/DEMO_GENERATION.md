@@ -1,21 +1,28 @@
-# Demo Generation — Phase 8
+# Demo Generation — Phases 8 & 9
 
 Phase 8 takes a qualified-v2 prospect and automatically builds a personalized,
 viewable website demo. It crosses SaltBox from "finds good prospects" to
 "builds something sellable for them" — without outreach, AI, paid APIs, or
-fabricated claims.
+fabricated claims. Phase 9 layers deterministic brand/asset intelligence on
+top (see [BRAND_ASSET_INTELLIGENCE.md](BRAND_ASSET_INTELLIGENCE.md)): the
+business's real logo, colors, photography, and services drive one of three
+layout compositions, so the demo reads as a redesign of THEIR site.
 
 ```text
 qualified-v2 prospect
   -> demo eligibility
-  -> DemoPlan (demo-plan-v1)
-  -> structured business/demo content (demo-content-v1, demo-copy-v1)
-  -> deterministic template selection (local-service @ 1.0.0)
+  -> brand/asset intelligence (brand-intelligence-v1, Phase 9)
+  -> DemoPlan (demo-plan-v2)
+  -> structured business/demo content (demo-content-v2, demo-copy-v2)
+  -> deterministic composition selection (premium | bold | clean)
   -> persisted Demo + append-only DemoVersion + demo_published event
-  -> opaque public locator
+  -> opaque public locator (stable across regenerations)
   -> one renderer serving many demos (apps/demos, /d/<locator>)
-  -> admin VIEW DEMO link
+  -> admin VIEW DEMO link + brand panel
 ```
+
+Phase 8's `demo-plan-v1`/`demo-content-v1` versions remain persisted history
+and stay renderable through the frozen `local-service@1.0.0` template.
 
 ## One renderer, many demos
 

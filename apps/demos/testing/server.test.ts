@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { test } from "node:test";
 import { buildDemoContent, buildDemoPlan, newLocatorToken } from "@saltbox/demo-generation";
 import type { DemoSourceFacts } from "@saltbox/demo-generation/content-model";
@@ -14,6 +17,7 @@ import {
 import { openProspect } from "@saltbox/database/repositories/prospects";
 import { createTestDatabase, type TestDatabase } from "@saltbox/database/testing/harness";
 import { createDemosServer } from "../server/app.ts";
+import { loadDemoAsset } from "../server/assets.ts";
 
 async function seedRenderableDemo(ctx: TestDatabase) {
   const business = await createBusiness(ctx.db, { canonicalName: "Server Test Roofing", category: "roofing" });
@@ -121,6 +125,44 @@ test("a demo without a renderable current version returns a controlled error, no
     assert.match(await response.text(), /cannot be rendered/);
   } finally {
     await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+    await ctx.destroy();
+  }
+});
+
+test("the demo-asset route serves only validated local files and rejects traversal", async () => {
+  const ctx = await createTestDatabase();
+  const assetRoot = mkdtempSync(join(tmpdir(), "saltbox-demo-assets-"));
+  const ref = "20260827120000-server-test";
+  mkdirSync(join(assetRoot, ref), { recursive: true });
+  // Minimal valid PNG header bytes are enough for serving semantics.
+  writeFileSync(join(assetRoot, ref, "logo.png"), Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+  writeFileSync(join(assetRoot, "secret.txt"), "not-an-asset");
+  const server = createDemosServer({ db: ctx.db, assetRoot });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const address = server.address();
+  assert.ok(address !== null && typeof address !== "string");
+  const base = `http://127.0.0.1:${address.port}`;
+  try {
+    const ok = await fetch(`${base}/demo-assets/${ref}/logo.png`);
+    assert.equal(ok.status, 200);
+    assert.equal(ok.headers.get("content-type"), "image/png");
+    assert.equal(ok.headers.get("x-robots-tag"), "noindex, nofollow");
+    assert.equal((await ok.arrayBuffer()).byteLength, 8);
+
+    assert.equal((await fetch(`${base}/demo-assets/${ref}/missing.png`)).status, 404);
+    assert.equal((await fetch(`${base}/demo-assets/${ref}/logo.txt`)).status, 404);
+    assert.equal((await fetch(`${base}/demo-assets/not-a-valid-ref/logo.png`)).status, 404);
+    assert.equal((await fetch(`${base}/demo-assets/${ref}/..%2Fsecret.txt`)).status, 404);
+    assert.equal((await fetch(`${base}/demo-assets/..%2F..%2Fsecret/logo.png`)).status, 404);
+
+    // Direct unit checks on the loader guard.
+    assert.equal(loadDemoAsset(assetRoot, ref, "logo.png").status, 200);
+    assert.equal(loadDemoAsset(assetRoot, "../escape", "logo.png").status, 404);
+    assert.equal(loadDemoAsset(assetRoot, ref, "../secret.txt").status, 404);
+    assert.equal(loadDemoAsset(assetRoot, ref, "logo.svg").status, 404, "raw SVG is never served");
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+    rmSync(assetRoot, { recursive: true, force: true });
     await ctx.destroy();
   }
 });

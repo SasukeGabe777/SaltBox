@@ -61,7 +61,10 @@ export function findUnsupportedClaims(content: DemoContent): UnsupportedClaim[] 
   check("services.heading", content.services.heading);
   check("services.intro", content.services.intro);
   content.services.items.forEach((item, index) => {
-    check(`services.items[${index}].title`, item.title);
+    // Evidence-backed service names are the business's own site text
+    // (extracted provenance), not generated claims; descriptions are still
+    // generated and stay guarded.
+    if (item.evidence !== true) check(`services.items[${index}].title`, item.title);
     check(`services.items[${index}].description`, item.description);
   });
   check("trust.heading", content.trust.heading);

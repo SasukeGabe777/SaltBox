@@ -237,13 +237,44 @@ Phase 8 is implemented, tested, and documented in
   DEMO. The 141-test suite, `pnpm check`, `pnpm build`, and `pnpm db:verify`
   are green. Demo rows are machine-local; regenerate on another machine.
 
+## Phase 9 — Brand + Asset Intelligence / Bespoke Demo Quality (COMPLETE)
+
+Documented in `docs/BRAND_ASSET_INTELLIGENCE.md`. Summary:
+
+- `services/website-intelligence/src/brand/`: bounded deterministic brand
+  extraction (`brand-intelligence-v1` / `brand-profile-v1`) over the Phase 6
+  SSRF boundary — ≤3 pages, logo ranking + safe download (SVG rasterized),
+  contrast-safe palette from CSS evidence + logo dominant colors (sharp),
+  credential-badge-filtered photography (≤4, resized ≤1600px), lexicon-based
+  service extraction. Persisted as append-only website_analysis rows (no
+  migration); binaries in git-ignored `.data/demo-assets/<ref>/`.
+- `services/demo-generation`: demo-plan-v2 / demo-content-v2 / demo-copy-v2;
+  deterministic composition selection (premium: hero photo; bold: strong
+  identity; clean: fallback) with persisted reasons; evidence-backed services
+  lead with "From their current site" badges; claims guard skips extracted
+  names but still guards generated text; brand extraction is an injectable
+  hook (`--skip-brand` / `--refresh-brand`; failure never fatal).
+- `apps/demos`: three compositions over shared primitives + frozen Phase 8
+  template (old DemoVersions still render; v1+v2 content accepted);
+  validated `/demo-assets/` route; CSP `img-src 'self' data:`; inline SVG
+  favicon; QA expanded to 28 checks (lazy-load scroll, image loads, brand
+  mark, disclosure, noindex, no external scripts).
+- Admin demo panel shows brand intelligence (logo/palette/swatches/imagery/
+  extracted services) and composition reasons. CLI adds `pnpm demo:brand`.
+- Real smoke on this machine: Utah Roof and Solar regenerated on the SAME
+  demo + locator (`F-KUt2u_DQeDVYozejyZeU6d`, v4 — honest clean fallback,
+  its site is a parked lander) and Riverfront Roofing (qualified 69 in a new
+  acquire run) got the full showcase: real logo (high), extracted palette
+  (high), real shingle-photo hero, 7 extracted services, premium composition
+  (`0z-T5ccKc4k2PEeV6v-2DTEf`, v3). Both 28/28 QA. 158 tests green.
+
 ## Current roadmap
 
-Phase 9 is not started and is not authorized to start automatically.
+Phase 10 is not started and is not authorized to start automatically.
 Candidate directions (operator decision required): outreach foundations
-(consent/suppression-first message intent without sending), brand/asset
-extraction to strengthen demos, additional template families, or an
-operator-facing demo approval flow.
+(consent/suppression-first message intent without sending), an operator
+demo approval flow, additional template families beyond local-service, or
+review/social enrichment for testimonials.
 
 ## FOR CLAUDE: FIRST ACTIONS
 

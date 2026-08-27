@@ -170,7 +170,7 @@ export const TRUST_POINTS: readonly { title: string; description: string }[] = [
   },
   {
     title: "Straightforward Process",
-    description: "Describe the project, get a response, and know what happens next â€” no guesswork.",
+    description: "Describe the project, get a response, and know what happens next — no guesswork.",
   },
 ];
 

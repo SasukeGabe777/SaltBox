@@ -12,17 +12,22 @@
  */
 
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
+import { resolve } from "node:path";
 import type { Database } from "@saltbox/database/client";
 import { resolveDemoByLocator } from "@saltbox/database/queries/demos";
+import { loadDemoAsset } from "./assets.ts";
 import { esc } from "./html.ts";
 import { asDemoContent, resolveTemplateRenderer } from "./templates/registry.ts";
 
 const LOCATOR_PATH = /^\/d\/([A-Za-z0-9_-]{16,128})$/;
+const ASSET_PATH = /^\/demo-assets\/([^/]{1,80})\/([^/]{1,60})$/;
 
 const BASE_HEADERS: Record<string, string> = {
   "x-robots-tag": "noindex, nofollow",
+  // 'self' in img-src covers the locally stored, validated demo assets only;
+  // no other origin can ever be requested from a demo page.
   "content-security-policy":
-    "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+    "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
   "referrer-policy": "no-referrer",
   "x-content-type-options": "nosniff",
   "cache-control": "no-store",
@@ -30,11 +35,14 @@ const BASE_HEADERS: Record<string, string> = {
 
 export interface DemosAppOptions {
   db: Database;
+  /** Root of the local demo-asset store; defaults to ../../.data/demo-assets. */
+  assetRoot?: string;
   log?: (message: string, detail?: Record<string, unknown>) => void;
 }
 
 export function createDemosRequestHandler(options: DemosAppOptions) {
   const log = options.log ?? (() => {});
+  const assetRoot = options.assetRoot ?? resolve(process.cwd(), "../../.data/demo-assets");
   return async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
     const method = req.method ?? "GET";
     const path = (req.url ?? "/").split("?")[0] ?? "/";
@@ -57,6 +65,27 @@ export function createDemosRequestHandler(options: DemosAppOptions) {
       if (path === "/healthz") {
         res.writeHead(200, { ...BASE_HEADERS, "content-type": "text/plain; charset=utf-8" });
         res.end("ok");
+        return;
+      }
+      if (path === "/favicon.ico") {
+        // Pages carry an inline data: favicon; this quiets legacy requests.
+        res.writeHead(204, BASE_HEADERS);
+        res.end();
+        return;
+      }
+      const assetMatch = ASSET_PATH.exec(path);
+      if (assetMatch) {
+        const asset = loadDemoAsset(assetRoot, assetMatch[1]!, assetMatch[2]!);
+        if (asset.status !== 200 || !asset.body || !asset.contentType) {
+          sendHtml(res, 404, statusPage("Not found", "There is no asset at this address."));
+          return;
+        }
+        res.writeHead(200, {
+          ...BASE_HEADERS,
+          "content-type": asset.contentType,
+          "cache-control": "private, max-age=3600",
+        });
+        res.end(asset.body);
         return;
       }
       const match = LOCATOR_PATH.exec(path);

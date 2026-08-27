@@ -50,11 +50,42 @@ export interface DemoBusinessContent {
   websiteUrl?: string;
 }
 
+/** A processed local image asset served by the demo renderer. */
+export interface DemoImage {
+  /** Renderer-relative URL, e.g. "/demo-assets/<ref>/image-1.jpg". */
+  url: string;
+  width: number;
+  height: number;
+  alt: string;
+}
+
+/** Contrast-safe extracted brand palette (demo-content-v2). */
+export interface DemoPalette {
+  primary: string;
+  secondary: string;
+  accent: string;
+  background: string;
+  surface: string;
+  text: string;
+  onPrimary: string;
+  onAccent: string;
+}
+
 export interface DemoBrandContent {
   /** Deterministic category-based theme key understood by the template. */
   themeKey: string;
   /** Short mark rendered when no usable logo asset exists (e.g. initials). */
   logotype: string;
+  /** Extracted brand palette (v2); templates fall back to the theme key. */
+  palette?: DemoPalette;
+  /** The business's actual logo, locally stored and validated (v2). */
+  logo?: DemoImage;
+}
+
+/** Real business photography selected by brand intelligence (v2). */
+export interface DemoImageryContent {
+  hero?: DemoImage;
+  gallery: DemoImage[];
 }
 
 export interface DemoCta {
@@ -73,6 +104,8 @@ export interface DemoHeroContent {
 export interface DemoServiceItem {
   title: string;
   description: string;
+  /** True when the service name was extracted from the business's own site (v2). */
+  evidence?: boolean;
 }
 
 export interface DemoServicesContent {
@@ -145,6 +178,8 @@ export interface DemoContent {
   contentVersion: string;
   business: DemoBusinessContent;
   brand: DemoBrandContent;
+  /** Real business photography (v2); absent content renders asset-free. */
+  imagery?: DemoImageryContent;
   meta: DemoMetaContent;
   hero: DemoHeroContent;
   services: DemoServicesContent;
@@ -181,6 +216,23 @@ export interface DemoPlanTemplateSelection {
   templateName: string;
   templateVersion: string;
   reason: string;
+  /** demo-plan-v2: full deterministic composition-selection reasoning. */
+  selectionReasons?: string[];
+}
+
+/** demo-plan-v2: bounded summary of the brand intelligence used. */
+export interface DemoPlanBrandSummary {
+  analysisId: string;
+  profileVersion: string;
+  collectedAt: string;
+  logo: { status: string; confidence: string; sourceUrl?: string };
+  palette: { status: string; confidence: string; sources: string[] };
+  /** Extracted swatches for read-only admin display. */
+  paletteColors?: { primary: string; secondary: string; accent: string };
+  imageryCount: number;
+  extractedServices: string[];
+  artifactRef: string | null;
+  fallbacks: string[];
 }
 
 /** Deterministic, inspectable pre-render plan (demo-plan-v1). */
@@ -192,6 +244,8 @@ export interface DemoPlan {
   intelligence: { analysisId: string; analyzerVersion: string; calculatedAt: string } | null;
   deficiencies: DemoDeficiency[];
   template: DemoPlanTemplateSelection;
+  /** demo-plan-v2: null when no brand intelligence exists (full fallback). */
+  brand?: DemoPlanBrandSummary | null;
   sections: string[];
   ctaStrategy: { primary: DemoCta; secondary?: DemoCta; rationale: string };
   contactStrategy: {
@@ -214,10 +268,19 @@ export interface DemoPlan {
   override?: { flag: string; note: string };
 }
 
+/** Persisted brand-intelligence result available to demo generation. */
+export interface DemoBrandFacts {
+  analysisId: string;
+  calculatedAt: string;
+  /** brand-profile-v1 structured findings (BrandProfile shape). */
+  profile: Record<string, unknown>;
+}
+
 /** Deterministic facts gathered from persisted SaltBox state (never recrawled). */
 export interface DemoSourceFacts {
   prospectId: string;
   businessId: string;
+  websiteId?: string;
   businessName: string;
   category: string | null;
   lifecycleState: string;
@@ -246,5 +309,7 @@ export interface DemoSourceFacts {
     overallScore: number;
     calculatedAt: string;
   };
+  /** Latest persisted brand-intelligence-v1 profile, when one exists. */
+  brand?: DemoBrandFacts;
   activeSuppressionIds: string[];
 }

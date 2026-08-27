@@ -15,15 +15,16 @@
   },
   "scripts": {
     "generate": "node scripts/generate.ts",
+    "brand": "node scripts/inspect-brand.ts",
     "check": "tsc --noEmit",
     "test": "node --test \"testing/**/*.test.ts\""
   },
   "dependencies": {
-    "@saltbox/database": "workspace:*"
+    "@saltbox/database": "workspace:*",
+    "@saltbox/website-intelligence": "workspace:*"
   },
   "devDependencies": {
     "@saltbox/qualification": "workspace:*",
-    "@saltbox/website-intelligence": "workspace:*",
     "@types/node": "^26.3.0",
     "typescript": "5.9.3"
   }

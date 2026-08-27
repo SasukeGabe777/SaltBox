@@ -20,6 +20,7 @@
     "discovery:compare": "pnpm --filter @saltbox/discovery compare",
     "website:intelligence": "pnpm --filter @saltbox/website-intelligence intelligence",
     "demo:generate": "pnpm --filter @saltbox/demo-generation generate",
+    "demo:brand": "pnpm --filter @saltbox/demo-generation brand",
     "demo:qa": "pnpm --filter @saltbox/demos qa",
     "demos:dev": "pnpm --filter @saltbox/demos dev",
     "demos:start": "pnpm --filter @saltbox/demos start",
