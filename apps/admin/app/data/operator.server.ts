@@ -24,6 +24,10 @@ import {
 } from "@saltbox/database/queries/operator";
 import { approveDemoVersion, rejectDemoVersion } from "@saltbox/demo-generation/approval";
 import { enqueueOperatorRun } from "@saltbox/operator/enqueue";
+import { MAX_BULK_PREPARATION } from "@saltbox/outreach/config";
+import { prepareOutreach } from "@saltbox/outreach/prepare";
+import { listOutreachQueue, type OutreachQueueItem } from "@saltbox/outreach/queries";
+import { suppressOutreach, type OperatorSuppressionScope } from "@saltbox/outreach/suppress";
 import {
   parseAcquisitionParameters,
   parseDemoGenerateParameters,
@@ -102,6 +106,74 @@ export async function dispatchOperatorIntent(
   const enqueueOptions = { actorRef, ...(options.startWorker === false ? { startWorker: false } : {}) };
 
   switch (intent) {
+    case "prepare-outreach": {
+      const prospectId = String(form.get("prospectId") ?? "");
+      if (!isUuid(prospectId)) return { ok: false, intent, message: "Invalid prospect identifier." };
+      const result = await prepareOutreach(db, { prospectId, actorRef });
+      if (result.status === "ineligible") {
+        return {
+          ok: false,
+          intent,
+          message: "Outreach preparation was blocked by the current safety check.",
+          detail: result.eligibility.reasons.map((reason) => `${reason.code}: ${reason.detail}`),
+        };
+      }
+      return {
+        ok: true,
+        intent,
+        message: result.message.reused
+          ? "The existing SEND-READY message was reused; nothing was sent."
+          : "Outreach is SEND-READY. No email was sent.",
+      };
+    }
+
+    case "suppress-outreach": {
+      const prospectId = String(form.get("prospectId") ?? "");
+      const scope = String(form.get("scope") ?? "prospect") as OperatorSuppressionScope;
+      const reason = String(form.get("reason") ?? "").trim();
+      const contactMethodId = String(form.get("contactMethodId") ?? "").trim();
+      if (!isUuid(prospectId) || !["prospect", "business", "contact_method"].includes(scope)) {
+        return { ok: false, intent, message: "Invalid suppression request." };
+      }
+      if (reason.length < 3 || reason.length > 400 || (scope === "contact_method" && !isUuid(contactMethodId))) {
+        return { ok: false, intent, message: "A valid suppression scope and reason are required." };
+      }
+      const result = await suppressOutreach(db, {
+        prospectId,
+        scope,
+        reason,
+        actorRef,
+        ...(contactMethodId ? { contactMethodId } : {}),
+      });
+      return {
+        ok: true,
+        intent,
+        message: `DO NOT CONTACT recorded; ${result.invalidatedMessageCount} pending message intent(s) made ineligible.`,
+      };
+    }
+
+    case "prepare-outreach-batch": {
+      const parsedLimit = Number(form.get("limit") ?? "3");
+      if (!Number.isInteger(parsedLimit) || parsedLimit < 1 || parsedLimit > MAX_BULK_PREPARATION) {
+        return { ok: false, intent, message: `Batch limit must be between 1 and ${MAX_BULK_PREPARATION}.` };
+      }
+      const queue = await listOutreachQueue(db, 50);
+      const candidates = queue.filter((item) => item.status === "READY_FOR_OUTREACH").slice(0, parsedLimit);
+      const prepared: string[] = [];
+      const blocked: string[] = [];
+      for (const candidate of candidates) {
+        const result = await prepareOutreach(db, { prospectId: candidate.prospectId, actorRef });
+        if (result.status === "send_ready") prepared.push(candidate.businessName);
+        else blocked.push(`${candidate.businessName}: ${result.eligibility.reasons.map((reason) => reason.code).join(", ")}`);
+      }
+      return {
+        ok: true,
+        intent,
+        message: `Prepared ${prepared.length} SEND-READY message(s); no email was sent.`,
+        detail: [...prepared.map((name) => `SEND_READY: ${name}`), ...blocked],
+      };
+    }
+
     case "approve-version": {
       const demoId = String(form.get("demoId") ?? "");
       const demoVersionId = String(form.get("demoVersionId") ?? "");
@@ -252,6 +324,14 @@ export async function loadProspectDemoId(prospectId: string): Promise<string | u
   return demo?.id;
 }
 
+export async function loadOutreachQueue(limit = 50): Promise<OutreachQueueItem[]> {
+  return listOutreachQueue(database, limit);
+}
+
 export function acquisitionCategories(): string[] {
   return supportedAcquisitionCategories("all");
+}
+
+function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 }

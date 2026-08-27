@@ -41,7 +41,7 @@ export type ProspectLifecycleState = "discovered" | "engaged" | "enriching" | "e
 
 export type SubjectKind = "business" | "contact" | "contact_method" | "domain" | "prospect" | "source_record" | "website";
 
-export type SuppressionScope = "address_pattern" | "business" | "channel" | "contact" | "contact_method" | "global";
+export type SuppressionScope = "address_pattern" | "business" | "channel" | "contact" | "contact_method" | "global" | "prospect";
 
 export type SuppressionStatus = "active" | "expired" | "revoked";
 
@@ -519,8 +519,10 @@ export interface MergeRecord {
 }
 
 export interface Message {
+  approved_at_snapshot: Timestamp | null;
   body: string | null;
   body_ref: string | null;
+  body_template_version: string | null;
   business_id: string;
   campaign_enrollment_id: string | null;
   channel: ContactChannel;
@@ -529,13 +531,29 @@ export interface Message {
   content_version: string | null;
   conversation_id: string | null;
   created_at: Generated<Timestamp>;
+  demo_approval_review_id: string | null;
+  demo_id: string | null;
+  demo_public_locator_id: string | null;
+  demo_version_id: string | null;
   direction: MessageDirection;
+  hosted_publication_id: string | null;
   id: Generated<string>;
   idempotency_key: string;
+  invalidated_at: Timestamp | null;
+  preparation_metadata: Json | null;
+  prepared_at: Timestamp | null;
   prospect_id: string | null;
+  public_url: string | null;
   scheduled_at: Timestamp | null;
+  selected_contact_confidence: ConfidenceBand | null;
+  selected_contact_reason: string | null;
+  selected_contact_source_ref: string | null;
+  send_ready_at: Timestamp | null;
+  sender_profile_version: string | null;
   sequence_step: number | null;
+  status: Generated<string>;
   subject: string | null;
+  subject_template_version: string | null;
   template_ref: string | null;
 }
 
@@ -818,6 +836,7 @@ export interface Suppression {
   evidence_ref: string | null;
   expires_at: Timestamp | null;
   id: Generated<string>;
+  prospect_id: string | null;
   reason: string;
   revoke_authorization_ref: string | null;
   revoked_at: Timestamp | null;

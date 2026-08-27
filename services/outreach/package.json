@@ -1,0 +1,34 @@
+{
+  "name": "@saltbox/outreach",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.0.0 <25"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./config": "./src/config.ts",
+    "./contacts": "./src/contact-selection.ts",
+    "./eligibility": "./src/eligibility.ts",
+    "./message": "./src/message.ts",
+    "./prepare": "./src/prepare.ts",
+    "./queries": "./src/queries.ts",
+    "./suppress": "./src/suppress.ts",
+    "./provider": "./src/provider.ts"
+  },
+  "scripts": {
+    "check": "tsc --noEmit",
+    "test": "node --test \"testing/**/*.test.ts\""
+  },
+  "dependencies": {
+    "@saltbox/database": "workspace:*",
+    "kysely": "^0.29.5"
+  },
+  "devDependencies": {
+    "@saltbox/demo-generation": "workspace:*",
+    "@saltbox/qualification": "workspace:*",
+    "@types/node": "^26.3.0",
+    "typescript": "5.9.3"
+  }
+}

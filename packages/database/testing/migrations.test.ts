@@ -94,7 +94,7 @@ test("replaying the migration history creates every ADR-004 table", async () => 
 
 test("the initial canonical event registry is seeded", async () => {
   const rows = await ctx.db.selectFrom("event_type").select(["name", "category"]).execute();
-  assert.equal(rows.length, 39);
+  assert.equal(rows.length, 44);
   const byName = new Map(rows.map((r) => [r.name, r.category]));
   assert.equal(byName.get("demo_view"), "analytics");
   assert.equal(byName.get("email_delivered"), "domain");
@@ -106,4 +106,10 @@ test("the initial canonical event registry is seeded", async () => {
   assert.equal(byName.get("demo_qa_failed"), "audit");
   assert.equal(byName.get("acquisition_run_started"), "audit");
   assert.equal(byName.get("retry_requested"), "audit");
+  // Phase 11 prepares provider-neutral intent and explicitly stops before send.
+  assert.equal(byName.get("outreach_eligibility_checked"), "audit");
+  assert.equal(byName.get("outreach_prepared"), "domain");
+  assert.equal(byName.get("message_intent_created"), "domain");
+  assert.equal(byName.get("message_send_ready"), "domain");
+  assert.equal(byName.get("outreach_suppressed"), "audit");
 });

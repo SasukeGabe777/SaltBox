@@ -83,6 +83,7 @@ export default function Dashboard({ loaderData, actionData }: Route.ComponentPro
           <Link className="button button-quiet" to="/runs">
             All runs{operator.activeRunCount > 0 ? ` · ${operator.activeRunCount} active` : ""}
           </Link>
+          <Link className="button button-quiet" to="/outreach">Outreach queue</Link>
         </div>
         <OperatorMessage result={actionData ?? null} />
         <Form method="post" className="operator-form" aria-label="Start acquisition">

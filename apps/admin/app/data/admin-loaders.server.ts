@@ -6,10 +6,12 @@ import {
   type ProspectListFilters,
   type ProspectOverview,
 } from "@saltbox/database/queries/admin";
+import { getProspectOutreachView, type ProspectOutreachView } from "@saltbox/outreach/queries";
 
 export interface AdminQueryService {
   getOverview(filters: ProspectListFilters): Promise<ProspectOverview>;
   getDetail(prospectId: string): Promise<ProspectDetail | undefined>;
+  getOutreach?(prospectId: string): Promise<ProspectOutreachView>;
 }
 
 const globalDatabase = globalThis as typeof globalThis & { __saltboxAdminDatabase?: Database };
@@ -19,6 +21,7 @@ if (process.env.NODE_ENV !== "production") globalDatabase.__saltboxAdminDatabase
 export const adminQueryService: AdminQueryService = {
   getOverview: (filters) => getProspectOverview(database, filters),
   getDetail: (prospectId) => getProspectDetail(database, prospectId),
+  getOutreach: (prospectId) => getProspectOutreachView(database, prospectId),
 };
 
 export function parseProspectFilters(url: string): ProspectListFilters {
@@ -51,7 +54,7 @@ export function demosBaseUrl(): string {
 export async function loadProspectRequest(
   prospectId: string | undefined,
   service: AdminQueryService = adminQueryService
-): Promise<{ detail: ProspectDetail; loadedAt: string; demosBaseUrl: string }> {
+): Promise<{ detail: ProspectDetail; outreach: ProspectOutreachView | null; loadedAt: string; demosBaseUrl: string }> {
   if (!prospectId || !isUuid(prospectId)) {
     throw new Response("Malformed prospect identifier.", { status: 400, statusText: "Invalid prospect ID" });
   }
@@ -59,7 +62,8 @@ export async function loadProspectRequest(
   if (!detail) {
     throw new Response("Prospect not found.", { status: 404, statusText: "Prospect not found" });
   }
-  return { detail, loadedAt: new Date().toISOString(), demosBaseUrl: demosBaseUrl() };
+  const outreach = service.getOutreach ? await service.getOutreach(prospectId) : null;
+  return { detail, outreach, loadedAt: new Date().toISOString(), demosBaseUrl: demosBaseUrl() };
 }
 
 export function rethrowAsOperatorResponse(error: unknown): never {

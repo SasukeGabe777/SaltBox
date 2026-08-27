@@ -40,6 +40,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <span>SaltBox</span>
             </Link>
             <div className="header-context">
+              <Link className="header-link" to="/outreach">OUTREACH QUEUE</Link>
               <span className="live-dot" aria-hidden="true" />
               <span>LOCAL OPERATOR VIEW</span>
             </div>

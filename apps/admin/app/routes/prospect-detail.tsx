@@ -10,6 +10,7 @@ import type {
   ProspectDemoView,
 } from "@saltbox/database/queries/demos";
 import type { OperatorRunView } from "@saltbox/database/queries/operator";
+import type { ProspectOutreachView } from "@saltbox/outreach/queries";
 import type { Route } from "./+types/prospect-detail";
 import { RefreshControl } from "../components/RefreshControl";
 import { WebsiteIntelligencePanel } from "../components/WebsiteIntelligencePanel";
@@ -91,7 +92,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
 }
 
 export default function ProspectDetailPage({ loaderData, actionData }: Route.ComponentProps) {
-  const { detail, loadedAt, demosBaseUrl, runs } = loaderData;
+  const { detail, outreach, loadedAt, demosBaseUrl, runs } = loaderData;
   const [selectedScoreId, setSelectedScoreId] = useState(detail.currentScoreId ?? detail.scoreHistory[0]?.id ?? "");
 
   useEffect(() => {
@@ -250,6 +251,10 @@ export default function ProspectDetailPage({ loaderData, actionData }: Route.Com
         actionResult={actionData ?? null}
         runs={runs}
       />
+
+      {outreach ? (
+        <OutreachPanel outreach={outreach} prospectId={detail.prospectId} actionResult={actionData ?? null} />
+      ) : null}
 
       <section className="panel history-panel">
         <div className="panel-heading split-heading">
@@ -416,6 +421,99 @@ export default function ProspectDetailPage({ loaderData, actionData }: Route.Com
         )}
       </section>
     </main>
+  );
+}
+
+function OutreachPanel({
+  outreach,
+  prospectId,
+  actionResult,
+}: {
+  outreach: ProspectOutreachView;
+  prospectId: string;
+  actionResult: OperatorActionResult | null;
+}) {
+  const message = outreach.message;
+  const canPrepare = outreach.status === "READY_FOR_OUTREACH" || outreach.status === "SEND_READY" || outreach.status === "STALE_PREPARATION";
+  const suppressionContact = outreach.eligibility.contact?.contactMethodId ?? message?.contactMethodId;
+  return (
+    <section className="panel outreach-panel">
+      <div className="panel-heading split-heading">
+        <div>
+          <p className="section-kicker">OUTREACH</p>
+          <h2>Send-ready preparation</h2>
+        </div>
+        <span className="no-send-chip">NO SEND CAPABILITY</span>
+      </div>
+      {actionResult?.intent.includes("outreach") ? <OperatorMessage result={actionResult} /> : null}
+
+      <div className={`outreach-readiness outreach-${outreach.status.toLowerCase().replaceAll("_", "-")}`}>
+        <strong>{outreach.status.replaceAll("_", " ")}</strong>
+        <span>Eligibility is current, derived, and must be checked again immediately before any future provider send.</span>
+      </div>
+
+      <dl className="fact-list outreach-facts">
+        <Fact label="Fit score" value={outreach.fitScore === null ? "Not available" : String(outreach.fitScore)} />
+        <Fact label="Selected contact" value={outreach.eligibility.contact?.email ?? message?.to ?? "Needs contact"} />
+        <Fact label="Selection reason" value={outreach.eligibility.contact?.selectionReason.replaceAll("_", " ") ?? message?.contactSelectionReason.replaceAll("_", " ") ?? "Not selected"} />
+        <Fact label="Campaign" value={`${outreach.campaign.name} · ${outreach.campaign.version}`} />
+        <Fact label="Sequence" value={`${outreach.sequence.name} · v${outreach.sequence.version} · step 1`} />
+        <Fact label="Approved demo" value={outreach.eligibility.artifact ? `v${outreach.eligibility.artifact.demoVersionNumber}` : message ? `v${message.demoVersionNumber}` : "Not available"} />
+      </dl>
+
+      {outreach.eligibility.reasons.length > 0 ? (
+        <div className="eligibility-reasons">
+          <strong>Current eligibility blockers</strong>
+          <ul>{outreach.eligibility.reasons.map((reason) => <li key={reason.code}><code>{reason.code}</code> {reason.detail}</li>)}</ul>
+        </div>
+      ) : <p className="operator-note">All Phase 11 eligibility checks pass.</p>}
+
+      <div className="operator-action-row outreach-actions">
+        <Form method="post">
+          <input type="hidden" name="intent" value="prepare-outreach" />
+          <input type="hidden" name="prospectId" value={prospectId} />
+          <button className="button button-primary" type="submit" disabled={!canPrepare}>PREPARE OUTREACH</button>
+        </Form>
+        <Form method="post" className="suppression-form">
+          <input type="hidden" name="intent" value="suppress-outreach" />
+          <input type="hidden" name="prospectId" value={prospectId} />
+          {suppressionContact ? <input type="hidden" name="contactMethodId" value={suppressionContact} /> : null}
+          <select name="scope" defaultValue="prospect" aria-label="Suppression scope">
+            <option value="prospect">This prospect</option>
+            <option value="business">Entire business</option>
+            {suppressionContact ? <option value="contact_method">Selected email</option> : null}
+          </select>
+          <input name="reason" required minLength={3} maxLength={400} placeholder="Do-not-contact reason" />
+          <button className="button button-quiet" type="submit">DO NOT CONTACT</button>
+        </Form>
+      </div>
+
+      {message ? (
+        <article className="email-preview">
+          <div className="email-preview-heading">
+            <div><span>TO</span><strong>{message.to}</strong></div>
+            <div><span>SUBJECT</span><strong>{message.subject}</strong></div>
+          </div>
+          <pre>{message.body}</pre>
+          <dl className="fact-list email-metadata">
+            <Fact label="Message intent" value={message.messageId} />
+            <Fact label="Prepared" value={formatDateTime(message.preparedAt)} />
+            <Fact label="Message/template" value={`${message.contentVersion} · ${message.subjectTemplateVersion} · ${message.bodyTemplateVersion}`} />
+            <Fact label="Demo pin" value={`v${message.demoVersionNumber} · ${message.demoVersionId}`} />
+            <Fact label="Provider attempts" value={`${message.providerAttemptCount} · ${message.deliveryStatus.replaceAll("_", " ")}`} />
+          </dl>
+          <a className="view-demo-link" href={message.demoUrl} target="_blank" rel="noreferrer">APPROVED HOSTED DEMO ↗</a>
+        </article>
+      ) : null}
+
+      {outreach.senderRequirements.length > 0 ? (
+        <div className="phase12-requirements">
+          <strong>Required before Phase 12 delivery</strong>
+          <ul>{outreach.senderRequirements.map((requirement) => <li key={requirement}>{requirement}</li>)}</ul>
+        </div>
+      ) : null}
+      <p className="operator-note">SEND-READY is a persisted provider-neutral intent, not a send. There is intentionally no SEND button.</p>
+    </section>
   );
 }
 

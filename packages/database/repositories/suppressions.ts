@@ -26,6 +26,7 @@ export interface ActivateSuppressionInput {
   actorType: ActorType;
   actorRef?: string;
   businessId?: string;
+  prospectId?: string;
   contactId?: string;
   contactMethodId?: string;
   channel?: ContactChannel;
@@ -45,6 +46,7 @@ export async function activateSuppression(db: Database, input: ActivateSuppressi
       actor_type: input.actorType,
       actor_ref: input.actorRef ?? null,
       business_id: input.businessId ?? null,
+      prospect_id: input.prospectId ?? null,
       contact_id: input.contactId ?? null,
       contact_method_id: input.contactMethodId ?? null,
       channel: input.channel ?? null,
@@ -82,6 +84,7 @@ export async function revokeSuppression(db: Database, input: RevokeSuppressionIn
 
 export interface OutreachEligibilityInput {
   businessId: string;
+  prospectId?: string;
   channel: ContactChannel;
   contactId?: string;
   contactMethodId?: string;
@@ -136,6 +139,9 @@ export async function checkOutreachEligibility(
         eb.and([eb("scope", "=", "business" as const), eb("business_id", "=", input.businessId)]),
         eb.and([eb("scope", "=", "channel" as const), eb("channel", "=", input.channel)]),
       ];
+      if (input.prospectId !== undefined) {
+        scopes.push(eb.and([eb("scope", "=", "prospect" as const), eb("prospect_id", "=", input.prospectId)]));
+      }
       if (input.contactId !== undefined) {
         scopes.push(eb.and([eb("scope", "=", "contact" as const), eb("contact_id", "=", input.contactId)]));
       }

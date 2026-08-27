@@ -162,8 +162,8 @@ pnpm build
 
 `apps/website` is an Astro 6 + TypeScript faithful port of the approved marketing prototype. It builds to static HTML by default and contains no backend, analytics, CMS, deployment credentials, or Cloudflare account configuration. See [apps/website/README.md](apps/website/README.md) for app-specific guidance.
 
-`apps/admin` is the local-only, read-only React Router 8 Framework Mode
-prospect viewer. With PostgreSQL running, start it using `pnpm admin:dev` and
+`apps/admin` is the local-only React Router 8 Framework Mode operator surface
+with a deliberately narrow mutation boundary. With PostgreSQL running, start it using `pnpm admin:dev` and
 open `http://127.0.0.1:5174`. It reads through the SaltBox database query
 boundary; production deployment is prohibited until authentication and
 authorization are implemented. See [apps/admin/README.md](apps/admin/README.md).
@@ -258,6 +258,21 @@ See [docs/OPERATOR_APPROVAL.md](docs/OPERATOR_APPROVAL.md),
 [docs/DEMO_HOSTING.md](docs/DEMO_HOSTING.md),
 [services/operator/README.md](services/operator/README.md), and
 [packages/artifact-store/README.md](packages/artifact-store/README.md).
+
+Phase 11 extends `READY FOR OUTREACH` to a provider-neutral `SEND-READY`
+message intent. It deterministically selects a persisted email, rechecks all
+suppression and demo invariants, renders evidence-backed versioned copy, and
+pins the exact approved DemoVersion/publication. The prospect case file and
+`/outreach` queue expose the exact payload and structured blockers.
+
+```text
+READY FOR OUTREACH -> CONTACT -> ELIGIBILITY -> MESSAGE INTENT -> SEND-READY
+```
+
+There is no provider adapter, send endpoint, SEND button, SMTP client, or
+external delivery in Phase 11. See
+[docs/OUTREACH_FOUNDATIONS.md](docs/OUTREACH_FOUNDATIONS.md) and
+[services/outreach/README.md](services/outreach/README.md).
 
 ## Fresh-machine bootstrap
 

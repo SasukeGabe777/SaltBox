@@ -1015,6 +1015,99 @@ details summary { cursor: pointer; color: var(--green); font-size: 0.65rem; }
 .readiness-banner ul { margin: 8px 0 0; padding-left: 18px; color: var(--salt-soft); font-size: 0.86rem; }
 .readiness-banner p { margin: 8px 0 0; color: var(--salt-soft); font-size: 0.86rem; }
 
+/* Phase 11 outreach preparation — preview and safety state only. */
+.header-link {
+  color: var(--salt-soft);
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-decoration: none;
+}
+.header-link:hover { color: var(--green); }
+.outreach-panel { margin-top: 24px; }
+.no-send-chip,
+.outreach-status {
+  border: 1px solid rgba(242, 238, 228, 0.22);
+  border-radius: 999px;
+  color: var(--salt-soft);
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.07em;
+  padding: 6px 9px;
+  white-space: nowrap;
+}
+.no-send-chip { border-color: rgba(255, 190, 92, 0.45); color: #ffd38a; }
+.outreach-readiness {
+  align-items: flex-start;
+  background: rgba(242, 238, 228, 0.035);
+  border: 1px solid rgba(242, 238, 228, 0.12);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 18px;
+  padding: 14px 16px;
+}
+.outreach-readiness strong { font-family: var(--mono); font-size: 0.8rem; letter-spacing: 0.08em; }
+.outreach-readiness span { color: var(--salt-soft); font-size: 0.85rem; }
+.outreach-send-ready,
+.outreach-ready-for-outreach { background: var(--green-soft); border-color: rgba(42, 224, 138, 0.4); }
+.outreach-suppressed,
+.outreach-stale-preparation { border-color: rgba(255, 112, 112, 0.38); }
+.outreach-facts { margin-bottom: 18px; }
+.eligibility-reasons,
+.phase12-requirements {
+  background: rgba(242, 238, 228, 0.035);
+  border-left: 3px solid rgba(255, 190, 92, 0.7);
+  margin: 16px 0;
+  padding: 12px 14px;
+}
+.eligibility-reasons ul,
+.phase12-requirements ul { color: var(--salt-soft); margin: 8px 0 0; padding-left: 20px; }
+.eligibility-reasons code { color: #ffd38a; font-size: 0.72rem; }
+.outreach-actions { align-items: stretch; flex-wrap: wrap; margin: 18px 0; }
+.suppression-form { display: flex; flex: 1 1 560px; flex-wrap: wrap; gap: 8px; }
+.suppression-form input { flex: 1 1 220px; }
+.email-preview {
+  background: #f7f4ec;
+  border-radius: 14px;
+  color: #18201b;
+  margin: 20px 0;
+  overflow: hidden;
+}
+.email-preview-heading {
+  border-bottom: 1px solid rgba(24, 32, 27, 0.15);
+  display: grid;
+  gap: 10px;
+  padding: 16px 18px;
+}
+.email-preview-heading div { display: grid; grid-template-columns: 72px 1fr; gap: 10px; }
+.email-preview-heading span { color: #5b665f; font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.08em; }
+.email-preview-heading strong { font-size: 0.9rem; }
+.email-preview pre {
+  color: #18201b;
+  font-family: Inter, sans-serif;
+  font-size: 0.9rem;
+  line-height: 1.65;
+  margin: 0;
+  padding: 20px 18px;
+  white-space: pre-wrap;
+}
+.email-preview .email-metadata { border-top: 1px solid rgba(24, 32, 27, 0.12); margin: 0; padding: 14px 18px; }
+.email-preview .email-metadata dt { color: #5b665f; }
+.email-preview .view-demo-link { display: inline-block; margin: 0 18px 18px; }
+.outreach-page { padding-bottom: 64px; }
+.outreach-control-panel,
+.outreach-queue-panel { margin-top: 24px; }
+.outreach-status.status-send-ready { border-color: rgba(42, 224, 138, 0.6); color: var(--green); }
+.outreach-status.status-suppressed { border-color: rgba(255, 112, 112, 0.5); color: #ff9a9a; }
+
+@media (max-width: 720px) {
+  .header-link { display: none; }
+  .email-preview-heading div { grid-template-columns: 1fr; }
+  .suppression-form { flex-direction: column; }
+}
+
 .demo-operations {
   margin: 18px 0;
   padding: 16px;

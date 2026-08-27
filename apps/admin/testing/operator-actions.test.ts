@@ -13,6 +13,7 @@ import { getApprovedDemoVersion } from "@saltbox/database/repositories/demo-revi
 import { listOperatorRuns } from "@saltbox/database/repositories/operator-runs";
 import { createTestDatabase, type TestDatabase } from "@saltbox/database/testing/harness";
 import { generateDemoForProspect } from "@saltbox/demo-generation/generate";
+import { approveDemoVersion } from "@saltbox/demo-generation/approval";
 import { persistDemoQaResult } from "@saltbox/demo-generation/qa";
 import { qaReport, seedQualifiedProspect } from "../../../services/demo-generation/testing/fixtures.ts";
 import { assertSameOrigin, dispatchOperatorIntent } from "../app/data/operator.server.ts";
@@ -156,6 +157,52 @@ test("run intents queue bounded work and refuse invalid parameters", async () =>
       "only valid submissions created runs",
     );
     assert.ok(runs.every((run) => run.status === "queued" && run.actorRef === "test-operator"));
+  } finally {
+    await ctx.destroy();
+  }
+});
+
+test("outreach intents prepare and suppress without exposing a send action", async () => {
+  const ctx = await createTestDatabase();
+  try {
+    const { outcome, summary } = await seedDemo(ctx);
+    await approveDemoVersion(ctx.db, { demoId: summary.demoId, demoVersionId: summary.demoVersionId, actor: { actorRef: ACTOR.actorRef } });
+    await ctx.db.insertInto("demo_publication").values({
+      demo_id: summary.demoId,
+      demo_version_id: summary.demoVersionId,
+      environment: "hosted",
+      status: "published",
+      public_url: `https://saltbox-demos.example.test/d/${summary.locatorToken}`,
+      actor_type: "operator",
+      actor_ref: ACTOR.actorRef,
+      completed_at: new Date(),
+    }).execute();
+
+    const prepared = await dispatchOperatorIntent(
+      ctx.db,
+      form({ intent: "prepare-outreach", prospectId: outcome.prospectId }),
+      ACTOR,
+    );
+    assert.equal(prepared.ok, true);
+    assert.match(prepared.message, /SEND-READY/);
+    assert.match(prepared.message, /No email was sent/);
+    const message = await ctx.db.selectFrom("message").select(["id", "status"]).where("prospect_id", "=", outcome.prospectId).executeTakeFirstOrThrow();
+    assert.equal(message.status, "send_ready");
+    assert.equal(await ctx.db.selectFrom("message_attempt").select((eb) => eb.fn.countAll<number>().as("n")).executeTakeFirstOrThrow().then((row) => Number(row.n)), 0);
+
+    const suppressed = await dispatchOperatorIntent(
+      ctx.db,
+      form({ intent: "suppress-outreach", prospectId: outcome.prospectId, scope: "prospect", reason: "Operator requested no contact" }),
+      ACTOR,
+    );
+    assert.equal(suppressed.ok, true);
+    assert.match(suppressed.message, /DO NOT CONTACT/);
+    assert.equal((await ctx.db.selectFrom("message").select("status").where("id", "=", message.id).executeTakeFirstOrThrow()).status, "suppressed");
+
+    const send = await dispatchOperatorIntent(ctx.db, form({ intent: "send-outreach", prospectId: outcome.prospectId }), ACTOR);
+    assert.equal(send.ok, false);
+    assert.match(send.message, /Unknown operator action/);
+    assert.equal(await ctx.db.selectFrom("message_attempt").select((eb) => eb.fn.countAll<number>().as("n")).executeTakeFirstOrThrow().then((row) => Number(row.n)), 0);
   } finally {
     await ctx.destroy();
   }
