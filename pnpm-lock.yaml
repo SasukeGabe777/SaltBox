@@ -100,6 +100,12 @@ importers:
       '@saltbox/prospecting':
         specifier: workspace:*
         version: link:../prospecting
+      '@saltbox/qualification':
+        specifier: workspace:*
+        version: link:../qualification
+      '@saltbox/website-intelligence':
+        specifier: workspace:*
+        version: link:../website-intelligence
     devDependencies:
       '@types/node':
         specifier: ^26.3.0
@@ -116,6 +122,25 @@ importers:
       node-html-parser:
         specifier: ^9.0.1
         version: 9.0.1
+    devDependencies:
+      '@types/node':
+        specifier: ^26.3.0
+        version: 26.3.0
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+
+  services/qualification:
+    dependencies:
+      '@saltbox/database':
+        specifier: workspace:*
+        version: link:../../packages/database
+      '@saltbox/prospecting':
+        specifier: workspace:*
+        version: link:../prospecting
+      '@saltbox/website-intelligence':
+        specifier: workspace:*
+        version: link:../website-intelligence
     devDependencies:
       '@types/node':
         specifier: ^26.3.0

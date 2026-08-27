@@ -6,35 +6,34 @@ checklist, not a substitute for the ADRs.
 
 ## Where the project stands
 
-- **Current phase:** Phase 4 — Prospect Qualification Vertical Slice is
-  complete and approved. Phase 5 has NOT started.
+- **Current phase:** Phase 7 — Deep-Intelligence Qualification V2 is complete.
+  The current repository and `git log` are authoritative.
 - **Approved architecture:** ADR-001 (local-first intelligence), ADR-002
   (metrics/learning), ADR-003 (web runtime), ADR-004 (core data/CRM/events),
   ADR-005 (PostgreSQL + Neon), ADR-006 (Kysely + pg + node-pg-migrate). All
   accepted. Neon is NOT provisioned; nothing is deployed.
-- **Latest commit:** the Phase 4 commit `Implement prospect qualification
-  vertical slice` (this file ships inside it — confirm with
-  `git log --oneline -3`). Its parent is `fff90a5` (Phase 3 database
-  foundation).
+- **Operational capability:** real OSM + Overture discovery, conservative
+  cross-source identity, deep Chromium/Lighthouse intelligence, v1 and v2
+  append-only qualification history, and the local read-only admin viewer.
+- **Normal command:** `pnpm acquire --category roofing --location "Ogden, UT"
+  --radius-km 10 --limit 3 --source overture --concurrency 1`.
 
-## What Phase 4 does
+## What the current pipeline does
 
-`services/prospecting` turns a controlled business input (fixtures only — no
-scraping, no paid data) into a traceable qualification decision:
+`services/prospecting` preserves qualification v1. Phase 7 performs:
 
 ```text
-source → business → website → deterministic observations
-       → FeatureSet (prospect-qualification-features-v1)
-       → LeadScore (qualification-v1)
-       → qualify/reject Decision (qualification-policy-v1, threshold 60, provisional)
-       → prospect lifecycle transition (discovered → enriching → evaluated → qualified|rejected)
+real discovery → ingestion → deep website intelligence
+  → FeatureSet (prospect-qualification-features-v2)
+  → LeadScore (qualification-v2)
+  → Decision (qualification-policy-v2)
+  → lifecycle/result → read-only admin
 ```
 
-Identity (business/source record/website/prospect) is idempotent via database
-constraints; snapshots, observations, feature sets, scores, and decisions are
-append-only history. The website analyzer is deterministic HTTP + HTML parsing
-with SSRF guards (private/loopback/metadata destinations refused), timeouts,
-redirect and body-size limits.
+Identity is idempotent; evidence and results are append-only. V1 history is
+preserved. Deep analysis is bounded, SSRF-hardened, and deterministic. Target
+failures do not fail normal operator batches; system failures do. See
+`docs/QUALIFICATION_V2.md` for the scoring contract and limitations.
 
 ## Machine prerequisites
 
@@ -53,7 +52,7 @@ pnpm db:migrate     # apply the ordered SQL migration history from empty
 pnpm db:verify      # generated/db.ts must match a fresh migration replay
 pnpm check          # type-check all workspace packages
 pnpm build          # website build
-pnpm test           # database (18) + prospecting (31) suites; needs db:up
+pnpm test           # complete deterministic workspace suite; needs db:up
 ```
 
 The Docker/Postgres volume is **machine-local and disposable**. Never copy a
@@ -68,6 +67,17 @@ pnpm prospect:qualify --fixture bakery-strong-site  # → rejected,  score 52
 ```
 
 Run `pnpm prospect:qualify` with no arguments to list all five fixtures.
+
+## Phase 7 operator smoke
+
+```text
+pnpm discovery:data --location "Ogden, UT" --radius-km 30
+pnpm acquire --category roofing --location "Ogden, UT" --radius-km 10 --limit 3 --source overture --concurrency 1
+pnpm admin:dev
+```
+
+Open `http://127.0.0.1:5174/`. Target failures are listed but exit 0 by
+default; `--strict` makes them non-zero for CI/debugging. No outreach runs.
 
 ## Prototype integrity
 
@@ -104,9 +114,8 @@ weights are provisional human hypotheses (ADR-002).
 
 ## Recommended next phase
 
-Widen the input from controlled fixtures to real discovery sources
-(compliance-safe business discovery + enrichment), per the phase plan. Before
-changing any architecture, read the relevant ADRs in `docs/decisions/` —
-especially ADR-004 before touching data shapes and ADR-006 before touching
-schema/tooling — and record significant new decisions as new ADRs rather than
-editing accepted ones.
+Phase 8 should add authenticated/local operator controls and run visibility to
+the admin: start a bounded acquisition, validate inputs, show stage progress,
+inspect target failures, and request intentional retries. Keep the admin
+read-only with respect to authoritative business/score/decision history until
+each mutation has a governed service boundary. Do not add outreach.

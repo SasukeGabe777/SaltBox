@@ -3,9 +3,10 @@
 Phase 6 deterministic website-intelligence: a bounded, hardened browser
 analysis that produces a deep condition report for a real business website.
 
-**Measure first, tune later.** This service only records evidence. It does
-not feed `qualification-v1`, does not change any reason code, and presents no
-composite quality score — individual measured dimensions only.
+This service records individual measured dimensions and does not own a
+composite quality score. `qualification-v1` remains unchanged. Phase 7's
+separate `@saltbox/qualification` service consumes a documented subset of
+this evidence for `qualification-v2`; remaining metrics stay operator context.
 
 ```text
 business website
@@ -152,8 +153,8 @@ and is never converted into permanent "no website" evidence.
 **Known limitation — bot protection:** some hosts serve challenge or
 "Access Denied" pages to repeated same-hour automated visits. SaltBox records
 whatever the site actually served (and the screenshot shows it) and never
-evades the protection; re-analysis should be spaced by days, and none of this
-evidence feeds qualification scoring.
+evades the protection; re-analysis should be spaced by days. A challenge is
+not treated as a verified website deficiency merely because it was observed.
 
 ## CLI
 
@@ -165,9 +166,8 @@ pnpm website:intelligence --status qualified --limit 10 --concurrency 2
 pnpm website:intelligence --category roofing --limit 5 --strict
 ```
 
-Intelligence is intentionally NOT attached to discovery runs yet; discovery
-stays fast and enrichment is invoked separately while runtime/value are
-measured (see `docs/WEBSITE_INTELLIGENCE_BENCHMARK.md`).
+The Phase 7 `pnpm acquire` command attaches intelligence to discovery before
+v2 scoring. This standalone command remains for targeted reruns and debugging.
 
 ## Testing
 

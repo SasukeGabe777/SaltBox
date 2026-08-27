@@ -53,6 +53,7 @@ export interface CreateFeatureSetInput {
     mobilePass?: boolean;
     emailAvailable?: boolean;
     businessCategory?: string;
+    websitePerformanceScore?: number;
   };
   /** Governed extension features against the feature_definition registry. */
   values: { definitionId: string; value: FeatureValue }[];
@@ -71,6 +72,7 @@ export async function createFeatureSet(db: Database, input: CreateFeatureSetInpu
         mobile_pass: input.stable?.mobilePass ?? null,
         email_available: input.stable?.emailAvailable ?? null,
         business_category: input.stable?.businessCategory ?? null,
+        website_performance_score: input.stable?.websitePerformanceScore ?? null,
       })
       .returning("id")
       .executeTakeFirstOrThrow();

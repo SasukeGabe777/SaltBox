@@ -84,6 +84,28 @@ export interface OutreachEligibility {
   blockingSuppressionIds: string[];
 }
 
+/** Qualification hard-stop scope: active global or business suppression. */
+export async function activeQualificationSuppressions(
+  db: Database,
+  businessId: string,
+): Promise<string[]> {
+  const now = new Date();
+  const rows = await db
+    .selectFrom("suppression")
+    .select("id")
+    .where("status", "=", "active")
+    .where("effective_at", "<=", now)
+    .where((eb) => eb.or([eb("expires_at", "is", null), eb("expires_at", ">", now)]))
+    .where((eb) =>
+      eb.or([
+        eb("scope", "=", "global"),
+        eb.and([eb("scope", "=", "business"), eb("business_id", "=", businessId)]),
+      ]),
+    )
+    .execute();
+  return rows.map((row) => row.id);
+}
+
 /**
  * A contact action is eligible only when no active, effective suppression
  * matches any applicable scope. Address-pattern matching is exact for now;

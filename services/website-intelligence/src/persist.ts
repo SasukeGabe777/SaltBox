@@ -28,6 +28,7 @@ export interface PersistedIntelligence {
   snapshotIds: string[];
   observationCount: number;
   sourceRecordId: string;
+  observations: Array<{ id: string; fieldKey: string }>;
 }
 
 export async function persistIntelligenceRun(
@@ -91,8 +92,9 @@ export async function persistIntelligenceRun(
   });
 
   let observationCount = 0;
+  const observations: Array<{ id: string; fieldKey: string }> = [];
   const observe = async (fieldKey: string, value: ObservationValue) => {
-    await recordObservation(db, {
+    const id = await recordObservation(db, {
       subjectKind: "website",
       subjectId: input.websiteId,
       fieldKey,
@@ -104,6 +106,7 @@ export async function persistIntelligenceRun(
       verificationMethod: result.analyzerVersion,
       ...(input.artifactRef !== undefined ? { evidenceRef: input.artifactRef } : {}),
     });
+    observations.push({ id, fieldKey });
     observationCount += 1;
   };
 
@@ -111,7 +114,7 @@ export async function persistIntelligenceRun(
     await observe(fieldKey, value);
   }
 
-  return { analysisId, snapshotIds, observationCount, sourceRecordId: sourceRecord.id };
+  return { analysisId, snapshotIds, observationCount, sourceRecordId: sourceRecord.id, observations };
 }
 
 /** Bounded, versioned summary stored in website_analysis.structured_findings. */

@@ -97,6 +97,7 @@ export interface ScoreComponentView {
   result: number | null;
   direction: string | null;
   reasonCode: string;
+  contributingFeatures: Record<string, unknown> | null;
 }
 
 export interface DecisionHistoryView {
@@ -353,6 +354,9 @@ function latestProspectQuery(db: Database) {
             "sr.provider_metadata",
           ])
           .whereRef("sr.business_id", "=", "business.id")
+          // Analyzer/crawl source records are evidence provenance, not the
+          // business-discovery source shown in the prospect queue.
+          .where("src.source_type", "!=", "crawl")
           .orderBy("sr.retrieved_at", (order) => order.desc().nullsLast())
           .orderBy("sr.created_at", "desc")
           .limit(1)
@@ -498,6 +502,7 @@ export async function getRecentActivity(db: Database, limit = 14): Promise<Recen
         "fs.id as feature_set_id",
         "wa.calculated_at",
         "wa.analyzer_version",
+        "wa.structured_findings",
         "p.id as prospect_id",
         "b.canonical_name",
       ])
@@ -506,9 +511,10 @@ export async function getRecentActivity(db: Database, limit = 14): Promise<Recen
       .execute(),
     db
       .selectFrom("lead_score as ls")
+      .innerJoin("scoring_version as sv", "sv.id", "ls.scoring_version_id")
       .innerJoin("prospect as p", "p.id", "ls.prospect_id")
       .innerJoin("business as b", "b.id", "p.business_id")
-      .select(["ls.id", "ls.calculated_at", "ls.overall_score", "ls.prospect_id", "b.canonical_name"])
+      .select(["ls.id", "ls.calculated_at", "ls.overall_score", "ls.prospect_id", "sv.name as scoring_version", "b.canonical_name"])
       .orderBy("ls.calculated_at", "desc")
       .limit(perType)
       .execute(),
@@ -516,7 +522,7 @@ export async function getRecentActivity(db: Database, limit = 14): Promise<Recen
       .selectFrom("decision as dec")
       .innerJoin("prospect as p", "p.id", "dec.prospect_id")
       .innerJoin("business as b", "b.id", "p.business_id")
-      .select(["dec.id", "dec.decided_at", "dec.result_code", "dec.prospect_id", "b.canonical_name"])
+      .select(["dec.id", "dec.decided_at", "dec.result_code", "dec.policy_version", "dec.prospect_id", "b.canonical_name"])
       .orderBy("dec.decided_at", "desc")
       .limit(perType)
       .execute(),
@@ -533,23 +539,28 @@ export async function getRecentActivity(db: Database, limit = 14): Promise<Recen
       occurredAt: toIso(row.occurred_at),
       source: "persisted_record",
     })),
-    ...analyses.map((row): RecentActivityEntry => ({
-      id: `analysis:${row.id}:${row.feature_set_id}`,
-      prospectId: row.prospect_id,
-      businessName: row.canonical_name,
-      kind: "website_analysis",
-      label: "Website analyzed",
-      detail: row.analyzer_version,
-      occurredAt: toIso(row.calculated_at),
-      source: "persisted_record",
-    })),
+    ...analyses.map((row): RecentActivityEntry => {
+      const findings = asRecord(row.structured_findings);
+      const fatal = asRecord(findings?.fatal);
+      const failureKind = typeof fatal?.failureKind === "string" ? fatal.failureKind : null;
+      return {
+        id: `analysis:${row.id}:${row.feature_set_id}`,
+        prospectId: row.prospect_id,
+        businessName: row.canonical_name,
+        kind: "website_analysis",
+        label: fatal ? "Website intelligence target failure" : "Website intelligence completed",
+        detail: failureKind ? `${row.analyzer_version} / ${failureKind}` : row.analyzer_version,
+        occurredAt: toIso(row.calculated_at),
+        source: "persisted_record",
+      };
+    }),
     ...scores.map((row): RecentActivityEntry => ({
       id: `score:${row.id}`,
       prospectId: row.prospect_id,
       businessName: row.canonical_name,
       kind: "lead_score",
       label: `Score calculated: ${row.overall_score}`,
-      detail: "Heuristic priority score",
+      detail: `${row.scoring_version} heuristic priority score`,
       occurredAt: toIso(row.calculated_at),
       source: "persisted_record",
     })),
@@ -559,7 +570,7 @@ export async function getRecentActivity(db: Database, limit = 14): Promise<Recen
       businessName: row.canonical_name,
       kind: "qualification_decision",
       label: row.result_code === "qualified" ? "Prospect qualified" : "Prospect rejected",
-      detail: row.result_code,
+      detail: row.policy_version,
       occurredAt: toIso(row.decided_at),
       source: "persisted_record",
     })),
@@ -780,6 +791,7 @@ export async function getProspectDetail(db: Database, prospectId: string): Promi
         result: component.result === null ? null : Number(component.result),
         direction: component.direction,
         reasonCode: component.reason_code,
+        contributingFeatures: asRecord(component.contributing_features),
       })),
     decisions: decisions
       .filter((decision) => decision.leadScoreId === row.id)
@@ -977,10 +989,29 @@ function mapWebsiteAnalysis(row: {
   final_url: string | null;
 }): WebsiteAnalysisView {
   const findings = asRecord(row.structured_findings);
-  const signals = asRecord(findings?.signals);
-  const failure = asRecord(findings?.failure);
-  const redirectChain = Array.isArray(findings?.redirectChain)
-    ? findings.redirectChain.filter((item): item is string => typeof item === "string")
+  const deep = findings?.kind === "website-intelligence";
+  const technical = asRecord(findings?.technical);
+  const seo = asRecord(findings?.seo);
+  const conversion = asRecord(findings?.conversion);
+  const content = asRecord(findings?.content);
+  const mobile = asRecord(findings?.mobile);
+  const signals = deep
+    ? {
+        titlePresent: seo?.titlePresent,
+        metaDescriptionPresent: seo?.metaDescriptionPresent,
+        viewportPresent: mobile?.viewportMetaPresent,
+        contactFormPresent: conversion?.contactFormPresent,
+        ctaPresent: conversion?.prominentCtaPresent,
+        emailPresent: conversion?.emailLinkPresent,
+        phonePresent: conversion?.phoneLinkPresent,
+        copyrightYear: content?.copyrightYear,
+      }
+    : asRecord(findings?.signals);
+  const failure = deep ? asRecord(findings?.fatal) : asRecord(findings?.failure);
+  const pages = Array.isArray(findings?.pages) ? findings.pages : [];
+  const rawRedirectChain = deep ? technical?.redirectChain : findings?.redirectChain;
+  const redirectChain = Array.isArray(rawRedirectChain)
+    ? rawRedirectChain.filter((item): item is string => typeof item === "string")
     : [];
   return {
     id: row.id,
@@ -989,13 +1020,13 @@ function mapWebsiteAnalysis(row: {
     calculatedAt: toIso(row.calculated_at),
     observedAt: row.observed_at ? toIso(row.observed_at) : null,
     requestedUrl: row.requested_url,
-    finalUrl: row.final_url,
-    reachable: booleanOrNull(findings?.reachable),
-    httpStatus: numberOrNull(findings?.httpStatus),
-    https: booleanOrNull(findings?.https),
+    finalUrl: row.final_url ?? stringOrNull(findings?.finalHomepageUrl),
+    reachable: deep ? (failure ? false : pages.length > 0 ? true : null) : booleanOrNull(findings?.reachable),
+    httpStatus: deep ? numberOrNull(technical?.httpStatus) : numberOrNull(findings?.httpStatus),
+    https: deep ? booleanOrNull(technical?.https) : booleanOrNull(findings?.https),
     latencyMs: numberOrNull(findings?.latencyMs),
     contentType: stringOrNull(findings?.contentType),
-    htmlRetrieved: booleanOrNull(findings?.htmlRetrieved),
+    htmlRetrieved: deep ? (pages.length > 0 ? true : failure ? false : null) : booleanOrNull(findings?.htmlRetrieved),
     redirectChain,
     signals: signals
       ? {

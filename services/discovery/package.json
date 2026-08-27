@@ -10,10 +10,12 @@
     ".": "./src/types.ts",
     "./openstreetmap": "./src/adapters/openstreetmap.ts",
     "./overture": "./src/adapters/overture.ts",
-    "./orchestrator": "./src/application/discover-and-qualify.ts"
+    "./orchestrator": "./src/application/discover-and-qualify.ts",
+    "./acquire-v2": "./src/application/acquire-v2.ts"
   },
   "scripts": {
     "discover": "node scripts/discover.ts",
+    "acquire": "node scripts/acquire.ts",
     "data": "node scripts/build-overture-extract.ts",
     "compare": "node scripts/compare.ts",
     "check": "tsc --noEmit",
@@ -22,7 +24,9 @@
   "dependencies": {
     "@duckdb/node-api": "1.5.5-r.4",
     "@saltbox/database": "workspace:*",
-    "@saltbox/prospecting": "workspace:*"
+    "@saltbox/prospecting": "workspace:*",
+    "@saltbox/qualification": "workspace:*",
+    "@saltbox/website-intelligence": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^26.3.0",

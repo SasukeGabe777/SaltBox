@@ -1,7 +1,8 @@
 # @saltbox/admin
 
 The SaltBox Admin Prospect Viewer is the local, read-only operator surface for
-Phase 5A. It makes the persisted Phase 4 qualification pipeline inspectable in
+Originally Phase 5A, now extended for Phase 7. It makes persisted v1 and v2
+qualification history inspectable in
 a browser without creating a second write path.
 
 ## Architecture
@@ -85,6 +86,9 @@ next automatic refresh.
   heuristic priority score—not conversion probability
 - Deterministic website-analysis findings and ordinary failure observations
 - Append-only score, FeatureSet, Decision, and policy/version history
+- Clear v1/v2 current-versus-historical labels, prior v1 score, v2 feature
+  contributions, reason codes, and persisted evidence lineage
+- Deep-intelligence completion/partial/failure state and versioned v2 activity
 - Point-in-time observations with distinct `observed_at` and `recorded_at`
 - Source records/provenance and chronological prospect lifecycle transitions
 

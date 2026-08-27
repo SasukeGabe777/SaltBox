@@ -244,13 +244,23 @@ export async function ingestControlledBusiness(
   }
 
   if (input.websiteUrl !== undefined && input.websiteUrl.trim() !== "") {
-    const host = new URL(input.websiteUrl).hostname;
-    result.domainId = await ensureDomain(db, host);
-    result.websiteId = await ensureBusinessWebsite(db, {
-      businessId,
-      domainId: result.domainId,
-      canonicalUrl: input.websiteUrl,
-    });
+    // A malformed provider URL is target evidence, not a database/system
+    // failure. The analyzer records the invalid-target classification; identity
+    // ingestion deliberately omits a website row that cannot have a valid host.
+    let parsed: URL | null = null;
+    try {
+      parsed = new URL(input.websiteUrl);
+    } catch {
+      // The deep analyzer owns the structured invalid_target evidence.
+    }
+    if (parsed) {
+      result.domainId = await ensureDomain(db, parsed.hostname);
+      result.websiteId = await ensureBusinessWebsite(db, {
+        businessId,
+        domainId: result.domainId,
+        canonicalUrl: input.websiteUrl,
+      });
+    }
   }
 
   return result;

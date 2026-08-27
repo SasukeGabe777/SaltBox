@@ -15,6 +15,7 @@
     "admin:check": "pnpm --filter @saltbox/admin check",
     "admin:test": "pnpm --filter @saltbox/admin test",
     "discover": "pnpm --filter @saltbox/discovery discover",
+    "acquire": "pnpm --filter @saltbox/discovery acquire",
     "discovery:data": "pnpm --filter @saltbox/discovery data",
     "discovery:compare": "pnpm --filter @saltbox/discovery compare",
     "website:intelligence": "pnpm --filter @saltbox/website-intelligence intelligence",

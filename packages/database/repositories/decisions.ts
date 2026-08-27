@@ -11,6 +11,8 @@ export interface DecisionReasonInput {
   contribution?: "supports" | "opposes" | "neutral";
   explanation?: string;
   featureRef?: string;
+  evidenceKind?: string;
+  evidenceId?: string;
 }
 
 export interface CreateDecisionInput {
@@ -59,6 +61,8 @@ export async function createDecision(db: Database, input: CreateDecisionInput): 
           contribution: reason.contribution ?? null,
           explanation: reason.explanation ?? null,
           feature_ref: reason.featureRef ?? null,
+          evidence_kind: reason.evidenceKind ?? null,
+          evidence_id: reason.evidenceId ?? null,
         })
         .execute();
     }

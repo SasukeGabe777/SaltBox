@@ -6,8 +6,8 @@ import { formatDateTime } from "../utils/format";
  * Phase 6 WEBSITE INTELLIGENCE case-file section. Renders the selected
  * analysis run's findings exactly as persisted — selecting an older run shows
  * only that run's evidence (append-only history, no cross-run mixing).
- * Website-intelligence metrics are informational condition measurements and
- * are intentionally separate from the qualification score.
+ * Qualification v2 uses a documented subset of these measurements. The full
+ * report remains available for inspection; omitted metrics are informational.
  */
 
 interface Findings {
@@ -94,6 +94,11 @@ export function WebsiteIntelligencePanel({ runs }: { runs: WebsiteIntelligenceVi
   const findings = selected.structuredFindings as Findings;
   const isLatest = selected.analysisId === runs[0]!.analysisId;
   const artifactRef = findings.artifacts?.ref;
+  const analysisStatus = findings.fatal
+    ? "failed"
+    : Object.values(findings.stages ?? {}).some((stage) => stage.status === "failed" || stage.status === "partial")
+      ? "partially completed"
+      : "completed";
 
   return (
     <section className="panel intelligence-panel">
@@ -105,6 +110,7 @@ export function WebsiteIntelligencePanel({ runs }: { runs: WebsiteIntelligenceVi
             {findings.finalHomepageUrl ?? "—"} · {selected.analyzerVersion} · {formatDateTime(selected.calculatedAt)}
             {typeof findings.durationMs === "number" ? ` · ${(findings.durationMs / 1000).toFixed(1)}s` : ""}
           </p>
+          <span className="version-chip">{analysisStatus}</span>
         </div>
         {runs.length > 1 ? (
           <label className="intelligence-run-picker">
@@ -132,7 +138,7 @@ export function WebsiteIntelligencePanel({ runs }: { runs: WebsiteIntelligenceVi
       ) : null}
 
       <p className="intelligence-disclaimer">
-        Lab measurements (mobile emulation), not real-user data. Informational only — not part of the qualification score.
+        Lab measurements use mobile emulation, not real-user data. Qualification v2 uses only its documented deterministic subset.
       </p>
 
       {findings.lab ? (

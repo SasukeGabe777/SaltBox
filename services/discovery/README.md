@@ -5,6 +5,8 @@ Discovery is a deterministic input adapter; it does not own business identity,
 website analysis, scoring, decisions, or prospect lifecycle behavior.
 
 ```text
+legacy `pnpm discover` path:
+
 human query
   → DiscoverySourceAdapter (openstreetmap | overture)
   → normalized DiscoveryResult
@@ -15,6 +17,14 @@ human query
 
 This service performs discovery and analysis only. It does not send email,
 SMS, phone calls, social messages, demo links, or any other outreach.
+
+Phase 7 adds a second orchestration path without changing provider adapters or
+v1 history:
+
+```text
+DiscoverySourceAdapter -> ingestion -> deep website intelligence
+  -> FeatureSet v2 -> LeadScore v2 -> Decision v2 -> admin
+```
 
 ## Sources
 
@@ -166,6 +176,18 @@ Run a controlled search:
 pnpm discover --category roofing --location "Ogden, UT" --radius-km 10 --limit 5
 ```
 
+Run the complete Phase 7 flow (safe default limit 3, concurrency 1):
+
+```text
+pnpm acquire --category roofing --location "Ogden, UT" --radius-km 10 --limit 3 --source overture --concurrency 1
+```
+
+Acquisition caps limit at 10 per source and deep concurrency at 2. Target
+analysis failures are persisted and produce `completed_with_target_failures`
+with exit 0 by default; add `--strict` for a non-zero CI/debug exit. System,
+schema, configuration, source, and globally unavailable Chromium failures
+produce `failed`.
+
 Optional flags:
 
 ```text
@@ -192,8 +214,10 @@ candidate progress plus a structured run result to stdout.
 - Location/Overpass failure is classified as a discovery-source failure;
   database failure is a system failure.
 
-The website analyzer remains homepage/single-page only and retains all Phase 4
-DNS, SSRF, timeout, redirect, content-type, and size protections.
+The legacy `pnpm discover` analyzer remains homepage/single-page only and
+retains all Phase 4 DNS, SSRF, timeout, redirect, content-type, and size
+protections. `pnpm acquire` uses the separate bounded Chromium/Lighthouse
+analyzer before qualification v2.
 
 ## Testing
 

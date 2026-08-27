@@ -186,11 +186,24 @@ Phase 6 deep website intelligence lives in
 a bounded, hardened Chromium + Lighthouse condition report (performance,
 accessibility, SEO, mobile, conversion paths, link/asset health, platform)
 persisted as versioned append-only evidence and shown in the admin case file.
-It is informational only — qualification-v1 scoring is unchanged:
+The standalone analyzer remains available for targeted re-analysis:
 
 ```text
 pnpm website:intelligence --category roofing --limit 5
 ```
+
+Phase 7 adds versioned deep-intelligence qualification v2 while preserving all
+v1 history. The normal bounded operator flow performs discovery, deep analysis,
+v2 feature derivation, scoring, policy, and persistence in one run:
+
+```text
+pnpm acquire --category roofing --location "Ogden, UT" --radius-km 10 --limit 3 --source overture --concurrency 1
+```
+
+See [docs/QUALIFICATION_V2.md](docs/QUALIFICATION_V2.md) and
+[services/qualification/README.md](services/qualification/README.md). Target
+analysis failures are `completed_with_target_failures` and exit 0 by default;
+`--strict` makes them non-zero for CI/debugging.
 
 ## Fresh-machine bootstrap
 

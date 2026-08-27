@@ -30,6 +30,30 @@ const NEED_REASON_CODES = new Set([
   "META_DESCRIPTION_MISSING",
   "NO_CONTACT_FORM",
   "NO_CTA",
+  "WEBSITE_MISSING",
+  "DNS_NOT_FOUND",
+  "WEBSITE_DEFINITIVELY_UNREACHABLE",
+  "INVALID_WEBSITE_TARGET",
+  "TLS_FAILURE",
+  "HTTPS_PROBLEM",
+  "MOBILE_OVERFLOW",
+  "LIGHTHOUSE_PERFORMANCE_POOR",
+  "LIGHTHOUSE_PERFORMANCE_WEAK",
+  "LIGHTHOUSE_PERFORMANCE_FAIR",
+  "LCP_POOR",
+  "LCP_NEEDS_IMPROVEMENT",
+  "TBT_POOR",
+  "TBT_NEEDS_IMPROVEMENT",
+  "CLS_POOR",
+  "CLS_NEEDS_IMPROVEMENT",
+  "CTA_MISSING",
+  "CONTACT_FORM_MISSING",
+  "TECHNICAL_ERRORS_HIGH",
+  "TECHNICAL_ERRORS_PRESENT",
+  "BROKEN_INTERNAL_LINKS",
+  "COPYRIGHT_STALE",
+  "COPYRIGHT_AGING",
+  "SHALLOW_SITE_STRUCTURE",
 ]);
 
 export async function loader({ params }: Route.LoaderArgs) {
@@ -60,6 +84,7 @@ export default function ProspectDetailPage({ loaderData }: Route.ComponentProps)
 
   const selectedRun = detail.scoreHistory.find((run) => run.id === selectedScoreId) ?? detail.scoreHistory[0] ?? null;
   const selectedDecision = selectedRun?.decisions[0] ?? null;
+  const latestV1Run = detail.scoreHistory.find((run) => run.scoringVersion === "qualification-v1") ?? null;
   const displayStatus = selectedDecision?.result ?? detail.lifecycleState;
   const isHistorical = selectedRun ? !selectedRun.isLatest : false;
 
@@ -87,6 +112,7 @@ export default function ProspectDetailPage({ loaderData }: Route.ComponentProps)
       <section className={`score-hero ${displayStatus === "rejected" ? "score-hero-rejected" : ""}`}>
         <div className="score-primary">
           <StatusBadge status={displayStatus} />
+          {selectedRun ? <span className="version-chip">{selectedRun.scoringVersion === "qualification-v2" ? "V2" : "V1"}</span> : null}
           <strong>{selectedRun?.overallScore ?? "—"}</strong>
           <span>/ 100</span>
           <p>HEURISTIC PRIORITY SCORE</p>
@@ -111,6 +137,9 @@ export default function ProspectDetailPage({ loaderData }: Route.ComponentProps)
           <span>POLICY</span>
           <strong>{selectedDecision?.policyVersion ?? "Not recorded"}</strong>
           <small>Priority signal only · never conversion probability</small>
+          {selectedRun?.scoringVersion === "qualification-v2" && latestV1Run ? (
+            <small>Previous v1: {latestV1Run.overallScore}/100 · preserved</small>
+          ) : null}
         </div>
       </section>
 
@@ -137,6 +166,20 @@ export default function ProspectDetailPage({ loaderData }: Route.ComponentProps)
                 title="Positive and policy signals"
                 reasons={selectedDecision.reasons.filter((reason) => !NEED_REASON_CODES.has(reason.code))}
               />
+              {selectedRun && selectedRun.components.length > 0 ? (
+                <details className="raw-details">
+                  <summary>Feature contributions and evidence lineage</summary>
+                  <ul>
+                    {selectedRun.components.map((component) => (
+                      <li key={component.id}>
+                        <strong>{humanizeCode(component.reasonCode)}</strong>{" "}
+                        <code>{component.dimension} / {component.componentKey} / {component.result ?? 0}</code>
+                        {component.contributingFeatures ? <pre>{JSON.stringify(component.contributingFeatures, null, 2)}</pre> : null}
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              ) : null}
             </>
           ) : (
             <p className="panel-empty">No qualification decision is linked to this score.</p>
@@ -194,7 +237,7 @@ export default function ProspectDetailPage({ loaderData }: Route.ComponentProps)
               <select value={selectedScoreId} onChange={(event) => setSelectedScoreId(event.target.value)}>
                 {detail.scoreHistory.map((run, index) => (
                   <option value={run.id} key={run.id}>
-                    {index === 0 ? "Latest · " : "Historical · "}{run.overallScore} · {formatDateTime(run.calculatedAt)}
+                    {index === 0 ? "Latest · " : "Historical · "}{run.scoringVersion} · {run.overallScore} · {formatDateTime(run.calculatedAt)}
                   </option>
                 ))}
               </select>
