@@ -1,3 +1,10 @@
+# HISTORICAL PHASE 10 HANDOFF — SUPERSEDED AFTER PHASE 11.
+
+For the current cross-machine state, read `docs/HOME_PC_HANDOFF.md` first.
+The repository is now complete through Phase 11 at implementation commit
+`69aaaf9c82687d422858fcc595e96937580f5b13`; this file is retained only as the
+detailed Phase 10 handoff record.
+
 # READ THIS FIRST BEFORE CONTINUING SALTBOX DEVELOPMENT.
 
 Prepared 2026-08-27 on the Windows work PC in `C:\dev\SaltBox`, handing
