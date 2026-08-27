@@ -1,5 +1,10 @@
 # READ THIS FIRST BEFORE CONTINUING SALTBOX DEVELOPMENT.
 
+> [!IMPORTANT]
+> **Superseded by [`CODEX_HANDOFF.md`](CODEX_HANDOFF.md)** (2026-08-27), which
+> reflects the current milestone `4dc295e` and the live hosted environment.
+> This file remains as the Phase 7–10 record.
+
 ## Handoff identity
 
 - Prepared: 2026-08-27 on the Windows work PC in `C:\dev\SaltBox`.
