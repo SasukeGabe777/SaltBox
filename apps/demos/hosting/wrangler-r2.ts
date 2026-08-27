@@ -16,6 +16,7 @@ import { spawnSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { resolveWranglerCommand } from "./config.ts";
 import {
   assertArtifactKey,
   hashArtifact,
@@ -46,7 +47,7 @@ export class WranglerR2ArtifactStore implements ArtifactStore {
   constructor(options: WranglerR2Options) {
     this.#options = {
       bucket: options.bucket,
-      command: options.command ?? "wrangler",
+      command: options.command ?? resolveWranglerCommand(options.cwd ?? process.cwd()),
       cwd: options.cwd ?? process.cwd(),
     };
   }

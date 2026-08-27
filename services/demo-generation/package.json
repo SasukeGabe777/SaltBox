@@ -20,6 +20,7 @@
   "scripts": {
     "generate": "node scripts/generate.ts",
     "brand": "node scripts/inspect-brand.ts",
+    "review": "node scripts/review.ts",
     "check": "tsc --noEmit",
     "test": "node --test \"testing/**/*.test.ts\""
   },

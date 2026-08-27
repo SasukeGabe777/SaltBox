@@ -18,13 +18,14 @@ const { values } = parseArgs({
   options: {
     token: { type: "string", short: "t" },
     mode: { type: "string", default: "preview" },
+    "base-url": { type: "string" },
     "no-persist": { type: "boolean", default: false },
     help: { type: "boolean", short: "h", default: false },
   },
   strict: true,
 });
 if (values.help || !values.token || !QA_TOKEN_PATTERN.test(values.token)) {
-  console.error("Usage: pnpm demo:qa --token <public-locator> [--mode preview|public] [--no-persist]");
+  console.error("Usage: pnpm demo:qa --token <public-locator> [--mode preview|public] [--base-url <origin>] [--no-persist]");
   process.exit(values.help ? 0 : 1);
 }
 const mode = values.mode === "public" ? "public" : "preview";
@@ -37,6 +38,7 @@ try {
     db,
     token: values.token,
     mode,
+    ...(values["base-url"] !== undefined ? { baseUrl: values["base-url"] } : {}),
     log: (line) => console.log(line),
   });
 

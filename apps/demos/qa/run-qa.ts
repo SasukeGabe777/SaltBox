@@ -29,6 +29,13 @@ export interface RunDemoQaOptions {
   /** Screenshot destination root; defaults to ../../.data/demos/qa. */
   artifactRoot?: string;
   mode?: DemoResolutionMode;
+  /**
+   * Target an already-running renderer (the deployed Worker) instead of
+   * starting one in-process. The database is still used to resolve which
+   * DemoVersion the evidence belongs to, so hosted QA is recorded against the
+   * exact version the origin is serving.
+   */
+  baseUrl?: string;
   log?: (line: string) => void;
 }
 
@@ -71,15 +78,23 @@ export async function runDemoQa(options: RunDemoQaOptions): Promise<RunDemoQaRes
   const artifactDir = resolve(artifactRoot, options.token);
   mkdirSync(artifactDir, { recursive: true });
 
-  const server = createDemosServer({
-    db: options.db,
-    mode,
-    ...(options.assetRoot !== undefined ? { assetRoot: options.assetRoot } : {}),
-  });
-  await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
-  const address = server.address();
-  if (address === null || typeof address === "string") throw new Error("Could not determine QA server port.");
-  const url = `http://127.0.0.1:${address.port}/d/${options.token}`;
+  const hosted = options.baseUrl?.replace(/\/+$/, "");
+  const server = hosted
+    ? undefined
+    : createDemosServer({
+        db: options.db,
+        mode,
+        ...(options.assetRoot !== undefined ? { assetRoot: options.assetRoot } : {}),
+      });
+  if (server) {
+    await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
+  }
+  const address = server?.address();
+  if (server && (address === null || typeof address === "string")) {
+    throw new Error("Could not determine QA server port.");
+  }
+  const origin = hosted ?? `http://127.0.0.1:${(address as { port: number }).port}`;
+  const url = `${origin}/d/${options.token}`;
   log(`QA target: ${url}`);
 
   let errorMessage: string | undefined;
@@ -183,7 +198,9 @@ export async function runDemoQa(options: RunDemoQaOptions): Promise<RunDemoQaRes
     errorMessage = error instanceof Error ? error.message : String(error);
     log(`  QA RUN ERROR — ${errorMessage}`);
   } finally {
-    await new Promise<void>((done, fail) => server.close((error) => (error ? fail(error) : done())));
+    if (server) {
+      await new Promise<void>((done, fail) => server.close((error) => (error ? fail(error) : done())));
+    }
   }
 
   const report: DemoQaReport = {

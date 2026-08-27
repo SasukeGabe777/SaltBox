@@ -9,18 +9,26 @@ handler and templates. Architecture and safety posture:
 ```powershell
 pnpm demos:dev                            # http://127.0.0.1:5175/ (loopback, preview mode)
 pnpm demo:qa --token <public-locator>     # 28 desktop/mobile checks, persisted as QA evidence
+pnpm demo:qa --token <t> --base-url <url> # the same checks against a hosted origin
 pnpm demos:publish --prospect <uuid>      # publish the APPROVED version's assets
+pnpm demos:stage --prospect <uuid> --target-url-file <path>   # promote one approved demo
 pnpm demos:deploy:check                   # hosted deploy preflight (no account needed)
 pnpm demos:deploy                         # deploy the Worker (needs `wrangler login`)
 ```
+
+Live hosted origin: `https://saltbox-demos.saltbox-demos.workers.dev`
+(see [`docs/DEMO_HOSTING.md`](../../docs/DEMO_HOSTING.md) for the resources).
 
 - `server/handler.ts` — the runtime-neutral request handler. No Node or
   Cloudflare APIs; both adapters supply the same two ports.
 - `server/app.ts` — Node adapter (Kysely + the local artifact store).
 - `worker/index.ts` — Cloudflare Worker adapter (Hyperdrive + R2 bindings).
 - `qa/run-qa.ts` — the reusable QA runner the CLI and the admin both use.
-- `hosting/` — committed non-secret wrangler config reader and the
-  operator-tool R2 uploader.
+- `hosting/` — committed non-secret wrangler config reader (which also
+  resolves the pinned workspace wrangler binary) and the operator-tool R2
+  uploader.
+- `scripts/stage-demo.ts` — promote one approved demo into another
+  environment's database, minimally and verbatim.
 
 Resolution mode is the public-safety boundary. `preview` (default) serves the
 demo's current version for operator review; `public` — always used by the

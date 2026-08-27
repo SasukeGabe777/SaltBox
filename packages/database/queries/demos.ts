@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Read models for the demo renderer and the operator admin.
  *
  * The resolver answers exactly one question — "which persisted demo version

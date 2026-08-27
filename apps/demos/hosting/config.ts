@@ -7,7 +7,7 @@
  * still unfilled.
  */
 
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 export const PLACEHOLDER_PREFIX = "REPLACE_WITH_";
@@ -38,6 +38,19 @@ export function readHostingConfig(appDir: string): HostingConfig {
   if (hyperdriveId.startsWith(PLACEHOLDER_PREFIX) || hyperdriveId === "") placeholders.push("hyperdrive.id");
   if (bucketName.startsWith(PLACEHOLDER_PREFIX)) placeholders.push("r2_buckets.bucket_name");
   return { path, workerName, compatibilityDate, hyperdriveId, bucketName, placeholders };
+}
+
+/**
+ * Wrangler is a workspace devDependency, so operator tooling uses the pinned
+ * local binary rather than depending on whatever is installed globally.
+ * `SALTBOX_WRANGLER` overrides it; a PATH lookup is the last resort.
+ */
+export function resolveWranglerCommand(appDir: string): string {
+  const explicit = process.env.SALTBOX_WRANGLER?.trim();
+  if (explicit) return explicit;
+  const binary = process.platform === "win32" ? "wrangler.CMD" : "wrangler";
+  const local = resolve(appDir, "node_modules", ".bin", binary);
+  return existsSync(local) ? local : "wrangler";
 }
 
 function scalar(raw: string, key: string): string | undefined {

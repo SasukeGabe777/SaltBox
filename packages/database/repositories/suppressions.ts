@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Suppression safety state (ADR-004 invariants 12–13).
  *
  * Eligibility is computed across every applicable scope; positive eligibility

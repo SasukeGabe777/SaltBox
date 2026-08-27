@@ -1,4 +1,4 @@
-﻿# @saltbox/demo-generation
+# @saltbox/demo-generation
 
 Deterministic demo generation and lifecycle (Phases 8–10): eligibility, fact collection,
 brand-profile consumption, DemoPlan v2, structured content v2, deterministic
@@ -13,6 +13,7 @@ and [`docs/OPERATOR_APPROVAL.md`](../../docs/OPERATOR_APPROVAL.md).
 pnpm demo:generate --prospect <uuid> [--skip-brand] [--refresh-brand]
 pnpm demo:generate --latest-qualified [--category roofing] [--limit 1]
 pnpm demo:brand --prospect <uuid> [--refresh]
+pnpm demo:review --demo <uuid> [--version <n> --approve|--reject]  # approval CLI
 pnpm demo:qa --token <public-locator>            # records QA evidence (apps/demos)
 pnpm demos:publish --prospect <uuid>             # publishes the APPROVED version
 ```

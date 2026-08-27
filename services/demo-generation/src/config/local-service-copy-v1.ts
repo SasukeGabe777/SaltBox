@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Deterministic copy library for the local-service template family
  * (demo-copy-v1). No AI. Every phrase is a generic marketing transformation
  * with slots for OBSERVED facts only ({name}, {city}, {state}, {category

@@ -6,12 +6,14 @@
 # ONE renderer serves MANY demos. There is deliberately no per-prospect
 # project, deployment, route, or bucket.
 #
-# Before the first deploy, replace the two placeholder ids below with the
-# resources created by `pnpm demos:deploy:check` guidance:
+# The resources below were provisioned once with:
 #
 #   wrangler r2 bucket create saltbox-demo-assets
-#   wrangler hyperdrive create saltbox-demos --connection-string "<neon-unpooled-url>"
+#   wrangler hyperdrive create saltbox-demos \
+#     --connection-string "<neon-unpooled-url>" --caching-disabled
 #
+# The Hyperdrive id is a non-secret resource identifier; the connection string
+# it wraps is stored by Cloudflare and never appears in this repository.
 # `pnpm demos:deploy` refuses to run while a REPLACE_WITH_ placeholder remains.
 
 name = "saltbox-demos"
@@ -32,7 +34,7 @@ enabled = true
 # disabled — approval state must never be served stale (ADR-005).
 [[hyperdrive]]
 binding = "HYPERDRIVE"
-id = "REPLACE_WITH_HYPERDRIVE_ID"
+id = "bd10802e4efb432085ada1ba17b8d2e9"
 
 # Durable demo assets (logos and photography). Blobs never enter PostgreSQL.
 [[r2_buckets]]

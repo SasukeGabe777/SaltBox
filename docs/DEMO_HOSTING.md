@@ -81,6 +81,21 @@ long-lived R2 access keys, so SaltBox stores no additional standing
 credentials. The hosted renderer itself never shells out to anything — it
 reads R2 through its binding.
 
+## Provisioned environment
+
+The first hosted environment is live. All identifiers below are non-secret;
+the Neon connection string is held by Cloudflare (Hyperdrive) and, for local
+operator tooling, in git-ignored `.data/neon-staging.url`.
+
+| Resource | Value |
+| --- | --- |
+| Cloudflare account | `587c410c995716940542dfe4cd3cf6a9` |
+| Worker | `saltbox-demos` |
+| Origin | `https://saltbox-demos.saltbox-demos.workers.dev` |
+| R2 bucket | `saltbox-demo-assets` (binding `DEMO_ASSETS`) |
+| Hyperdrive | `bd10802e4efb432085ada1ba17b8d2e9` (binding `HYPERDRIVE`, caching disabled) |
+| Database | Neon `saltbox-staging`, PostgreSQL 18, `aws-us-west-2`, database `saltbox` |
+
 ## Deployment
 
 ```powershell
@@ -99,20 +114,52 @@ bindings and never appear in the repository. Deployment never runs migrations
 (ADR-006 prohibits migration-on-start); migrations are applied from Node
 tooling against the database directly.
 
-First-time provisioning, all one-time operator actions:
+Wrangler is a pinned workspace devDependency, so `pnpm install` is enough —
+no global install. First-time provisioning, performed once:
 
 ```powershell
-wrangler login
-wrangler r2 bucket create saltbox-demo-assets
-neonctl projects create --name saltbox-staging      # or the Neon console
-pnpm --filter @saltbox/database db:migrate          # with DATABASE_URL + SALTBOX_ALLOW_REMOTE_DB_TOOLING=1
-wrangler hyperdrive create saltbox-demos --connection-string "<neon-unpooled-url>"
+pnpm exec wrangler login                            # interactive, ~2 minute window
+pnpm exec wrangler r2 bucket create saltbox-demo-assets
+pnpm dlx neonctl@2 auth                             # interactive
+pnpm dlx neonctl@2 projects create --name saltbox-staging --database saltbox
+# store the connection string in git-ignored .data/neon-staging.url, then:
+$env:DATABASE_URL = (Get-Content .data\neon-staging.url -Raw).Trim(); pnpm db:migrate
+pnpm exec wrangler hyperdrive create saltbox-demos `
+  --connection-string="<neon-unpooled-url>" --caching-disabled
 # paste the returned id into apps/demos/wrangler.toml, then:
 pnpm demos:deploy
 ```
 
-The resulting URL is `https://saltbox-demos.<account>.workers.dev/d/<locator>`.
-A custom domain is deliberately not required.
+Enabling R2 on a Cloudflare account is a dashboard action with a payment
+method on file; the free tier (10 GB storage, 1M writes/month) covers SaltBox
+by orders of magnitude. Applying migrations to a remote database needs only
+`DATABASE_URL` — it is forward-only DDL, not the disposable-database tooling
+that `SALTBOX_ALLOW_REMOTE_DB_TOOLING=1` guards.
+
+A newly registered `workers.dev` subdomain takes a few minutes to serve TLS;
+until then the hostname resolves but the handshake fails.
+
+## Getting a demo into a hosted environment
+
+The hosted renderer reads its own database, so a demo must exist there:
+
+```powershell
+pnpm demos:stage --prospect <uuid> --target-url-file .data\neon-staging.url
+$env:DATABASE_URL = (Get-Content .data\neon-staging.url -Raw).Trim()
+pnpm demos:publish --demo <demo-id> --environment hosted --base-url https://...
+pnpm demo:qa --token <locator> --mode public --base-url https://...   # hosted QA
+pnpm demo:review --demo <demo-id>                                     # review/approve there
+```
+
+`demos:stage` copies the MINIMUM state for one approved demo — identity,
+provenance, qualification lineage, every DemoVersion, the locator, QA
+evidence, review history, and the approval pointer — preserving ids,
+version numbers, and timestamps. It is not a database dump, it refuses a demo
+with no approved version, it never deletes, and it deliberately copies no
+suppression state so a target can never silently lose one.
+
+`demo:review` is the same approval domain service the admin uses, for
+environments the admin is not pointed at.
 
 ## Database environments
 
@@ -162,11 +209,14 @@ Local development costs nothing at all.
 
 ## Known limitations
 
-- Hosted deployment requires a one-time interactive Cloudflare login; the
-  preflight reports this cleanly rather than pretending.
+- Provisioning required interactive logins (Cloudflare, Neon) and a dashboard
+  action to enable R2. Redeploys and publications are fully automated.
 - Hosted publication uploads through the wrangler CLI; a non-interactive CI
   path would need R2 S3-API credentials, which SaltBox deliberately does not
   store yet.
+- The hosted environment holds only promoted demos. Discovery, intelligence,
+  and generation still run locally against Docker PostgreSQL; `demos:stage`
+  is the bridge until a hosted pipeline is a deliberate decision.
 - No custom domain, no cache/CDN tuning, no multi-region strategy.
 - No backup policy yet for a remote database beyond the provider's own
   restore window — see the durability note in ADR-005. This must be decided

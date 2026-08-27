@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Phase 10 operator review and approval.
  *
  * THE PHASE 10 INVARIANT: only an APPROVED DemoVersion may later be used for

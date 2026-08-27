@@ -1,4 +1,4 @@
-﻿# @saltbox/admin
+# @saltbox/admin
 
 The SaltBox operator surface. Originally a read-only Phase 5A viewer, extended
 through Phase 7 (qualification v2 evidence) and Phase 10, where it becomes the

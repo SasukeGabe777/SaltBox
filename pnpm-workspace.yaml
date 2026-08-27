@@ -5,6 +5,9 @@ packages:
 
 allowBuilds:
   esbuild: true
+  # Cloudflare's local runtime binary, installed by wrangler for `demos:deploy`
+  # and local Worker development (ADR-003 hosted demo renderer).
+  workerd: true
   # Puppeteer's postinstall downloads Chrome for Testing, required by the
   # website-intelligence service (Phase 6 browser/Lighthouse analysis).
   puppeteer: true

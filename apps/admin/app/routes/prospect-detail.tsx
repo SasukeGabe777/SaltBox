@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Form, Link } from "react-router";
 import type {
   DecisionReasonView,

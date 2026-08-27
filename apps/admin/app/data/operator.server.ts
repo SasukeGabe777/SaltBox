@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Operator mutations for the local admin (Phase 10).
  *
  * The admin stops being read-only here — but only for demo lifecycle actions

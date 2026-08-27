@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Deploy (or preflight) the hosted demo renderer.
  *
  *   pnpm demos:deploy:check   # no network, no account required
@@ -14,7 +14,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { parseArgs } from "node:util";
-import { PLACEHOLDER_PREFIX, readHostingConfig } from "../hosting/config.ts";
+import { PLACEHOLDER_PREFIX, readHostingConfig, resolveWranglerCommand } from "../hosting/config.ts";
 
 const { values } = parseArgs({
   options: {
@@ -31,7 +31,7 @@ if (values.help) {
 
 const appDir = resolve(process.cwd());
 const config = readHostingConfig(appDir);
-const wranglerCommand = process.env.SALTBOX_WRANGLER ?? "wrangler";
+const wranglerCommand = resolveWranglerCommand(appDir);
 
 interface Blocker {
   code: string;
@@ -75,7 +75,7 @@ if (version.status !== 0) {
   blockers.push({
     code: "WRANGLER_UNAVAILABLE",
     detail: version.detail,
-    action: "Install wrangler (`pnpm add -g wrangler` or `pnpm dlx wrangler`) and re-run.",
+    action: "Run `pnpm install` (wrangler is a workspace devDependency of apps/demos) and re-run.",
   });
 } else {
   notes.push(`wrangler ${version.output.trim().split("\n").pop() ?? ""}`);

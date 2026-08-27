@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Operator run execution.
  *
  * This is the only place that turns a queued `operator_run` into real work:

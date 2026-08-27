@@ -18,6 +18,7 @@
     "start": "node server/main.ts",
     "qa": "node scripts/qa.ts",
     "publish:demo": "node scripts/publish.ts",
+    "stage:demo": "node scripts/stage-demo.ts",
     "deploy": "node scripts/deploy.ts",
     "deploy:check": "node scripts/deploy.ts --check",
     "check": "tsc --noEmit",
@@ -30,7 +31,10 @@
   },
   "devDependencies": {
     "@types/node": "^26.3.0",
+    "@types/pg": "^8.23.1",
+    "pg": "^8.23.0",
     "puppeteer": "25.9.0",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "wrangler": "^4.126.0"
   }
 }

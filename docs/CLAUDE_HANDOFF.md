@@ -1,4 +1,4 @@
-﻿# READ THIS FIRST BEFORE CONTINUING SALTBOX DEVELOPMENT.
+# READ THIS FIRST BEFORE CONTINUING SALTBOX DEVELOPMENT.
 
 ## Handoff identity
 
@@ -317,11 +317,23 @@ Documented in `docs/OPERATOR_APPROVAL.md` and `docs/DEMO_HOSTING.md`. Summary:
   QA 28/28 → approved v1 → published locally (2 assets). Public-mode renderer
   proved approved-only resolution: approved locator 200, unapproved locator
   404, unpublished asset 404. 190 tests green.
-- **Hosted deployment is blocked by a one-time operator action**: no wrangler
-  installation and no authenticated Cloudflare session exist on this machine,
-  so no external HTTPS URL exists yet. `pnpm demos:deploy:check` prints the
-  exact commands. Everything else — Worker, config, publication, tests — is
-  implemented and verified locally.
+- **The hosted environment is LIVE** (bootstrapped after the Phase 10 commit).
+  Cloudflare account `587c410c995716940542dfe4cd3cf6a9`, Worker
+  `saltbox-demos` at `https://saltbox-demos.saltbox-demos.workers.dev`, R2
+  bucket `saltbox-demo-assets`, Hyperdrive `bd10802e4efb432085ada1ba17b8d2e9`
+  (caching disabled) over Neon `saltbox-staging` (PostgreSQL 18,
+  `aws-us-west-2`). All six migrations are applied there. The Neon connection
+  string lives only in git-ignored `.data/neon-staging.url` and inside
+  Cloudflare; wrangler is a pinned workspace devDependency.
+- First real external demo:
+  `https://saltbox-demos.saltbox-demos.workers.dev/d/0z-T5ccKc4k2PEeV6v-2DTEf`
+  — Riverfront Roofing, qualified 69, premium composition, approved v3,
+  hosted QA 28/28, 19/19 hosted security probes, READY FOR OUTREACH in the
+  admin. Promoted with `pnpm demos:stage`; assets served from R2.
+- Verified live on the real origin: withdrawing approval 404s both the page
+  and its assets, re-approving restores them, and approving an older version
+  makes the same locator serve that older version — approval, not "latest",
+  is the public gate.
 
 ## Current roadmap
 

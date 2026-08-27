@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Publish an APPROVED demo version:
  *
  *   pnpm demos:publish --prospect <uuid> [--environment local|hosted]
