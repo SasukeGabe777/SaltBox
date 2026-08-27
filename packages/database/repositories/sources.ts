@@ -60,7 +60,9 @@ export async function upsertSourceRecord(db: Database, input: UpsertSourceRecord
     .onConflict((oc) =>
       oc.constraint("source_record_source_external_uq").doUpdateSet((eb) => ({
         retrieved_at: eb.ref("excluded.retrieved_at"),
+        source_locator: eb.ref("excluded.source_locator"),
         content_hash: eb.ref("excluded.content_hash"),
+        provider_metadata: eb.ref("excluded.provider_metadata"),
       }))
     )
     .returning(["id", "business_id"])

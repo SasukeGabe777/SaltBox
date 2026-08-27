@@ -51,10 +51,14 @@ export type PipelineLog = (stage: string, detail?: Record<string, unknown>) => v
 export interface QualifyOptions {
   analyzer?: WebsiteAnalyzerOptions;
   log?: PipelineLog;
+  correlationId?: string;
 }
 
 export interface QualificationOutcome {
+  correlationId: string;
+  sourceRecordId: string;
   businessId: string;
+  businessCreated: boolean;
   prospectId: string;
   featureSetId: string;
   leadScoreId: string;
@@ -77,7 +81,7 @@ export async function qualifyBusiness(
 ): Promise<QualificationOutcome> {
   const log: PipelineLog = options.log ?? (() => {});
   const notes: string[] = [];
-  const correlationId = crypto.randomUUID();
+  const correlationId = options.correlationId ?? crypto.randomUUID();
 
   const setup = await ensureQualificationSetup(db);
 
@@ -197,7 +201,10 @@ export async function qualifyBusiness(
   const finalProspect = await getProspectById(db, prospect.id);
 
   const outcome: QualificationOutcome = {
+    correlationId,
+    sourceRecordId: ingestion.sourceRecordId,
     businessId: ingestion.businessId,
+    businessCreated: ingestion.businessCreated,
     prospectId: prospect.id,
     featureSetId,
     leadScoreId,

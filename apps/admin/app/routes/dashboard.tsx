@@ -29,6 +29,8 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
   const { overview, filters } = loaderData;
   const hasFilters = Boolean(
     filters.search ||
+      filters.source ||
+      filters.category ||
       (filters.status && filters.status !== "all") ||
       filters.minimumScore !== undefined ||
       filters.maximumScore !== undefined
@@ -121,6 +123,14 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
             </select>
           </label>
           <label>
+            <span>Source</span>
+            <input name="source" defaultValue={filters.source ?? ""} placeholder="OpenStreetMap" />
+          </label>
+          <label>
+            <span>Category</span>
+            <input name="category" defaultValue={filters.category ?? ""} placeholder="roofing" />
+          </label>
+          <label>
             <span>Minimum score</span>
             <input name="minScore" type="number" min="0" max="100" defaultValue={filters.minimumScore ?? ""} placeholder="0" />
           </label>
@@ -131,6 +141,12 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
           <button className="button button-primary" type="submit">Apply filters</button>
           {hasFilters ? <Link className="button button-quiet" to="/">Clear</Link> : null}
         </Form>
+
+        {overview.prospects.some((prospect) => prospect.sourceName?.toLowerCase() === "openstreetmap") ? (
+          <p className="osm-attribution">
+            Discovery data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap contributors</a> · ODbL 1.0
+          </p>
+        ) : null}
 
         {overview.summary.total === 0 ? (
           <EmptyState />

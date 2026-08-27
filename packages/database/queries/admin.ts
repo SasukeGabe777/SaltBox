@@ -16,6 +16,8 @@ export type ProspectStatusFilter = "all" | QualificationResult;
 export interface ProspectListFilters {
   status?: ProspectStatusFilter;
   search?: string;
+  source?: string;
+  category?: string;
   minimumScore?: number;
   maximumScore?: number;
 }
@@ -387,6 +389,10 @@ export async function listProspects(
   let query = latestProspectQuery(db);
   const search = filters.search?.trim();
   if (search) query = query.where("business.canonical_name", "ilike", `%${search}%`);
+  const source = filters.source?.trim();
+  if (source) query = query.where("latest_source.source_name", "ilike", `%${source}%`);
+  const category = filters.category?.trim();
+  if (category) query = query.where("business.category", "ilike", `%${category}%`);
   if (filters.status && filters.status !== "all") {
     query = query.where("latest_decision.result_code", "=", filters.status);
   }

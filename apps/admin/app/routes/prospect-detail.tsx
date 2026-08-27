@@ -323,12 +323,18 @@ export default function ProspectDetailPage({ loaderData }: Route.ComponentProps)
           <div className="provenance-grid">
             {detail.provenance.map((source) => (
               <article key={source.sourceRecordId}>
-                <div><span>Source</span><strong>{source.sourceName}</strong></div>
+                <div><span>Source</span><strong>{source.sourceName === "openstreetmap" ? "OpenStreetMap" : source.sourceName}</strong></div>
                 <div><span>Type</span><strong>{source.sourceType}</strong></div>
                 <div><span>External ID</span><code>{source.externalId}</code></div>
                 <div><span>Source-record ID</span><code>{source.sourceRecordId}</code></div>
                 <div><span>Retrieved at</span><strong>{formatDateTime(source.retrievedAt)}</strong></div>
                 <div><span>Recorded at</span><strong>{formatDateTime(source.recordedAt)}</strong></div>
+                {source.sourceLocator ? (
+                  <div><span>Source locator</span><a href={source.sourceLocator} target="_blank" rel="noreferrer">Open source record ↗</a></div>
+                ) : null}
+                {source.sourceName === "openstreetmap" ? (
+                  <div className="source-attribution"><span>Attribution</span><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap contributors · ODbL 1.0</a></div>
+                ) : null}
               </article>
             ))}
           </div>

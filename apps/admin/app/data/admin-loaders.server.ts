@@ -26,9 +26,11 @@ export function parseProspectFilters(url: string): ProspectListFilters {
   const rawStatus = params.get("status");
   const status = rawStatus === "qualified" || rawStatus === "rejected" ? rawStatus : "all";
   const search = params.get("search")?.trim() || undefined;
+  const source = params.get("source")?.trim() || undefined;
+  const category = params.get("category")?.trim() || undefined;
   const minimumScore = parseScore(params.get("minScore"));
   const maximumScore = parseScore(params.get("maxScore"));
-  return { status, search, minimumScore, maximumScore };
+  return { status, search, source, category, minimumScore, maximumScore };
 }
 
 export async function loadDashboardRequest(

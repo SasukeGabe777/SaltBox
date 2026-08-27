@@ -165,6 +165,17 @@ authorization are implemented. See [apps/admin/README.md](apps/admin/README.md).
 
 The database foundation lives in [packages/database](packages/database/README.md) (`pnpm db:up`, `db:migrate`, `db:verify`). The deterministic prospect-qualification slice lives in [services/prospecting](services/prospecting/README.md); exercise it locally with `pnpm prospect:qualify --fixture roofing-good`.
 
+Phase 5B real-business discovery lives in [services/discovery](services/discovery/README.md).
+For a small, local-only OpenStreetMap proof, run:
+
+```text
+pnpm discover --category roofing --location "Ogden, UT" --radius-km 10 --limit 5
+```
+
+Public OSM services are used only for bounded development searches; attribution
+and production-use restrictions are documented with the service. Discovery
+performs analysis and qualification only—it never sends outreach.
+
 ## Fresh-machine bootstrap
 
 Prerequisites:

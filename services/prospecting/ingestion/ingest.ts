@@ -32,12 +32,21 @@ export interface ControlledBusinessInput {
   source: string;
   /** Stable external id within the source namespace, e.g. "fixture-roofing-001". */
   externalId: string;
+  /** Provider-neutral provenance used by real discovery adapters. */
+  sourceType?: string;
+  sourceDescription?: string;
+  sourceRetentionClass?: string;
+  sourceLocator?: string;
+  sourceRetrievedAt?: Date;
+  sourceContentHash?: string;
+  sourceMetadata?: Record<string, unknown>;
 }
 
 export interface IngestionResult {
   sourceId: string;
   sourceRecordId: string;
   businessId: string;
+  businessCreated: boolean;
   emailContactMethodId?: string;
   phoneContactMethodId?: string;
   domainId?: string;
@@ -52,16 +61,22 @@ export async function ingestControlledBusiness(
 ): Promise<IngestionResult> {
   const sourceId = await ensureSource(db, {
     name: input.source,
-    sourceType: "manual",
-    description: "Controlled Phase 4 input path (fixtures and local developer tooling).",
+    sourceType: input.sourceType ?? "manual",
+    description: input.sourceDescription ?? "Controlled Phase 4 input path (fixtures and local developer tooling).",
+    ...(input.sourceRetentionClass !== undefined ? { retentionClass: input.sourceRetentionClass } : {}),
   });
 
   const sourceRecord = await upsertSourceRecord(db, {
     sourceId,
     externalId: input.externalId,
+    ...(input.sourceRetrievedAt !== undefined ? { retrievedAt: input.sourceRetrievedAt } : {}),
+    ...(input.sourceLocator !== undefined ? { sourceLocator: input.sourceLocator } : {}),
+    ...(input.sourceContentHash !== undefined ? { contentHash: input.sourceContentHash } : {}),
+    ...(input.sourceMetadata !== undefined ? { providerMetadata: input.sourceMetadata } : {}),
   });
 
   let businessId = sourceRecord.businessId;
+  let businessCreated = false;
   if (businessId === null) {
     const matched = await findBusinessByExternalIdentifier(db, {
       provider: input.source,
@@ -76,6 +91,7 @@ export async function ingestControlledBusiness(
         ...(input.industry !== undefined ? { category: input.industry } : {}),
       });
       businessId = business.id;
+      businessCreated = true;
       await addBusinessIdentifier(db, {
         businessId,
         provider: input.source,
@@ -90,6 +106,7 @@ export async function ingestControlledBusiness(
     sourceId,
     sourceRecordId: sourceRecord.id,
     businessId,
+    businessCreated,
   };
 
   if (input.email !== undefined && input.email.trim() !== "") {

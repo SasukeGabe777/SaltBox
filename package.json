@@ -14,6 +14,7 @@
     "admin:build": "pnpm --filter @saltbox/admin build",
     "admin:check": "pnpm --filter @saltbox/admin check",
     "admin:test": "pnpm --filter @saltbox/admin test",
+    "discover": "pnpm --filter @saltbox/discovery discover",
     "build": "pnpm -r build",
     "build:website": "pnpm --filter @saltbox/website build",
     "check": "pnpm -r check",

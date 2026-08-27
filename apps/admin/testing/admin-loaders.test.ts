@@ -26,9 +26,16 @@ test("dashboard loader parses lightweight URL filters and returns an empty state
     },
     getDetail: async () => undefined,
   };
-  const request = new Request("http://localhost:5174/?status=qualified&search=roof&minScore=60&maxScore=95");
+  const request = new Request("http://localhost:5174/?status=qualified&search=roof&source=openstreetmap&category=roofing&minScore=60&maxScore=95");
   const result = await loadDashboardRequest(request, service);
-  assert.deepEqual(capturedFilters, { status: "qualified", search: "roof", minimumScore: 60, maximumScore: 95 });
+  assert.deepEqual(capturedFilters, {
+    status: "qualified",
+    search: "roof",
+    source: "openstreetmap",
+    category: "roofing",
+    minimumScore: 60,
+    maximumScore: 95,
+  });
   assert.equal(result.overview.prospects.length, 0);
 });
 
@@ -36,6 +43,8 @@ test("filter parsing clamps numeric scores and ignores unsupported decisions", (
   assert.deepEqual(parseProspectFilters("http://localhost/?status=won&minScore=-10&maxScore=500"), {
     status: "all",
     search: undefined,
+    source: undefined,
+    category: undefined,
     minimumScore: 0,
     maximumScore: 100,
   });

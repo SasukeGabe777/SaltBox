@@ -60,6 +60,7 @@ test("listProspects selects the latest score and applies operator filters", asyn
 
   assert.deepEqual((await listProspects(ctx.db, { status: "rejected" })).map((row) => row.prospectId), [rejectedProspectId]);
   assert.deepEqual((await listProspects(ctx.db, { search: "summit", minimumScore: 80 })).map((row) => row.prospectId), [qualifiedProspectId]);
+  assert.deepEqual((await listProspects(ctx.db, { source: "admin_fixture", category: "roofing" })).map((row) => row.prospectId), [qualifiedProspectId]);
   assert.deepEqual(await listProspects(ctx.db, { search: "does-not-exist" }), []);
 });
 

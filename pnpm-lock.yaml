@@ -89,6 +89,22 @@ importers:
         specifier: 5.9.3
         version: 5.9.3
 
+  services/discovery:
+    dependencies:
+      '@saltbox/database':
+        specifier: workspace:*
+        version: link:../../packages/database
+      '@saltbox/prospecting':
+        specifier: workspace:*
+        version: link:../prospecting
+    devDependencies:
+      '@types/node':
+        specifier: ^26.3.0
+        version: 26.3.0
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+
   services/prospecting:
     dependencies:
       '@saltbox/database':
