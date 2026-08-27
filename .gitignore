@@ -16,6 +16,7 @@ node_modules/
 .output/
 .svelte-kit/
 .astro/
+.react-router/
 dist/
 build/
 out/

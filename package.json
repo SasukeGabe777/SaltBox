@@ -10,7 +10,11 @@
   "scripts": {
     "dev": "pnpm dev:website",
     "dev:website": "pnpm --filter @saltbox/website dev",
-    "build": "pnpm build:website",
+    "admin:dev": "pnpm --filter @saltbox/admin dev",
+    "admin:build": "pnpm --filter @saltbox/admin build",
+    "admin:check": "pnpm --filter @saltbox/admin check",
+    "admin:test": "pnpm --filter @saltbox/admin test",
+    "build": "pnpm -r build",
     "build:website": "pnpm --filter @saltbox/website build",
     "check": "pnpm -r check",
     "test": "pnpm -r test",

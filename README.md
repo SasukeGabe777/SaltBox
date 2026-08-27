@@ -91,7 +91,7 @@ At maturity, SaltBox should track discovery and enrichment, analysis and scoring
 saltbox/
 ├── apps/
 │   ├── website/          # Astro production marketing website
-│   ├── admin/            # Future operator dashboard
+│   ├── admin/            # Local read-only React Router prospect viewer
 │   └── demo-sites/       # Future demo-site delivery surface
 ├── services/
 │   ├── prospecting/
@@ -156,6 +156,12 @@ pnpm build
 ```
 
 `apps/website` is an Astro 6 + TypeScript faithful port of the approved marketing prototype. It builds to static HTML by default and contains no backend, analytics, CMS, deployment credentials, or Cloudflare account configuration. See [apps/website/README.md](apps/website/README.md) for app-specific guidance.
+
+`apps/admin` is the local-only, read-only React Router 8 Framework Mode
+prospect viewer. With PostgreSQL running, start it using `pnpm admin:dev` and
+open `http://127.0.0.1:5174`. It reads through the SaltBox database query
+boundary; production deployment is prohibited until authentication and
+authorization are implemented. See [apps/admin/README.md](apps/admin/README.md).
 
 The database foundation lives in [packages/database](packages/database/README.md) (`pnpm db:up`, `db:migrate`, `db:verify`). The deterministic prospect-qualification slice lives in [services/prospecting](services/prospecting/README.md); exercise it locally with `pnpm prospect:qualify --fixture roofing-good`.
 
