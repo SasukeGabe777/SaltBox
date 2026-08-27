@@ -6,14 +6,25 @@
   "engines": {
     "node": ">=24.0.0 <25"
   },
+  "exports": {
+    "./app": "./server/app.ts",
+    "./handler": "./server/handler.ts",
+    "./qa": "./qa/run-qa.ts",
+    "./hosting": "./hosting/config.ts",
+    "./hosting/r2": "./hosting/wrangler-r2.ts"
+  },
   "scripts": {
     "dev": "node --watch server/main.ts",
     "start": "node server/main.ts",
     "qa": "node scripts/qa.ts",
+    "publish:demo": "node scripts/publish.ts",
+    "deploy": "node scripts/deploy.ts",
+    "deploy:check": "node scripts/deploy.ts --check",
     "check": "tsc --noEmit",
     "test": "node --test \"testing/**/*.test.ts\""
   },
   "dependencies": {
+    "@saltbox/artifact-store": "workspace:*",
     "@saltbox/database": "workspace:*",
     "@saltbox/demo-generation": "workspace:*"
   },

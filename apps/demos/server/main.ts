@@ -23,14 +23,27 @@ if (!Number.isInteger(port) || port < 1 || port > 65535) {
   process.exit(1);
 }
 
+const rawMode = process.env.SALTBOX_DEMOS_MODE ?? "preview";
+if (rawMode !== "preview" && rawMode !== "public") {
+  console.error(`Invalid SALTBOX_DEMOS_MODE "${rawMode}"; expected "preview" or "public".`);
+  process.exit(1);
+}
+const mode = rawMode;
+
 const db = createDatabase({ connectionString: databaseUrl, maxConnections: 6 });
 const server = createDemosServer({
   db,
+  mode,
   log: (message, detail) => console.error(JSON.stringify({ message, ...(detail ?? {}) })),
 });
 
 server.listen(port, host, () => {
   console.log(`SaltBox demo renderer listening on http://${host}:${port}/ (loopback only, noindex).`);
+  console.log(
+    mode === "public"
+      ? "Mode: public — only operator-APPROVED demo versions resolve."
+      : "Mode: preview — the current version of each demo resolves for operator review.",
+  );
   console.log("Demos are reachable only through their private /d/<locator> links.");
 });
 

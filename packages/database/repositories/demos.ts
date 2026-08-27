@@ -62,6 +62,8 @@ export interface DemoRecord {
   concept: string | null;
   status: DemoStatus;
   currentDemoVersionId: string | null;
+  /** The operator-approved version (Phase 10); never moved by generation. */
+  approvedDemoVersionId: string | null;
   revision: number;
   createdAt: Date;
   updatedAt: Date;
@@ -73,6 +75,7 @@ function mapDemoRow(row: {
   concept: string | null;
   status: string;
   current_demo_version_id: string | null;
+  approved_demo_version_id: string | null;
   revision: number;
   created_at: Date;
   updated_at: Date;
@@ -83,6 +86,7 @@ function mapDemoRow(row: {
     concept: row.concept,
     status: row.status as DemoStatus,
     currentDemoVersionId: row.current_demo_version_id,
+    approvedDemoVersionId: row.approved_demo_version_id,
     revision: row.revision,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -95,6 +99,7 @@ const DEMO_COLUMNS = [
   "concept",
   "status",
   "current_demo_version_id",
+  "approved_demo_version_id",
   "revision",
   "created_at",
   "updated_at",

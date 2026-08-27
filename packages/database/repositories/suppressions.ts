@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Suppression safety state (ADR-004 invariants 12–13).
  *
  * Eligibility is computed across every applicable scope; positive eligibility
@@ -6,8 +6,18 @@
  * authorized action that preserves the record.
  */
 
+import { sql } from "kysely";
 import type { Database } from "../client/kysely.ts";
 import type { ActorType, ContactChannel, SuppressionScope, SuppressionType } from "../generated/db.ts";
+
+/**
+ * Effectiveness is evaluated against the DATABASE clock, never the caller's.
+ * `effective_at` defaults to the server's now(); comparing it to a client
+ * timestamp can hide a just-activated suppression whenever the two clocks
+ * disagree (a container and its host routinely do), and a missed suppression
+ * is exactly the failure SaltBox must never have.
+ */
+const databaseNow = () => sql<Date>`now()`;
 
 export interface ActivateSuppressionInput {
   scope: SuppressionScope;
@@ -89,13 +99,12 @@ export async function activeQualificationSuppressions(
   db: Database,
   businessId: string,
 ): Promise<string[]> {
-  const now = new Date();
   const rows = await db
     .selectFrom("suppression")
     .select("id")
     .where("status", "=", "active")
-    .where("effective_at", "<=", now)
-    .where((eb) => eb.or([eb("expires_at", "is", null), eb("expires_at", ">", now)]))
+    .where("effective_at", "<=", databaseNow())
+    .where((eb) => eb.or([eb("expires_at", "is", null), eb("expires_at", ">", databaseNow())]))
     .where((eb) =>
       eb.or([
         eb("scope", "=", "global"),
@@ -115,13 +124,12 @@ export async function checkOutreachEligibility(
   db: Database,
   input: OutreachEligibilityInput
 ): Promise<OutreachEligibility> {
-  const now = new Date();
   const rows = await db
     .selectFrom("suppression")
     .select(["id"])
     .where("status", "=", "active")
-    .where("effective_at", "<=", now)
-    .where((eb) => eb.or([eb("expires_at", "is", null), eb("expires_at", ">", now)]))
+    .where("effective_at", "<=", databaseNow())
+    .where((eb) => eb.or([eb("expires_at", "is", null), eb("expires_at", ">", databaseNow())]))
     .where((eb) => {
       const scopes = [
         eb("scope", "=", "global" as const),

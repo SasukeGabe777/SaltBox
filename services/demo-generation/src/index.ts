@@ -14,6 +14,31 @@ export { assertNoUnsupportedClaims, findUnsupportedClaims } from "./claims-guard
 export { evaluateDemoEligibility, type DemoEligibility, type EligibilityReason } from "./eligibility.ts";
 export { collectDemoSourceFacts, formatPhoneDisplay } from "./facts.ts";
 export {
+  approveDemoVersion,
+  rejectDemoVersion,
+  evaluateQaGate,
+  DEMO_APPROVAL_POLICY_VERSION,
+  type ApprovalBlocker,
+  type ApproveDemoVersionResult,
+  type RejectDemoVersionResult,
+} from "./approval.ts";
+export {
+  evaluateDemoQaReport,
+  persistDemoQaResult,
+  CRITICAL_QA_CHECKS,
+  DEMO_QA_RUNNER_VERSION,
+  type DemoQaCheck,
+  type DemoQaEvaluation,
+  type DemoQaReport,
+} from "./qa.ts";
+export {
+  publishDemo,
+  collectDemoAssetReferences,
+  DEMO_PUBLICATION_VERSION,
+  type PublishDemoInput,
+  type PublishDemoResult,
+} from "./publish.ts";
+export {
   generateDemoForProspect,
   demoContentHash,
   stableStringify,

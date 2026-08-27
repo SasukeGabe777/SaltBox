@@ -19,6 +19,12 @@ importers:
       '@saltbox/database':
         specifier: workspace:*
         version: link:../../packages/database
+      '@saltbox/demo-generation':
+        specifier: workspace:*
+        version: link:../../services/demo-generation
+      '@saltbox/operator':
+        specifier: workspace:*
+        version: link:../../services/operator
       isbot:
         specifier: 5.1.36
         version: 5.1.36
@@ -53,6 +59,9 @@ importers:
 
   apps/demos:
     dependencies:
+      '@saltbox/artifact-store':
+        specifier: workspace:*
+        version: link:../../packages/artifact-store
       '@saltbox/database':
         specifier: workspace:*
         version: link:../../packages/database
@@ -79,6 +88,15 @@ importers:
       '@astrojs/check':
         specifier: 0.9.10
         version: 0.9.10(prettier@3.9.6)(typescript@5.9.3)
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+
+  packages/artifact-store:
+    devDependencies:
+      '@types/node':
+        specifier: ^26.3.0
+        version: 26.3.0
       typescript:
         specifier: 5.9.3
         version: 5.9.3
@@ -110,6 +128,9 @@ importers:
 
   services/demo-generation:
     dependencies:
+      '@saltbox/artifact-store':
+        specifier: workspace:*
+        version: link:../../packages/artifact-store
       '@saltbox/database':
         specifier: workspace:*
         version: link:../../packages/database
@@ -135,6 +156,40 @@ importers:
       '@saltbox/database':
         specifier: workspace:*
         version: link:../../packages/database
+      '@saltbox/prospecting':
+        specifier: workspace:*
+        version: link:../prospecting
+      '@saltbox/qualification':
+        specifier: workspace:*
+        version: link:../qualification
+      '@saltbox/website-intelligence':
+        specifier: workspace:*
+        version: link:../website-intelligence
+    devDependencies:
+      '@types/node':
+        specifier: ^26.3.0
+        version: 26.3.0
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+
+  services/operator:
+    dependencies:
+      '@saltbox/artifact-store':
+        specifier: workspace:*
+        version: link:../../packages/artifact-store
+      '@saltbox/database':
+        specifier: workspace:*
+        version: link:../../packages/database
+      '@saltbox/demo-generation':
+        specifier: workspace:*
+        version: link:../demo-generation
+      '@saltbox/demos':
+        specifier: workspace:*
+        version: link:../../apps/demos
+      '@saltbox/discovery':
+        specifier: workspace:*
+        version: link:../discovery
       '@saltbox/prospecting':
         specifier: workspace:*
         version: link:../prospecting

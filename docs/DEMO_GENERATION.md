@@ -1,5 +1,12 @@
 # Demo Generation — Phases 8 & 9
 
+> [!IMPORTANT]
+> Phase 10 adds the lifecycle around generation: operator review and approval
+> ([`OPERATOR_APPROVAL.md`](OPERATOR_APPROVAL.md)) and durable hosting
+> ([`DEMO_HOSTING.md`](DEMO_HOSTING.md)). Generating a version no longer makes
+> it usable — an operator must approve one exact `DemoVersion` first, and the
+> public URL serves only that one.
+
 Phase 8 takes a qualified-v2 prospect and automatically builds a personalized,
 viewable website demo. It crosses SaltBox from "finds good prospects" to
 "builds something sellable for them" — without outreach, AI, paid APIs, or
@@ -174,6 +181,8 @@ in PostgreSQL. No production object storage is provisioned in Phase 8.
 
 ## Known limitations
 
+- Generation never approves and never publishes; those are Phase 10 operator
+  actions (`docs/OPERATOR_APPROVAL.md`).
 - No AI copywriting or image generation; copy is phrase-library deterministic
   and intentionally conservative.
 - One template family (local service businesses); other categories are
@@ -183,5 +192,5 @@ in PostgreSQL. No production object storage is provisioned in Phase 8.
 - No review/social enrichment; testimonials are always omitted.
 - No customer approval flow, outreach, public deployment, custom domains,
   billing, or automatic form delivery.
-- Demo status model stops at `ready`; `published`/`sent` semantics belong to
-  future outreach phases.
+- `sent` semantics belong to future outreach phases; Phase 10 stops at
+  `READY FOR OUTREACH`.

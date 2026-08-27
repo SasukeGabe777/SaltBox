@@ -1,17 +1,20 @@
-# @saltbox/demo-generation
+﻿# @saltbox/demo-generation
 
-Deterministic demo generation (Phases 8–9): eligibility, fact collection,
+Deterministic demo generation and lifecycle (Phases 8–10): eligibility, fact collection,
 brand-profile consumption, DemoPlan v2, structured content v2, deterministic
 composition selection, and append-only Demo/DemoVersion persistence.
 Rendering lives separately in [`apps/demos`](../../apps/demos/README.md) —
 this service never produces HTML. Full architecture:
-[`docs/DEMO_GENERATION.md`](../../docs/DEMO_GENERATION.md) and
-[`docs/BRAND_ASSET_INTELLIGENCE.md`](../../docs/BRAND_ASSET_INTELLIGENCE.md).
+[`docs/DEMO_GENERATION.md`](../../docs/DEMO_GENERATION.md),
+[`docs/BRAND_ASSET_INTELLIGENCE.md`](../../docs/BRAND_ASSET_INTELLIGENCE.md),
+and [`docs/OPERATOR_APPROVAL.md`](../../docs/OPERATOR_APPROVAL.md).
 
 ```text
 pnpm demo:generate --prospect <uuid> [--skip-brand] [--refresh-brand]
 pnpm demo:generate --latest-qualified [--category roofing] [--limit 1]
 pnpm demo:brand --prospect <uuid> [--refresh]
+pnpm demo:qa --token <public-locator>            # records QA evidence (apps/demos)
+pnpm demos:publish --prospect <uuid>             # publishes the APPROVED version
 ```
 
 ## Versioned contract
@@ -25,6 +28,9 @@ pnpm demo:brand --prospect <uuid> [--refresh]
 | Compositions | `local-service-premium/bold/clean` @ `1.0.0` (+ frozen `local-service` @ `1.0.0`) |
 | Brand input | `brand-intelligence-v1` / `brand-profile-v1` |
 | Eligible policy | `qualification-policy-v2` |
+| Approval policy | `demo-approval-policy-v1` |
+| QA runner | `demo-qa-v2` |
+| Publication | `demo-publication-v1` |
 
 ## Module map
 
@@ -46,7 +52,16 @@ pnpm demo:brand --prospect <uuid> [--refresh]
   generated copy (extracted site text is evidence, not a generated claim).
 - `src/generate.ts` — orchestration, idempotency (content hash), append-only
   DemoVersion, opaque locator (stable across regenerations), the optional
-  brand-extraction hook, and the `demo_published` event.
+  brand-extraction hook, the optional composition override, and the
+  `demo_generated` / `demo_regenerated` events. Generation NEVER approves.
+- `src/qa.ts` — the QA report contract, which checks are critical, and
+  append-only QA persistence with `demo_qa_passed` / `demo_qa_failed`.
+- `src/approval.ts` — the Phase 10 approval invariant: one exact approved
+  DemoVersion, the QA gate, audited overrides, non-overridable suppression,
+  first-class decisions and append-only review history.
+- `src/publish.ts` — publication of the approved version's assets through the
+  provider-neutral artifact store, recording `demo_asset` metadata and the
+  durable URL (`demo_published`).
 
 ## Behavior guarantees
 
@@ -58,4 +73,7 @@ pnpm demo:brand --prospect <uuid> [--refresh]
   `--force-regenerate` append the next version; old versions are immutable.
 - Bounded generator metadata (size-guarded); large artifacts never enter
   PostgreSQL.
-- No AI, no paid APIs, no network calls, no outreach.
+- Generating a version never approves it and never moves an existing approval;
+  publication is only ever of the approved version.
+- No AI, no paid APIs, no outreach. Generation itself performs no network
+  calls; the injectable brand extractor does, through the Phase 6 boundary.

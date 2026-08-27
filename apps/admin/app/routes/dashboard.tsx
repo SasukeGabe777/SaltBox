@@ -4,29 +4,46 @@ import type { Route } from "./+types/dashboard";
 import { EmptyState } from "../components/EmptyState";
 import { RefreshControl } from "../components/RefreshControl";
 import { StatusBadge } from "../components/StatusBadge";
+import { OperatorMessage } from "../components/OperatorMessage";
+import { RunProgress } from "../components/RunProgress";
 import {
   loadDashboardRequest,
   rethrowAsOperatorResponse,
 } from "../data/admin-loaders.server";
+import {
+  acquisitionCategories,
+  demosBaseUrlValue,
+  handleOperatorAction,
+  loadOperatorDashboard,
+} from "../data/operator.server";
 import { formatClockTime, formatDateTime, formatLocation } from "../utils/format";
 
 export function meta() {
   return [
     { title: "Prospect Intelligence · SaltBox" },
-    { name: "description", content: "Local read-only prospect intelligence for SaltBox operators." },
+    { name: "description", content: "Local prospect intelligence and demo operations for SaltBox operators." },
   ];
 }
 
 export async function loader({ request }: Route.LoaderArgs) {
   try {
-    return await loadDashboardRequest(request);
+    const [base, operator] = await Promise.all([loadDashboardRequest(request), loadOperatorDashboard()]);
+    return { ...base, operator, categories: acquisitionCategories(), demosBaseUrl: demosBaseUrlValue() };
   } catch (error) {
     rethrowAsOperatorResponse(error);
   }
 }
 
-export default function Dashboard({ loaderData }: Route.ComponentProps) {
-  const { overview, filters } = loaderData;
+export async function action({ request }: Route.ActionArgs) {
+  try {
+    return await handleOperatorAction(request);
+  } catch (error) {
+    rethrowAsOperatorResponse(error);
+  }
+}
+
+export default function Dashboard({ loaderData, actionData }: Route.ComponentProps) {
+  const { overview, filters, operator, categories, demosBaseUrl } = loaderData;
   const hasFilters = Boolean(
     filters.search ||
       filters.source ||
@@ -53,8 +70,186 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
       <section className="metric-grid" aria-label="Prospect totals">
         <Metric label="Total prospects" value={overview.summary.total} accent="default" />
         <Metric label="Qualified" value={overview.summary.qualified} accent="positive" />
-        <Metric label="Rejected" value={overview.summary.rejected} accent="negative" />
-        <Metric label="Analyzed" value={overview.summary.analyzed} accent="info" />
+        <Metric label="Awaiting demo review" value={operator.awaitingReview.length} accent="review" />
+        <Metric label="Ready for outreach" value={operator.readyForOutreach.filter((item) => item.readyForOutreach).length} accent="info" />
+      </section>
+
+      <section className="panel operator-panel">
+        <div className="panel-heading split-heading">
+          <div>
+            <p className="section-kicker">OPERATOR CONTROL</p>
+            <h2>Start an acquisition run</h2>
+          </div>
+          <Link className="button button-quiet" to="/runs">
+            All runs{operator.activeRunCount > 0 ? ` · ${operator.activeRunCount} active` : ""}
+          </Link>
+        </div>
+        <OperatorMessage result={actionData ?? null} />
+        <Form method="post" className="operator-form" aria-label="Start acquisition">
+          <input type="hidden" name="intent" value="start-acquisition" />
+          <label>
+            <span>Category</span>
+            <select name="category" defaultValue="roofing">
+              {categories.map((category) => (
+                <option key={category} value={category}>
+                  {category.replaceAll("_", " ")}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="operator-field-wide">
+            <span>Location</span>
+            <input name="location" defaultValue="Ogden, UT" placeholder="Ogden, UT" required maxLength={120} />
+          </label>
+          <label>
+            <span>Radius (km)</span>
+            <input name="radiusKm" type="number" min={1} max={25} defaultValue={10} />
+          </label>
+          <label>
+            <span>Limit</span>
+            <input name="limit" type="number" min={1} max={10} defaultValue={3} />
+          </label>
+          <label>
+            <span>Source</span>
+            <select name="source" defaultValue="overture">
+              <option value="overture">Overture</option>
+              <option value="openstreetmap">OpenStreetMap</option>
+              <option value="all">Both</option>
+            </select>
+          </label>
+          <label>
+            <span>Concurrency</span>
+            <input name="concurrency" type="number" min={1} max={2} defaultValue={1} />
+          </label>
+          <button className="button button-primary" type="submit">START ACQUISITION</button>
+        </Form>
+        <p className="operator-note">
+          Bounded by policy: at most 10 businesses per source, 25 km, and deep-analysis concurrency 2. Runs execute
+          in a local worker process and never send outreach.
+        </p>
+      </section>
+
+      <section className="dashboard-grid operator-grid">
+        <div className="panel">
+          <div className="panel-heading">
+            <div>
+              <p className="section-kicker">REVIEW QUEUE</p>
+              <h2>Demos awaiting review</h2>
+            </div>
+          </div>
+          {operator.awaitingReview.length === 0 ? (
+            <p className="panel-empty">Every generated demo version has been reviewed.</p>
+          ) : (
+            <ul className="review-queue">
+              {operator.awaitingReview.map((item) => (
+                <li key={item.demoId}>
+                  <Link to={`/prospects/${item.prospectId}`}>{item.businessName}</Link>
+                  <span className="review-meta">
+                    v{item.currentVersionNumber ?? "—"} · {item.composition ?? "composition unknown"}
+                    {item.approvedVersionNumber ? ` · approved v${item.approvedVersionNumber}` : " · never approved"}
+                  </span>
+                  <span className={`qa-chip qa-${item.qaStatus ?? "none"}`}>
+                    {item.qaStatus ? `QA ${item.qaStatus}` : "QA not run"}
+                    {item.qaCriticalFailures ? ` · ${item.qaCriticalFailures} critical` : ""}
+                  </span>
+                  {item.locatorToken ? (
+                    <a href={`${demosBaseUrl}/d/${item.locatorToken}`} target="_blank" rel="noreferrer">
+                      preview ↗
+                    </a>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div className="panel">
+          <div className="panel-heading">
+            <div>
+              <p className="section-kicker">APPROVED</p>
+              <h2>Ready for outreach</h2>
+            </div>
+          </div>
+          {operator.readyForOutreach.length === 0 ? (
+            <p className="panel-empty">No demo version has been approved yet.</p>
+          ) : (
+            <ul className="review-queue">
+              {operator.readyForOutreach.map((item) => (
+                <li key={item.demoId}>
+                  <Link to={`/prospects/${item.prospectId}`}>{item.businessName}</Link>
+                  <span className="review-meta">
+                    approved v{item.approvedVersionNumber} · {item.hostingStatus.replaceAll("_", " ")}
+                    {item.suppressed ? " · SUPPRESSED" : ""}
+                  </span>
+                  <span className={`qa-chip ${item.readyForOutreach ? "qa-passed" : "qa-none"}`}>
+                    {item.readyForOutreach ? "READY FOR OUTREACH" : "not ready"}
+                  </span>
+                  {item.hostedUrl ? (
+                    <a href={item.hostedUrl} target="_blank" rel="noreferrer">
+                      hosted demo ↗
+                    </a>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          )}
+          <p className="operator-note">Ready for outreach means "may be used later" — SaltBox still sends nothing.</p>
+        </div>
+      </section>
+
+      <section className="dashboard-grid operator-grid">
+        <div className="panel">
+          <div className="panel-heading">
+            <div>
+              <p className="section-kicker">OPERATOR RUNS</p>
+              <h2>Recent runs</h2>
+            </div>
+            <Link className="button button-quiet" to="/runs">View all</Link>
+          </div>
+          {operator.recentRuns.length === 0 ? (
+            <p className="panel-empty">No operator run has been started from the admin yet.</p>
+          ) : (
+            <ul className="run-list">
+              {operator.recentRuns.slice(0, 5).map((run) => (
+                <li key={run.runId}>
+                  <Link to={`/runs/${run.runId}`}>{run.runKind.replaceAll("_", " ")}</Link>
+                  <RunProgress run={run} compact />
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div className="panel">
+          <div className="panel-heading">
+            <div>
+              <p className="section-kicker">ISOLATED FAILURES</p>
+              <h2>Target failures</h2>
+            </div>
+          </div>
+          {operator.targetFailures.length === 0 ? (
+            <p className="panel-empty">No target failed in a recent run.</p>
+          ) : (
+            <ul className="failure-list">
+              {operator.targetFailures.map((target) => (
+                <li key={target.targetId}>
+                  <strong>{target.label}</strong>
+                  <span className="failure-kind">
+                    {target.failureKind ?? "unknown"}
+                    {target.failureCode ? ` (${target.failureCode})` : ""}
+                    {target.transient ? " · transient" : ""}
+                  </span>
+                  {target.prospectId ? (
+                    <Link to={`/prospects/${target.prospectId}`}>open case file</Link>
+                  ) : (
+                    <span className="muted">not persisted as a prospect</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+          <p className="operator-note">A target failure never fails the whole run — retry it from its case file.</p>
+        </div>
       </section>
 
       <section className="dashboard-grid">

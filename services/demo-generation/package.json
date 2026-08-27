@@ -11,7 +11,11 @@
     "./config": "./src/config/demo-v1.ts",
     "./content-model": "./src/types.ts",
     "./eligibility": "./src/eligibility.ts",
-    "./generate": "./src/generate.ts"
+    "./generate": "./src/generate.ts",
+    "./approval": "./src/approval.ts",
+    "./brand-extraction": "./src/brand-extraction.ts",
+    "./qa": "./src/qa.ts",
+    "./publish": "./src/publish.ts"
   },
   "scripts": {
     "generate": "node scripts/generate.ts",
@@ -20,6 +24,7 @@
     "test": "node --test \"testing/**/*.test.ts\""
   },
   "dependencies": {
+    "@saltbox/artifact-store": "workspace:*",
     "@saltbox/database": "workspace:*",
     "@saltbox/website-intelligence": "workspace:*"
   },

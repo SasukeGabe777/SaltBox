@@ -169,13 +169,16 @@ test("full generation: qualified v2 prospect -> plan -> content -> Demo -> DemoV
     assert.equal(versionRow.feature_set_id, outcome.featureSetId);
     assert.ok(versionRow.published_at !== null);
 
-    // demo_published domain event is appended and idempotent by version.
+    // Generation announces a version awaiting review (Phase 10). Becoming
+    // publicly visible is a separate later event emitted by publication, so
+    // demo_published must NOT be emitted here.
     const events = await ctx.db
       .selectFrom("event")
       .select(["event_type", "demo_version_id"])
-      .where("event_type", "=", "demo_published")
+      .where("event_type", "in", ["demo_generated", "demo_published"])
       .execute();
     assert.equal(events.length, 1);
+    assert.equal(events[0]?.event_type, "demo_generated");
     assert.equal(events[0]?.demo_version_id, summary.demoVersionId);
 
     // Public locator resolves to the current version; unknown tokens do not.

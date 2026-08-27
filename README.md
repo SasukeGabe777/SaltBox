@@ -91,14 +91,15 @@ At maturity, SaltBox should track discovery and enrichment, analysis and scoring
 saltbox/
 ├── apps/
 │   ├── website/          # Astro production marketing website
-│   ├── admin/            # Local read-only React Router prospect viewer
-│   └── demos/            # One renderer serving many prospect demos (Phase 8)
+│   ├── admin/            # Local React Router operator surface (viewer + demo lifecycle)
+│   └── demos/            # One renderer serving many prospect demos (Node + Worker)
 ├── services/
 │   ├── prospecting/
 │   ├── discovery/
 │   ├── website-intelligence/
 │   ├── qualification/
-│   ├── demo-generation/  # Deterministic demo planning/content/persistence (Phase 8)
+│   ├── demo-generation/  # Demo planning/content/approval/publication (Phases 8–10)
+│   ├── operator/         # Bounded operator runs started from the admin (Phase 10)
 │   ├── website-analysis/
 │   ├── lead-scoring/
 │   ├── outreach/
@@ -106,6 +107,7 @@ saltbox/
 │   └── learning/         # Future metrics, experiments, and learning domain
 ├── packages/
 │   ├── database/
+│   ├── artifact-store/   # Provider-neutral artifact storage (local | R2)
 │   ├── ai/
 │   ├── email/
 │   ├── types/
@@ -228,6 +230,34 @@ See [docs/DEMO_GENERATION.md](docs/DEMO_GENERATION.md),
 [docs/BRAND_ASSET_INTELLIGENCE.md](docs/BRAND_ASSET_INTELLIGENCE.md),
 [services/demo-generation/README.md](services/demo-generation/README.md), and
 [apps/demos/README.md](apps/demos/README.md).
+
+Phase 10 turns that into an operated lifecycle. The admin becomes the place
+work is started and demos are reviewed, and an approved demo gets a durable
+hosted URL:
+
+```text
+discovery -> qualification -> bespoke demo -> automated QA
+   -> OPERATOR REVIEW -> approve -> hosted URL -> READY FOR OUTREACH
+```
+
+**Only an approved DemoVersion may later be used for outreach.** Generation,
+a QA pass, and "latest" are all explicitly insufficient; regenerating never
+moves approval, and the public URL keeps serving the approved version until an
+operator approves a new one. `READY FOR OUTREACH` sends nothing — outreach is
+a later phase.
+
+```text
+pnpm admin:dev                                   # start/watch runs, review and approve demos
+pnpm operator:worker -- --drain                  # execute queued runs by hand if needed
+pnpm demos:publish --prospect <uuid>             # publish the APPROVED version's assets
+pnpm demos:deploy:check                          # hosted deploy preflight (no account needed)
+pnpm demos:deploy                                # deploy the Worker (needs `wrangler login`)
+```
+
+See [docs/OPERATOR_APPROVAL.md](docs/OPERATOR_APPROVAL.md),
+[docs/DEMO_HOSTING.md](docs/DEMO_HOSTING.md),
+[services/operator/README.md](services/operator/README.md), and
+[packages/artifact-store/README.md](packages/artifact-store/README.md).
 
 ## Fresh-machine bootstrap
 

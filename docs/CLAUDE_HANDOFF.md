@@ -1,11 +1,14 @@
-# READ THIS FIRST BEFORE CONTINUING SALTBOX DEVELOPMENT.
+﻿# READ THIS FIRST BEFORE CONTINUING SALTBOX DEVELOPMENT.
 
 ## Handoff identity
 
 - Prepared: 2026-08-27 on the Windows work PC in `C:\dev\SaltBox`.
 - Branch: `main`.
-- Authoritative completed Phase 7 commit: `2392601be49ad2971a6dd7c16ee82b0c46399d34` (`Implement deep-intelligence qualification v2`).
-- This document is committed immediately after that implementation commit. Run `git rev-parse HEAD` and `git rev-parse origin/main` to verify the final handoff commit; a commit cannot contain its own hash.
+- Phases 3–10 are complete and pushed. The Phase 9 commit is
+  `ed20021` (`Improve demos with brand and asset intelligence`); the Phase 10
+  commit follows this document's own commit — run `git log --oneline -5` to see it.
+- Run `git rev-parse HEAD` and `git rev-parse origin/main` to verify the current
+  commit; a commit cannot contain its own hash.
 - The committed repository is authoritative. This handoff is orientation, not a substitute for inspecting current code and history.
 
 ## Recent important commits
@@ -55,7 +58,11 @@ Improve website intelligence failure isolation
 ## Applications, services, and packages
 
 - `apps/website`: preserved Astro marketing prototype.
-- `apps/admin`: local React Router 8/React 19 server-rendered, read-only operator viewer at `http://127.0.0.1:5174/`.
+- `apps/admin`: local React Router 8/React 19 operator surface at `http://127.0.0.1:5174/` — evidence viewer plus the Phase 10 demo lifecycle controls and operator runs.
+- `apps/demos`: ONE demo renderer in two runtimes (Node server + Cloudflare Worker) over a shared handler and templates.
+- `services/demo-generation`: eligibility, facts, plan/content, approval, QA evidence, and publication.
+- `services/operator`: bounded operator runs (validation, queueing, the local worker, execution).
+- `packages/artifact-store`: provider-neutral artifact storage (local filesystem | Cloudflare R2).
 - `services/prospecting`: ingestion, lightweight website analysis, FeatureSet/score/policy v1, and lifecycle behavior.
 - `services/discovery`: OpenStreetMap and Overture adapters, local extract tooling, conservative cross-source identity, legacy v1 discovery, and Phase 7 acquisition orchestration.
 - `services/website-intelligence`: hardened Puppeteer/Chromium plus Lighthouse analysis, bounded crawling, evidence persistence, artifacts, and target/system failure classification. The persisted analyzer identifier remains `website-intelligence-v1`.
@@ -67,7 +74,8 @@ Improve website intelligence failure isolation
 - PostgreSQL is the authoritative local datastore; the Docker development instance uses PostgreSQL 18 on host port 5433.
 - SQL files in `packages/database/migrations` are authoritative. Kysely generated types and repositories sit above them.
 - Existing tables already support sources/source records, businesses, websites, contact methods, prospects/lifecycle, snapshots, analyses, observations, FeatureSets, LeadScores, Decisions, suppressions, events, and Demo/DemoVersion records.
-- Phase 7 required no migration. It appends v2 FeatureSets, scores, and decisions without mutating v1 history or duplicating active business/prospect identity.
+- Phase 7 required no migration. It appends v2 FeatureSets, scores, and decisions without mutating v1 history or duplicating active business/prospect identity. Phases 8–9 also required none.
+- Phase 10 added migration `1787702400006_demo-lifecycle-hosting-operator-runs`: demo review/QA/asset/publication tables, operator runs, the `demo.approved_demo_version_id` pointer, two decision types, and nine event types.
 - ADR-004 point-in-time rules apply: a FeatureSet uses only evidence available by its calculation cutoff; later analysis creates new history and never changes an older FeatureSet, score, or decision.
 - Large website-intelligence artifacts stay in git-ignored `.data/website-intelligence`; PostgreSQL stores structured evidence, summaries, lineage, and relative artifact references.
 - The work-PC database contained the controlled Phase 7 smoke-test businesses and results when Phase 7 was completed. Database contents are machine-local and are not conveyed by Git, so verify rather than assume they survived any later local reset.
@@ -87,7 +95,8 @@ pnpm.cmd db:verify
 pnpm.cmd admin:dev
 ```
 
-Open `http://127.0.0.1:5174/`.
+Open `http://127.0.0.1:5174/`. From Phase 10 the admin can also start
+acquisition runs and review/approve demos; see `docs/OPERATOR_APPROVAL.md`.
 
 For Overture, build or reuse a bounded local extract:
 
@@ -176,7 +185,7 @@ pnpm db:verify
 pnpm test
 ```
 
-Tests: 122 passed across database, admin, prospecting, website intelligence, qualification, and discovery workspaces. The deterministic suite does not depend on arbitrary public websites.
+Tests: 122 passed at Phase 7 across database, admin, prospecting, website intelligence, qualification, and discovery workspaces (190 as of Phase 10, adding artifact-store, demo-generation, demos, and operator). The deterministic suite does not depend on arbitrary public websites.
 
 Preserved marketing prototype SHA-256:
 
@@ -203,12 +212,13 @@ All persisted results were readable through the live admin route.
 
 ## Known limitations
 
+- No outreach exists anywhere: SaltBox stops at `READY FOR OUTREACH`.
 - Scoring weights and threshold are hypotheses, not trained probabilities; no outcome-learning loop exists yet.
 - Activity evidence remains weak by design. Target-fit detection is narrow to avoid false positives.
 - Lighthouse is lab evidence, analysis can take roughly a minute per target, and execution is bounded local concurrency rather than distributed work.
 - Public OSM infrastructure has no production SLA; Overture coverage depends on the locally prepared extract and pinned release.
 - Bot challenges are recorded as served and never evaded; they are not automatically treated as verified business deficiencies.
-- The system remains local-only, read-only in the admin, without UI orchestration, authentication, outreach, demos, billing, paid enrichment, or production deployment.
+- The admin has narrow demo-lifecycle mutations only (Phase 10); there is still no authentication, no hosted admin, no outreach, no billing, no paid enrichment, and no customer production deployment.
 
 ## Phase 8 — Automated Demo Generation (COMPLETE)
 
@@ -268,22 +278,68 @@ Documented in `docs/BRAND_ASSET_INTELLIGENCE.md`. Summary:
   (high), real shingle-photo hero, 7 extracted services, premium composition
   (`0z-T5ccKc4k2PEeV6v-2DTEf`, v3). Both 28/28 QA. 158 tests green.
 
+## Phase 10 — Demo Hosting + Operator Approval (COMPLETE)
+
+Documented in `docs/OPERATOR_APPROVAL.md` and `docs/DEMO_HOSTING.md`. Summary:
+
+- **The invariant**: only an APPROVED `DemoVersion` may later be used for
+  outreach. Generation, a QA pass, and "latest" are all insufficient;
+  regeneration never moves approval; the public locator serves only the
+  approved version and switches only when an operator approves a new one.
+- Migration `1787702400006` (the first since Phase 4): `demo_version_review`,
+  `demo_version_qa_result`, `demo_asset`, `demo_publication`, `operator_run`,
+  `operator_run_target`, the `demo.approved_demo_version_id` pointer,
+  `approve_demo`/`reject_demo` decision types, and nine new event types.
+- `services/demo-generation` gains `approval.ts` (QA gate, audited overrides,
+  never-overridable suppression, first-class decisions), `qa.ts` (report
+  contract + critical checks + append-only evidence) and `publish.ts`.
+- `packages/artifact-store` (@saltbox/artifact-store): provider-neutral
+  `put/get/has` with validated keys; Local and R2 implementations. Blobs never
+  enter PostgreSQL — only metadata and hashes.
+- `apps/demos` splits into a runtime-neutral handler plus two adapters: the
+  Node server and a Cloudflare Worker (`worker/index.ts`, `wrangler.toml`,
+  Hyperdrive + R2 bindings). ONE renderer, MANY demos, in both runtimes.
+  `SALTBOX_DEMOS_MODE=public` runs the hosted semantics locally.
+- `services/operator` (@saltbox/operator): bounded operator runs — validated
+  parameters, queued `operator_run`, detached local worker, per-target
+  progress, Phase 6/7 target-failure isolation preserved.
+- `apps/admin` is no longer read-only: START ACQUISITION, REGENERATE, RUN QA,
+  APPROVE/REJECT/WITHDRAW, PUBLISH (local|hosted), RETRY INTELLIGENCE, plus
+  `/runs` progress, version history with per-viewport QA, review/publication
+  history, and derived READY FOR OUTREACH with explicit blockers. Mutations
+  are same-origin checked and carry an explicit operator actor.
+- Also fixed: suppression effectiveness now evaluates against the DATABASE
+  clock. A client-side timestamp could hide a just-activated suppression when
+  the container and host clocks disagree.
+- Real operator smoke on this machine (admin at 5176): acquisition run
+  (roofing / Ogden, UT / limit 1) → Legacy Roofing qualified at 64 → demo
+  generated (bold composition, real logo + palette + 7 extracted services) →
+  QA 28/28 → approved v1 → published locally (2 assets). Public-mode renderer
+  proved approved-only resolution: approved locator 200, unapproved locator
+  404, unpublished asset 404. 190 tests green.
+- **Hosted deployment is blocked by a one-time operator action**: no wrangler
+  installation and no authenticated Cloudflare session exist on this machine,
+  so no external HTTPS URL exists yet. `pnpm demos:deploy:check` prints the
+  exact commands. Everything else — Worker, config, publication, tests — is
+  implemented and verified locally.
+
 ## Current roadmap
 
-Phase 10 is not started and is not authorized to start automatically.
+Phase 11 is not started and is not authorized to start automatically.
 Candidate directions (operator decision required): outreach foundations
-(consent/suppression-first message intent without sending), an operator
-demo approval flow, additional template families beyond local-service, or
-review/social enrichment for testimonials.
+(consent/suppression-first message intent without sending), completing the
+hosted deployment after the one-time Cloudflare/Neon login, additional
+template families beyond local-service, or review/social enrichment for
+testimonials.
 
 ## FOR CLAUDE: FIRST ACTIONS
 
 1. Read this entire handoff.
 2. Inspect the current repository; committed code is authoritative over this summary and over stale chat history.
-3. Read the relevant architecture documents, ADRs, service READMEs, database migrations/repositories, and tests before designing Phase 8.
+3. Read the relevant architecture documents, ADRs, service READMEs, database migrations/repositories, and tests before designing new work.
 4. Verify branch/HEAD/origin/clean status plus Git, Node, pnpm, Docker, PostgreSQL, migrations, and relevant machine-local data.
 5. Do not assume stale handoffs or chat descriptions override committed code.
-6. Only after verification, proceed with Phase 8 — Automated Demo Generation.
+6. Only after verification, proceed with the phase the operator authorizes (Phases 3–10 are complete).
 
 The expected full gate set remains:
 
@@ -294,4 +350,4 @@ pnpm db:verify
 pnpm test
 ```
 
-Reverify the marketing prototype SHA-256 shown above before committing Phase 8.
+Reverify the marketing prototype SHA-256 shown above before committing.

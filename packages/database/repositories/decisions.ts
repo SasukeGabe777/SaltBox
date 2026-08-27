@@ -22,6 +22,8 @@ export interface CreateDecisionInput {
   policyVersion: string;
   actorType: ActorType;
   actorRef?: string;
+  /** Opaque reference to the artifact the decision acted on (e.g. a DemoVersion). */
+  actionRef?: string;
   businessId?: string;
   prospectId?: string;
   featureSetId?: string;
@@ -42,6 +44,7 @@ export async function createDecision(db: Database, input: CreateDecisionInput): 
         policy_version: input.policyVersion,
         actor_type: input.actorType,
         actor_ref: input.actorRef ?? null,
+        action_ref: input.actionRef ?? null,
         business_id: input.businessId ?? null,
         prospect_id: input.prospectId ?? null,
         feature_set_id: input.featureSetId ?? null,

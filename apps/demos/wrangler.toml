@@ -1,0 +1,40 @@
+# SaltBox hosted demo renderer (ADR-003 delivery surface, ADR-005/006 data path).
+#
+# Committed, NON-SECRET configuration only. Connection strings and API tokens
+# are Worker secrets / provider bindings and never live in this file.
+#
+# ONE renderer serves MANY demos. There is deliberately no per-prospect
+# project, deployment, route, or bucket.
+#
+# Before the first deploy, replace the two placeholder ids below with the
+# resources created by `pnpm demos:deploy:check` guidance:
+#
+#   wrangler r2 bucket create saltbox-demo-assets
+#   wrangler hyperdrive create saltbox-demos --connection-string "<neon-unpooled-url>"
+#
+# `pnpm demos:deploy` refuses to run while a REPLACE_WITH_ placeholder remains.
+
+name = "saltbox-demos"
+main = "worker/index.ts"
+# Node.js compatibility layers are on by default from 2026-08-04; the flag is
+# stated explicitly so the requirement stays visible (ADR-006).
+compatibility_date = "2026-08-04"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = true
+
+# The hosted renderer is read-only and public by design: it serves ONLY
+# operator-approved demo versions, never enumerates demos, and never accepts a
+# mutation. The mutable admin is NOT hosted (Phase 10 item 50).
+[observability]
+enabled = true
+
+# Authoritative demo metadata: Neon PostgreSQL through Hyperdrive with caching
+# disabled — approval state must never be served stale (ADR-005).
+[[hyperdrive]]
+binding = "HYPERDRIVE"
+id = "REPLACE_WITH_HYPERDRIVE_ID"
+
+# Durable demo assets (logos and photography). Blobs never enter PostgreSQL.
+[[r2_buckets]]
+binding = "DEMO_ASSETS"
+bucket_name = "saltbox-demo-assets"

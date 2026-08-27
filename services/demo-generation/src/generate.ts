@@ -1,12 +1,16 @@
 /**
- * Demo generation orchestration (demo-generation-pipeline-v1):
+ * Demo generation orchestration (demo-generation-pipeline-v2):
  *
- *   eligibility -> facts -> DemoPlan -> DemoContent -> template selection
+ *   eligibility -> facts -> DemoPlan -> DemoContent -> composition selection
  *   -> Demo identity -> append-only DemoVersion -> public locator
  *
  * Regeneration is idempotent for unchanged inputs (same content hash + same
  * template version = no new version unless forced) and append-only when
- * anything changed. Old versions are never mutated. No outreach is ever
+ * anything changed. Old versions are never mutated.
+ *
+ * Phase 10: generation NEVER approves. A newly generated version becomes the
+ * demo's current version for operator review, while the approved-version
+ * pointer stays exactly where the operator last put it. No outreach is ever
  * triggered from here.
  */
 
@@ -29,6 +33,7 @@ import {
   DEMO_CONTENT_VERSION,
   DEMO_COPY_VERSION,
   DEMO_PIPELINE_VERSION,
+  type CompositionKey,
 } from "./config/demo-v1.ts";
 import { buildDemoContent } from "./content.ts";
 import { evaluateDemoEligibility, type DemoEligibility } from "./eligibility.ts";
@@ -62,6 +67,15 @@ export interface GenerateDemoOptions {
   brandExtractor?: BrandExtractor;
   /** Re-run brand extraction even when a persisted profile exists. */
   refreshBrand?: boolean;
+  /**
+   * Phase 10 operator regeneration intent: force one of the committed Phase 9
+   * compositions instead of the deterministic choice. Recorded in the plan.
+   */
+  composition?: CompositionKey;
+  /** Free-text operator reason recorded with a regeneration. */
+  regenerationReason?: string;
+  /** Operator identity recorded on generation events (defaults to the pipeline). */
+  actorRef?: string;
   log?: GenerateDemoLog;
 }
 
@@ -80,6 +94,10 @@ export interface GeneratedDemoSummary {
   url: string;
   deficiencyCodes: string[];
   plan: DemoPlan;
+  /** The demo's approved version, which generation never changes (Phase 10). */
+  approvedDemoVersionId: string | null;
+  /** True when this exact version is the approved one. */
+  isApproved: boolean;
 }
 
 export type GenerateDemoResult =
@@ -127,7 +145,10 @@ export async function generateDemoForProspect(
     log("OVERRIDE", { bypassed: eligibility.reasons.map((reason) => reason.code) });
   }
 
-  const plan = buildDemoPlan(facts, override ? { override } : {});
+  const plan = buildDemoPlan(facts, {
+    ...(override ? { override } : {}),
+    ...(options.composition ? { compositionOverride: options.composition } : {}),
+  });
   const content = buildDemoContent(facts, plan);
   log("PLANNED", {
     template: plan.template.templateName,
@@ -198,6 +219,8 @@ export async function generateDemoForProspect(
       generatorMetadata: {
         pipelineVersion: DEMO_PIPELINE_VERSION,
         generatedAt: generatedAt.toISOString(),
+        ...(options.regenerationReason ? { regenerationReason: options.regenerationReason } : {}),
+        ...(options.composition ? { requestedComposition: options.composition } : {}),
         plan,
         planSummary: planSummary(plan),
         content,
@@ -211,14 +234,17 @@ export async function generateDemoForProspect(
     });
     if (!finalized) throw new Error(`Demo ${demo.id} was modified concurrently while finalizing.`);
     const locator = await ensureActiveDemoLocator(db, { demoId: demo.id, token: newLocatorToken() });
+    // Phase 10: generation announces a version awaiting review. Becoming
+    // publicly visible is a separate, later event emitted by publication.
+    const regeneration = latest !== undefined;
     await appendEvent(db, {
       category: "domain",
-      eventType: "demo_published",
+      eventType: regeneration ? "demo_regenerated" : "demo_generated",
       occurredAt: generatedAt,
       sourceProducer: DEMO_PIPELINE_VERSION,
-      actorType: "system",
-      actorRef: "demo-generation.local-service-v1",
-      idempotencyScope: "demo_published",
+      actorType: options.actorRef ? "operator" : "system",
+      actorRef: options.actorRef ?? "demo-generation.local-service-v1",
+      idempotencyScope: regeneration ? "demo_regenerated" : "demo_generated",
       idempotencyKey: version.id,
       businessId: facts.businessId,
       prospectId,
@@ -228,6 +254,10 @@ export async function generateDemoForProspect(
         templateName: plan.template.templateName,
         templateVersion: plan.template.templateVersion,
         contentHash,
+        // Explicitly recorded so the audit trail shows approval did not move.
+        approvedDemoVersionId: demo.approvedDemoVersionId,
+        approvalMoved: false,
+        ...(options.regenerationReason ? { regenerationReason: options.regenerationReason } : {}),
       },
     });
     const refreshed = (await getDemoById(db, demo.id)) ?? demo;
@@ -271,6 +301,8 @@ function buildSummary(
     url: `${baseUrl}/d/${locatorToken}`,
     deficiencyCodes: plan.deficiencies.map((deficiency) => deficiency.code),
     plan,
+    approvedDemoVersionId: demo.approvedDemoVersionId,
+    isApproved: demo.approvedDemoVersionId === demoVersionId,
   };
 }
 

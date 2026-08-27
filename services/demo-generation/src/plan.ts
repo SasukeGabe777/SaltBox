@@ -6,7 +6,7 @@
  */
 
 import { parseBrandProfile, type BrandProfileView } from "./brand-view.ts";
-import { DEMO_PLAN_VERSION, selectComposition, selectDemoTemplate } from "./config/demo-v1.ts";
+import { COMPOSITIONS, DEMO_PLAN_VERSION, selectComposition, selectDemoTemplate, type CompositionKey } from "./config/demo-v1.ts";
 import { CTA_LABELS } from "./config/local-service-copy-v1.ts";
 import type { DemoCta, DemoDeficiency, DemoPlan, DemoPlanBrandSummary, DemoSourceFacts } from "./types.ts";
 
@@ -88,6 +88,12 @@ export function deriveDemoDeficiencies(facts: DemoSourceFacts): DemoDeficiency[]
 
 export interface BuildDemoPlanOptions {
   override?: { flag: string; note: string };
+  /**
+   * Phase 10 operator regeneration intent: force one of the existing Phase 9
+   * compositions instead of the deterministic selection. Constrained to the
+   * committed composition library — this is not a website editor.
+   */
+  compositionOverride?: CompositionKey;
 }
 
 /** Typed view of the facts' persisted brand profile (undefined when absent/malformed). */
@@ -103,13 +109,26 @@ export function buildDemoPlan(facts: DemoSourceFacts, options: BuildDemoPlanOpti
   }
   const brand = brandViewFromFacts(facts);
   const heroImage = brand?.images.find((image) => image.role === "hero");
-  const composition = selectComposition({
+  const selected = selectComposition({
     ...(heroImage ? { heroImageWidth: heroImage.width } : {}),
     usableImageCount: brand?.images.length ?? 0,
     logoConfidence: brand?.logo ? brand.logoConfidence : "none",
     paletteConfidence: brand?.palette ? brand.paletteConfidence : "none",
     extractedServiceCount: brand?.services.length ?? 0,
   });
+  const forced = options.compositionOverride;
+  const composition =
+    forced === undefined || forced === selected.key
+      ? selected
+      : {
+          key: forced,
+          templateName: COMPOSITIONS[forced].templateName,
+          templateVersion: COMPOSITIONS[forced].templateVersion,
+          reasons: [
+            `operator requested the ${forced} composition for this regeneration`,
+            `deterministic selection would have chosen ${selected.key}: ${selected.reasons[0] ?? "no reason recorded"}`,
+          ],
+        };
   const template = {
     templateName: composition.templateName,
     templateVersion: composition.templateVersion,

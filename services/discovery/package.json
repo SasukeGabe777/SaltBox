@@ -11,7 +11,9 @@
     "./openstreetmap": "./src/adapters/openstreetmap.ts",
     "./overture": "./src/adapters/overture.ts",
     "./orchestrator": "./src/application/discover-and-qualify.ts",
-    "./acquire-v2": "./src/application/acquire-v2.ts"
+    "./acquire-v2": "./src/application/acquire-v2.ts",
+    "./osm-categories": "./src/config/osm-category-mapping-v1.ts",
+    "./overture-categories": "./src/config/overture-category-mapping-v1.ts"
   },
   "scripts": {
     "discover": "node scripts/discover.ts",

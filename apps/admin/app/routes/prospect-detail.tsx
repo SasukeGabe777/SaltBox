@@ -1,20 +1,28 @@
-import { useEffect, useState } from "react";
-import { Link } from "react-router";
+﻿import { useEffect, useState } from "react";
+import { Form, Link } from "react-router";
 import type {
   DecisionReasonView,
   ObservationView,
-  ProspectDemoView,
   WebsiteAnalysisView,
 } from "@saltbox/database/queries/admin";
+import type {
+  ProspectDemoVersionSummary,
+  ProspectDemoView,
+} from "@saltbox/database/queries/demos";
+import type { OperatorRunView } from "@saltbox/database/queries/operator";
 import type { Route } from "./+types/prospect-detail";
 import { RefreshControl } from "../components/RefreshControl";
 import { WebsiteIntelligencePanel } from "../components/WebsiteIntelligencePanel";
 import { ScoreBars } from "../components/ScoreBars";
 import { StatusBadge } from "../components/StatusBadge";
+import { OperatorMessage } from "../components/OperatorMessage";
+import { RunProgress } from "../components/RunProgress";
 import {
   loadProspectRequest,
   rethrowAsOperatorResponse,
 } from "../data/admin-loaders.server";
+import { handleOperatorAction, loadProspectRuns } from "../data/operator.server";
+import type { OperatorActionResult } from "../data/operator-types";
 import {
   formatDateTime,
   formatLocation,
@@ -59,7 +67,16 @@ const NEED_REASON_CODES = new Set([
 
 export async function loader({ params }: Route.LoaderArgs) {
   try {
-    return await loadProspectRequest(params.prospectId);
+    const base = await loadProspectRequest(params.prospectId);
+    return { ...base, runs: await loadProspectRuns(base.detail.prospectId, 5) };
+  } catch (error) {
+    rethrowAsOperatorResponse(error);
+  }
+}
+
+export async function action({ request }: Route.ActionArgs) {
+  try {
+    return await handleOperatorAction(request);
   } catch (error) {
     rethrowAsOperatorResponse(error);
   }
@@ -73,8 +90,8 @@ export function meta({ loaderData }: Route.MetaArgs) {
   ];
 }
 
-export default function ProspectDetailPage({ loaderData }: Route.ComponentProps) {
-  const { detail, loadedAt, demosBaseUrl } = loaderData;
+export default function ProspectDetailPage({ loaderData, actionData }: Route.ComponentProps) {
+  const { detail, loadedAt, demosBaseUrl, runs } = loaderData;
   const [selectedScoreId, setSelectedScoreId] = useState(detail.currentScoreId ?? detail.scoreHistory[0]?.id ?? "");
 
   useEffect(() => {
@@ -226,7 +243,13 @@ export default function ProspectDetailPage({ loaderData }: Route.ComponentProps)
 
       <WebsiteIntelligencePanel runs={detail.websiteIntelligence} />
 
-      <DemoPanel demo={detail.demo} demosBaseUrl={demosBaseUrl} />
+      <DemoPanel
+        demo={detail.demo}
+        demosBaseUrl={demosBaseUrl}
+        prospectId={detail.prospectId}
+        actionResult={actionData ?? null}
+        runs={runs}
+      />
 
       <section className="panel history-panel">
         <div className="panel-heading split-heading">
@@ -396,12 +419,25 @@ export default function ProspectDetailPage({ loaderData }: Route.ComponentProps)
   );
 }
 
-function DemoPanel({ demo, demosBaseUrl }: { demo: ProspectDemoView | null; demosBaseUrl: string }) {
+function DemoPanel({
+  demo,
+  demosBaseUrl,
+  prospectId,
+  actionResult,
+  runs,
+}: {
+  demo: ProspectDemoView | null;
+  demosBaseUrl: string;
+  prospectId: string;
+  actionResult: OperatorActionResult | null;
+  runs: OperatorRunView[];
+}) {
+  const activeRun = runs.find((run) => run.status === "queued" || run.status === "running");
   return (
     <section className="panel demo-panel">
       <div className="panel-heading split-heading">
         <div>
-          <p className="section-kicker">PHASE 8 · GENERATED DEMO</p>
+          <p className="section-kicker">DEMO LIFECYCLE</p>
           <h2>Demo website</h2>
         </div>
         {demo?.currentVersion ? (
@@ -410,13 +446,26 @@ function DemoPanel({ demo, demosBaseUrl }: { demo: ProspectDemoView | null; demo
           </span>
         ) : null}
       </div>
+
+      <OperatorMessage result={actionResult} />
+
       {!demo ? (
-        <p className="panel-empty">
-          No demo has been generated for this prospect. Qualified-v2 prospects are eligible via{" "}
-          <code>pnpm demo:generate</code>.
-        </p>
+        <>
+          <p className="panel-empty">
+            No demo has been generated for this prospect. Qualified-v2 prospects are eligible.
+          </p>
+          <Form method="post" className="operator-actions">
+            <input type="hidden" name="intent" value="regenerate-demo" />
+            <input type="hidden" name="prospectId" value={prospectId} />
+            <button className="button button-primary" type="submit">
+              GENERATE DEMO
+            </button>
+          </Form>
+        </>
       ) : (
         <>
+          <ReadinessBanner demo={demo} />
+
           <div className="demo-headline-row">
             <StatusBadge status={demo.status} />
             {demo.locatorToken && demo.currentVersion ? (
@@ -431,25 +480,307 @@ function DemoPanel({ demo, demosBaseUrl }: { demo: ProspectDemoView | null; demo
             ) : (
               <span className="muted">No viewable version yet.</span>
             )}
-            <small className="muted">Served by the local demo renderer ({demosBaseUrl}); start it with pnpm demos:dev.</small>
+            {demo.hostedUrl ? (
+              <a className="view-demo-link" href={demo.hostedUrl} target="_blank" rel="noreferrer">
+                VIEW HOSTED DEMO ↗
+              </a>
+            ) : null}
+            <span className={`hosting-chip hosting-${demo.hostingStatus}`}>
+              {demo.hostingStatus.replaceAll("_", " ")}
+            </span>
+            <small className="muted">
+              The local preview URL ({demosBaseUrl}) shows the current version; the hosted URL always serves the
+              approved one.
+            </small>
           </div>
+
           {demo.currentVersion ? (
             <dl className="fact-list demo-facts">
-              <Fact label="Demo version" value={`v${demo.currentVersion.versionNumber}`} />
+              <Fact label="Current version" value={`v${demo.currentVersion.versionNumber}`} />
+              <Fact
+                label="Approved version"
+                value={
+                  demo.approvedVersion
+                    ? `v${demo.approvedVersion.versionNumber} · ${formatDateTime(demo.approvedAt)} · ${demo.approvedByActorRef ?? ""}`
+                    : "None — nothing may be used for outreach"
+                }
+              />
               <Fact label="Generated" value={formatDateTime(demo.currentVersion.createdAt)} />
               <Fact label="Content schema" value={demo.currentVersion.contentInputVersion ?? "Not recorded"} />
-              <Fact label="Copy generator" value={demo.currentVersion.generatedContentVersion ?? "Not recorded"} />
               <Fact
                 label="Source qualification"
-                value={demo.sourceScoringVersion ? `${demo.sourceScoringVersion} · score ${demo.sourceScore ?? "—"}` : "Not recorded"}
+                value={
+                  demo.sourceScoringVersion
+                    ? `${demo.sourceScoringVersion} · score ${demo.sourceScore ?? "—"}`
+                    : "Not recorded"
+                }
               />
               <Fact label="Versions persisted" value={String(demo.versions.length)} />
             </dl>
           ) : null}
+
+          {activeRun ? (
+            <div className="demo-active-run">
+              <RunProgress run={activeRun} />
+              <Link className="button button-quiet" to={`/runs/${activeRun.runId}`}>
+                Watch run
+              </Link>
+            </div>
+          ) : null}
+
+          <DemoOperations demo={demo} prospectId={prospectId} />
+          <DemoVersionTable demo={demo} demosBaseUrl={demosBaseUrl} />
+          <DemoReviewHistory demo={demo} />
           {demo.planSummary ? <DemoPlanSummary summary={demo.planSummary} /> : null}
         </>
       )}
     </section>
+  );
+}
+
+function ReadinessBanner({ demo }: { demo: ProspectDemoView }) {
+  const ready = demo.readiness.readyForOutreach;
+  return (
+    <div className={`readiness-banner ${ready ? "is-ready" : "is-blocked"}`}>
+      <strong>{ready ? "READY FOR OUTREACH" : "NOT READY FOR OUTREACH"}</strong>
+      {ready ? (
+        <p>
+          Qualified, approved, QA-clean, hosted, and not suppressed. SaltBox still sends nothing — outreach is a later
+          phase.
+        </p>
+      ) : (
+        <ul>
+          {demo.readiness.blockers.map((blocker, index) => (
+            <li key={index}>{blocker}</li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function DemoOperations({ demo, prospectId }: { demo: ProspectDemoView; prospectId: string }) {
+  return (
+    <div className="demo-operations">
+      <Form method="post" className="operator-actions">
+        <input type="hidden" name="intent" value="regenerate-demo" />
+        <input type="hidden" name="prospectId" value={prospectId} />
+        <label>
+          <span>Composition</span>
+          <select name="composition" defaultValue="auto">
+            <option value="auto">Automatic (deterministic)</option>
+            <option value="premium">Premium (image-forward)</option>
+            <option value="bold">Bold (strong identity)</option>
+            <option value="clean">Clean (typography-led)</option>
+          </select>
+        </label>
+        <label className="operator-field-wide">
+          <span>Reason (optional)</span>
+          <input name="reason" maxLength={400} placeholder="why regenerate?" />
+        </label>
+        <label className="operator-checkbox">
+          <input type="checkbox" name="refreshBrand" value="true" />
+          <span>Re-extract brand assets</span>
+        </label>
+        <button className="button button-primary" type="submit">
+          REGENERATE DEMO
+        </button>
+      </Form>
+
+      <div className="operator-action-row">
+        <Form method="post">
+          <input type="hidden" name="intent" value="run-qa" />
+          <input type="hidden" name="prospectId" value={prospectId} />
+          <button className="button button-quiet" type="submit">
+            RUN QA
+          </button>
+        </Form>
+        <Form method="post">
+          <input type="hidden" name="intent" value="publish-demo" />
+          <input type="hidden" name="prospectId" value={prospectId} />
+          <input type="hidden" name="environment" value="local" />
+          <button className="button button-quiet" type="submit" disabled={demo.approvedVersion === null}>
+            PUBLISH (LOCAL)
+          </button>
+        </Form>
+        <Form method="post">
+          <input type="hidden" name="intent" value="publish-demo" />
+          <input type="hidden" name="prospectId" value={prospectId} />
+          <input type="hidden" name="environment" value="hosted" />
+          <button className="button button-quiet" type="submit" disabled={demo.approvedVersion === null}>
+            PUBLISH (HOSTED)
+          </button>
+        </Form>
+        <Form method="post">
+          <input type="hidden" name="intent" value="retry-intelligence" />
+          <input type="hidden" name="prospectId" value={prospectId} />
+          <button className="button button-quiet" type="submit">
+            RETRY INTELLIGENCE
+          </button>
+        </Form>
+      </div>
+      {demo.approvedVersion === null ? (
+        <p className="operator-note">Publication is only ever of an approved version.</p>
+      ) : null}
+    </div>
+  );
+}
+
+function DemoVersionTable({ demo, demosBaseUrl }: { demo: ProspectDemoView; demosBaseUrl: string }) {
+  return (
+    <div className="demo-versions">
+      <h3>Versions</h3>
+      <div className="table-shell">
+        <table className="prospect-table demo-version-table">
+          <thead>
+            <tr>
+              <th scope="col">Version</th>
+              <th scope="col">Composition</th>
+              <th scope="col">Created</th>
+              <th scope="col">QA</th>
+              <th scope="col">State</th>
+              <th scope="col">Review</th>
+            </tr>
+          </thead>
+          <tbody>
+            {demo.versions.map((version) => (
+              <DemoVersionRow
+                key={version.demoVersionId}
+                demo={demo}
+                version={version}
+                demosBaseUrl={demosBaseUrl}
+              />
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function DemoVersionRow({
+  demo,
+  version,
+  demosBaseUrl,
+}: {
+  demo: ProspectDemoView;
+  version: ProspectDemoVersionSummary;
+  demosBaseUrl: string;
+}) {
+  const qa = version.qa;
+  const criticalFailures = qa?.criticalFailures ?? [];
+  const blockedByQa = qa === null || criticalFailures.length > 0 || qa.status !== "passed";
+  return (
+    <tr className={version.isApproved ? "is-approved-version" : ""}>
+      <td>
+        <strong>v{version.versionNumber}</strong>
+        {version.isCurrent ? <span className="version-chip">current</span> : null}
+        {version.isApproved ? <span className="version-chip is-approved">approved</span> : null}
+      </td>
+      <td>
+        {version.composition ?? version.templateName}
+        <small className="muted">{version.planVersion ?? version.contentInputVersion ?? ""}</small>
+      </td>
+      <td className="date-cell">{formatDateTime(version.createdAt)}</td>
+      <td>
+        {qa ? (
+          <>
+            <span className={`qa-chip qa-${qa.status}`}>
+              {qa.status} {qa.checksPassed}/{qa.checksTotal}
+            </span>
+            {qa.viewports.map((viewport) => (
+              <small key={viewport.viewport} className="muted">
+                {viewport.viewport} {viewport.passed}/{viewport.total}
+                {viewport.failures.length > 0 ? ` · ${viewport.failures.slice(0, 2).join(", ")}` : ""}
+              </small>
+            ))}
+            {criticalFailures.length > 0 ? (
+              <small className="qa-critical">{criticalFailures.length} critical</small>
+            ) : null}
+            {qa.artifactRef ? <small className="muted">.data/{qa.artifactRef}/</small> : null}
+          </>
+        ) : (
+          <span className="qa-chip qa-none">not run</span>
+        )}
+      </td>
+      <td>
+        <a href={`${demosBaseUrl}/d/${demo.locatorToken ?? ""}`} target="_blank" rel="noreferrer">
+          {version.isCurrent ? "preview ↗" : ""}
+        </a>
+      </td>
+      <td className="review-cell">
+        {version.isApproved ? (
+          <Form method="post">
+            <input type="hidden" name="intent" value="reject-version" />
+            <input type="hidden" name="demoId" value={demo.demoId} />
+            <input type="hidden" name="demoVersionId" value={version.demoVersionId} />
+            <input name="note" placeholder="reason (optional)" maxLength={400} />
+            <button className="button button-quiet" type="submit">
+              WITHDRAW APPROVAL
+            </button>
+          </Form>
+        ) : (
+          <div className="review-actions">
+            <Form method="post">
+              <input type="hidden" name="intent" value="approve-version" />
+              <input type="hidden" name="demoId" value={demo.demoId} />
+              <input type="hidden" name="demoVersionId" value={version.demoVersionId} />
+              <input name="note" placeholder="note (optional)" maxLength={400} />
+              {blockedByQa ? (
+                <input
+                  name="qaOverrideReason"
+                  placeholder="QA override reason (audited)"
+                  maxLength={400}
+                  className="override-input"
+                />
+              ) : null}
+              <button className="button button-primary" type="submit">
+                APPROVE
+              </button>
+            </Form>
+            <Form method="post">
+              <input type="hidden" name="intent" value="reject-version" />
+              <input type="hidden" name="demoId" value={demo.demoId} />
+              <input type="hidden" name="demoVersionId" value={version.demoVersionId} />
+              <button className="button button-quiet" type="submit">
+                REJECT
+              </button>
+            </Form>
+          </div>
+        )}
+      </td>
+    </tr>
+  );
+}
+
+function DemoReviewHistory({ demo }: { demo: ProspectDemoView }) {
+  if (demo.reviews.length === 0 && demo.publications.length === 0) return null;
+  return (
+    <div className="demo-review-history">
+      <h3>Review and publication history</h3>
+      <ul>
+        {demo.reviews.map((review) => (
+          <li key={review.reviewId}>
+            <span className={`qa-chip qa-${review.action === "approved" ? "passed" : "failed"}`}>{review.action}</span>
+            <span>
+              v{review.versionNumber ?? "—"} · {review.actorRef} · {formatDateTime(review.createdAt)}
+              {review.qaOverride ? " · QA OVERRIDE" : ""}
+            </span>
+            {review.note ? <small className="muted">{review.note}</small> : null}
+          </li>
+        ))}
+        {demo.publications.map((publication) => (
+          <li key={publication.publicationId}>
+            <span className={`hosting-chip hosting-${publication.status}`}>{publication.status}</span>
+            <span>
+              {publication.environment} · v{publication.versionNumber ?? "—"} ·{" "}
+              {formatDateTime(publication.completedAt ?? publication.startedAt)} · {publication.assetCount} assets
+            </span>
+            {publication.failureMessage ? <small className="qa-critical">{publication.failureMessage}</small> : null}
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 

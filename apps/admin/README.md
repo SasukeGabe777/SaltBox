@@ -1,9 +1,10 @@
-# @saltbox/admin
+﻿# @saltbox/admin
 
-The SaltBox Admin Prospect Viewer is the local, read-only operator surface for
-Originally Phase 5A, now extended for Phase 7. It makes persisted v1 and v2
-qualification history inspectable in
-a browser without creating a second write path.
+The SaltBox operator surface. Originally a read-only Phase 5A viewer, extended
+through Phase 7 (qualification v2 evidence) and Phase 10, where it becomes the
+place the demo lifecycle is actually run: review, approval, regeneration,
+publication, and bounded acquisition runs. See
+[`docs/OPERATOR_APPROVAL.md`](../../docs/OPERATOR_APPROVAL.md).
 
 ## Architecture
 
@@ -14,8 +15,16 @@ a browser without creating a second write path.
 - Plain CSS using the established SaltBox visual language; no UI framework
 
 Route loaders return deliberate read models. React components do not issue SQL,
-and PostgreSQL credentials never enter browser JavaScript. There are no route
-actions, mutation endpoints, or operator controls that change SaltBox state.
+and PostgreSQL credentials never enter browser JavaScript.
+
+Phase 10 adds a deliberately narrow mutation surface: demo review/approval and
+bounded operator runs, and nothing else. There are still no generic CRUD
+controls for businesses, prospects, scores, or decisions — that history stays
+evidence. Every mutation is same-origin checked, carries the operator actor
+identity (`SALTBOX_OPERATOR_REF`, default `local-operator`), and goes through a
+domain service that enforces the approval invariant and writes audit history.
+Long work never runs inside a request: the admin queues an `operator_run` and a
+detached local worker executes it.
 
 > [!IMPORTANT]
 > This application is local-only and intentionally has no authentication in
@@ -92,6 +101,25 @@ next automatic refresh.
 - Point-in-time observations with distinct `observed_at` and `recorded_at`
 - Source records/provenance and chronological prospect lifecycle transitions
 
+## What the operator can do (Phase 10)
+
+- **START ACQUISITION** — a bounded discovery → intelligence → qualification
+  run with policy-enforced limits, watched live on `/runs`.
+- **GENERATE / REGENERATE DEMO** — optionally forcing one of the committed
+  compositions or re-extracting brand assets; QA runs automatically afterwards
+  and the new version returns to review.
+- **RUN QA** — re-record automated QA evidence for the current version.
+- **APPROVE / REJECT / WITHDRAW APPROVAL** — move or clear the approved
+  version. Approval pins one exact DemoVersion, is audited, is blocked by
+  critical QA failures without a written override, and can never be given to a
+  suppressed business.
+- **PUBLISH (LOCAL / HOSTED)** — publish the approved version's assets.
+- **RETRY INTELLIGENCE** — a narrow, audited retry after a transient failure.
+
+The prospect case file also shows readiness (with explicit blockers), the
+version history with per-viewport QA, review/publication history, and the
+hosted URL when one exists.
+
 ## Refresh behavior
 
 Dashboard and detail routes revalidate every three seconds while the browser
@@ -112,8 +140,10 @@ application where appropriate.
 
 ## Known limitations and intentionally deferred work
 
-- Local-only; no authentication, authorization, deployment, or Neon connection
-- Read-only; no edits, transitions, retries, suppression, outreach, or deletes
+- Local-only; no authentication, authorization, or deployment. The admin is
+  NOT hosted alongside the public demo renderer, and must not be.
+- Mutations are limited to demo review/approval and bounded runs; no lifecycle
+  edits, suppression changes, outreach, or deletes exist
 - Phase 4 does not persist fixture city/state fields, so location displays as
   “Not observed” unless future source metadata supplies them
 - Recent activity is a bounded operator feed, not a streaming event system

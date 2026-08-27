@@ -208,6 +208,10 @@ export interface DecisionReason {
 }
 
 export interface Demo {
+  approval_review_id: string | null;
+  approved_at: Timestamp | null;
+  approved_by_actor_ref: string | null;
+  approved_demo_version_id: string | null;
   archived_at: Timestamp | null;
   concept: string | null;
   created_at: Generated<Timestamp>;
@@ -218,6 +222,37 @@ export interface Demo {
   revision: Generated<number>;
   status: Generated<string>;
   updated_at: Generated<Timestamp>;
+}
+
+export interface DemoAsset {
+  asset_ref: string;
+  byte_size: Int8;
+  content_hash: string;
+  content_type: string;
+  created_at: Generated<Timestamp>;
+  demo_id: string;
+  file_name: string;
+  first_used_by_demo_version_id: string | null;
+  id: Generated<string>;
+  published_at: Timestamp | null;
+  storage_key: string;
+  storage_provider: string;
+}
+
+export interface DemoPublication {
+  actor_ref: string | null;
+  actor_type: ActorType;
+  asset_count: Generated<number>;
+  completed_at: Timestamp | null;
+  demo_id: string;
+  demo_version_id: string;
+  detail: Json | null;
+  environment: string;
+  failure_message: string | null;
+  id: Generated<string>;
+  public_url: string | null;
+  started_at: Generated<Timestamp>;
+  status: string;
 }
 
 export interface DemoPublicLocator {
@@ -258,6 +293,39 @@ export interface DemoVersion {
   id: Generated<string>;
   published_at: Timestamp | null;
   version_number: number;
+}
+
+export interface DemoVersionQaResult {
+  artifact_ref: string | null;
+  checks_passed: Generated<number>;
+  checks_total: Generated<number>;
+  completed_at: Generated<Timestamp>;
+  critical_failure_count: Generated<number>;
+  critical_failures: Json | null;
+  demo_version_id: string;
+  failure_message: string | null;
+  id: Generated<string>;
+  runner_version: string;
+  started_at: Timestamp | null;
+  status: string;
+  summary: Json | null;
+}
+
+export interface DemoVersionReview {
+  action: string;
+  actor_ref: string;
+  actor_type: ActorType;
+  correlation_id: string | null;
+  created_at: Generated<Timestamp>;
+  decision_id: string | null;
+  demo_id: string;
+  demo_version_id: string;
+  id: Generated<string>;
+  note: string | null;
+  previous_approved_demo_version_id: string | null;
+  qa_override: Generated<boolean>;
+  qa_result_id: string | null;
+  reason_code: string;
 }
 
 export interface Domain {
@@ -534,6 +602,47 @@ export interface OperatorOverride {
   value_json: Json | null;
 }
 
+export interface OperatorRun {
+  actor_ref: string;
+  actor_type: ActorType;
+  business_id: string | null;
+  completed_at: Timestamp | null;
+  correlation_id: string | null;
+  demo_id: string | null;
+  failure_message: string | null;
+  id: Generated<string>;
+  progress: Json | null;
+  prospect_id: string | null;
+  request_key: string | null;
+  requested_at: Generated<Timestamp>;
+  requested_parameters: Json;
+  revision: Generated<number>;
+  run_kind: string;
+  started_at: Timestamp | null;
+  status: Generated<string>;
+  summary: Json | null;
+  updated_at: Generated<Timestamp>;
+}
+
+export interface OperatorRunTarget {
+  business_id: string | null;
+  completed_at: Timestamp | null;
+  failure_code: string | null;
+  failure_kind: string | null;
+  failure_message: string | null;
+  id: Generated<string>;
+  label: string;
+  operator_run_id: string;
+  outcome: Json | null;
+  position: number;
+  prospect_id: string | null;
+  stage: string | null;
+  started_at: Timestamp | null;
+  status: Generated<string>;
+  transient: boolean | null;
+  updated_at: Generated<Timestamp>;
+}
+
 export interface OutreachCampaign {
   audience: string | null;
   created_at: Generated<Timestamp>;
@@ -793,10 +902,14 @@ export interface DB {
   decision: Decision;
   decision_reason: DecisionReason;
   demo: Demo;
+  demo_asset: DemoAsset;
   demo_public_locator: DemoPublicLocator;
+  demo_publication: DemoPublication;
   demo_template: DemoTemplate;
   demo_template_version: DemoTemplateVersion;
   demo_version: DemoVersion;
+  demo_version_qa_result: DemoVersionQaResult;
+  demo_version_review: DemoVersionReview;
   domain: Domain;
   entity_match_candidate: EntityMatchCandidate;
   event: Event;
@@ -814,6 +927,8 @@ export interface DB {
   message_attempt: MessageAttempt;
   observation: Observation;
   operator_override: OperatorOverride;
+  operator_run: OperatorRun;
+  operator_run_target: OperatorRunTarget;
   outreach_campaign: OutreachCampaign;
   outreach_sequence: OutreachSequence;
   outreach_sequence_version: OutreachSequenceVersion;

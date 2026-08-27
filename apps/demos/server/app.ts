@@ -1,8 +1,12 @@
 /**
- * The SaltBox demo renderer: ONE lightweight server that renders MANY
- * prospect demos from persisted Demo/DemoVersion state.
+ * The SaltBox demo renderer, Node adapter.
  *
- *   GET /d/<public-locator>  -> the demo's current persisted version
+ * The request logic lives in the runtime-neutral handler (server/handler.ts);
+ * this file only supplies Node-flavoured ports — a Kysely resolver and the
+ * local artifact store — and speaks node:http.
+ *
+ *   GET /d/<public-locator>       -> a persisted demo version
+ *   GET /demo-assets/<ref>/<file> -> a validated, locally stored brand asset
  *
  * Public-safety posture: opaque locator tokens only (no internal IDs in
  * URLs), no demo enumeration, noindex everywhere, a strict CSP with
@@ -14,113 +18,61 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { resolve } from "node:path";
 import type { Database } from "@saltbox/database/client";
-import { resolveDemoByLocator } from "@saltbox/database/queries/demos";
+import { resolveDemoByLocator, type DemoResolutionMode } from "@saltbox/database/queries/demos";
+import { findPublishedDemoAsset } from "@saltbox/database/repositories/demo-hosting";
 import { loadDemoAsset } from "./assets.ts";
-import { esc } from "./html.ts";
-import { asDemoContent, resolveTemplateRenderer } from "./templates/registry.ts";
-
-const LOCATOR_PATH = /^\/d\/([A-Za-z0-9_-]{16,128})$/;
-const ASSET_PATH = /^\/demo-assets\/([^/]{1,80})\/([^/]{1,60})$/;
-
-const BASE_HEADERS: Record<string, string> = {
-  "x-robots-tag": "noindex, nofollow",
-  // 'self' in img-src covers the locally stored, validated demo assets only;
-  // no other origin can ever be requested from a demo page.
-  "content-security-policy":
-    "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
-  "referrer-policy": "no-referrer",
-  "x-content-type-options": "nosniff",
-  "cache-control": "no-store",
-};
+import { BASE_HEADERS, handleDemoRequest, type DemoHandlerPorts } from "./handler.ts";
 
 export interface DemosAppOptions {
   db: Database;
   /** Root of the local demo-asset store; defaults to ../../.data/demo-assets. */
   assetRoot?: string;
+  /**
+   * `preview` (default) serves the demo's current version for local operator
+   * review; `public` serves only the operator-approved version.
+   */
+  mode?: DemoResolutionMode;
   log?: (message: string, detail?: Record<string, unknown>) => void;
 }
 
 export function createDemosRequestHandler(options: DemosAppOptions) {
   const log = options.log ?? (() => {});
+  const mode: DemoResolutionMode = options.mode ?? "preview";
   const assetRoot = options.assetRoot ?? resolve(process.cwd(), "../../.data/demo-assets");
+
+  const ports: DemoHandlerPorts = {
+    mode,
+    log,
+    resolveDemo: (token) => resolveDemoByLocator(options.db, token, { mode }),
+    loadAsset: async (assetRef, fileName) => {
+      // In public mode an asset must be a recorded, published asset of an
+      // approved demo; the filesystem alone is never sufficient authority.
+      if (mode === "public") {
+        const published = await findPublishedDemoAsset(options.db, assetRef, fileName);
+        if (!published) return undefined;
+      }
+      const asset = loadDemoAsset(assetRoot, assetRef, fileName);
+      if (asset.status !== 200 || !asset.body || !asset.contentType) return undefined;
+      return { contentType: asset.contentType, body: new Uint8Array(asset.body) };
+    },
+  };
+
   return async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
-    const method = req.method ?? "GET";
-    const path = (req.url ?? "/").split("?")[0] ?? "/";
     try {
-      if (method !== "GET" && method !== "HEAD") {
-        sendHtml(res, 405, statusPage("Method not allowed", "This renderer serves demo pages read-only."));
-        return;
-      }
-      if (path === "/" || path === "") {
-        sendHtml(
-          res,
-          200,
-          statusPage(
-            "SaltBox demo renderer",
-            "This local server renders SaltBox demo previews. A demo is reachable only through its private locator link.",
-          ),
-        );
-        return;
-      }
-      if (path === "/healthz") {
-        res.writeHead(200, { ...BASE_HEADERS, "content-type": "text/plain; charset=utf-8" });
-        res.end("ok");
-        return;
-      }
-      if (path === "/favicon.ico") {
-        // Pages carry an inline data: favicon; this quiets legacy requests.
-        res.writeHead(204, BASE_HEADERS);
-        res.end();
-        return;
-      }
-      const assetMatch = ASSET_PATH.exec(path);
-      if (assetMatch) {
-        const asset = loadDemoAsset(assetRoot, assetMatch[1]!, assetMatch[2]!);
-        if (asset.status !== 200 || !asset.body || !asset.contentType) {
-          sendHtml(res, 404, statusPage("Not found", "There is no asset at this address."));
-          return;
-        }
-        res.writeHead(200, {
-          ...BASE_HEADERS,
-          "content-type": asset.contentType,
-          "cache-control": "private, max-age=3600",
-        });
-        res.end(asset.body);
-        return;
-      }
-      const match = LOCATOR_PATH.exec(path);
-      if (!match) {
-        sendHtml(res, 404, statusPage("Not found", "There is no demo at this address."));
-        return;
-      }
-      const token = match[1]!;
-      const demo = await resolveDemoByLocator(options.db, token);
-      if (!demo) {
-        log("locator-miss", { path });
-        sendHtml(res, 404, statusPage("Demo not found", "This demo link is unknown, revoked, or expired."));
-        return;
-      }
-      const content = asDemoContent(demo.version.content);
-      const renderer = resolveTemplateRenderer(demo.version.templateName, demo.version.templateVersion);
-      if (!content || !renderer) {
-        log("unrenderable-version", {
-          demoId: demo.demoId,
-          templateName: demo.version.templateName,
-          templateVersion: demo.version.templateVersion,
-          hasContent: Boolean(content),
-        });
-        sendHtml(
-          res,
-          500,
-          statusPage("Demo unavailable", "This demo version cannot be rendered by this renderer build."),
-        );
-        return;
-      }
-      log("demo-rendered", { demoId: demo.demoId, versionNumber: demo.version.versionNumber });
-      sendHtml(res, 200, renderer(content));
+      const response = await handleDemoRequest(
+        { method: req.method ?? "GET", path: req.url ?? "/" },
+        ports,
+      );
+      res.writeHead(response.status, response.headers);
+      res.end(typeof response.body === "string" ? response.body : Buffer.from(response.body));
     } catch (error) {
       log("render-error", { message: error instanceof Error ? error.message : String(error) });
-      sendHtml(res, 503, statusPage("Renderer unavailable", "The local database is unavailable."));
+      res.writeHead(503, { ...BASE_HEADERS, "content-type": "text/html; charset=utf-8" });
+      res.end(
+        '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="robots" content="noindex, nofollow">' +
+          "<title>Renderer unavailable</title></head><body><main><h1>Renderer unavailable</h1>" +
+          "<p>The demo database is unavailable.</p></main></body></html>",
+      );
     }
   };
 }
@@ -130,19 +82,4 @@ export function createDemosServer(options: DemosAppOptions): Server {
   return createServer((req, res) => {
     void handler(req, res);
   });
-}
-
-function sendHtml(res: ServerResponse, status: number, body: string): void {
-  res.writeHead(status, { ...BASE_HEADERS, "content-type": "text/html; charset=utf-8" });
-  res.end(body);
-}
-
-/** Minimal utility page (index/404/errors) — never enumerates demos. */
-function statusPage(title: string, message: string): string {
-  return `<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex, nofollow"><title>${esc(title)}</title>
-<style>body{font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0;background:#f5f6f8;color:#1c2430}
-main{max-width:420px;padding:40px;text-align:center}h1{font-size:1.3rem;margin-bottom:10px}p{color:#5b6472}</style>
-</head><body><main><h1>${esc(title)}</h1><p>${esc(message)}</p></main></body></html>`;
 }
