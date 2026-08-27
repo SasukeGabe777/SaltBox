@@ -323,7 +323,7 @@ export default function ProspectDetailPage({ loaderData }: Route.ComponentProps)
           <div className="provenance-grid">
             {detail.provenance.map((source) => (
               <article key={source.sourceRecordId}>
-                <div><span>Source</span><strong>{source.sourceName === "openstreetmap" ? "OpenStreetMap" : source.sourceName}</strong></div>
+                <div><span>Source</span><strong>{sourceDisplayName(source.sourceName)}</strong></div>
                 <div><span>Type</span><strong>{source.sourceType}</strong></div>
                 <div><span>External ID</span><code>{source.externalId}</code></div>
                 <div><span>Source-record ID</span><code>{source.sourceRecordId}</code></div>
@@ -335,6 +335,9 @@ export default function ProspectDetailPage({ loaderData }: Route.ComponentProps)
                 {source.sourceName === "openstreetmap" ? (
                   <div className="source-attribution"><span>Attribution</span><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap contributors · ODbL 1.0</a></div>
                 ) : null}
+                {source.sourceName === "overture" ? (
+                  <div className="source-attribution"><span>Attribution</span><a href="https://docs.overturemaps.org/attribution/" target="_blank" rel="noreferrer">Overture Maps Foundation, overturemaps.org · CDLA-P 2.0 / Apache 2.0</a></div>
+                ) : null}
               </article>
             ))}
           </div>
@@ -342,6 +345,12 @@ export default function ProspectDetailPage({ loaderData }: Route.ComponentProps)
       </section>
     </main>
   );
+}
+
+function sourceDisplayName(sourceName: string): string {
+  if (sourceName === "openstreetmap") return "OpenStreetMap";
+  if (sourceName === "overture") return "Overture Maps";
+  return sourceName;
 }
 
 function ReasonGroup({ title, reasons }: { title: string; reasons: DecisionReasonView[] }) {

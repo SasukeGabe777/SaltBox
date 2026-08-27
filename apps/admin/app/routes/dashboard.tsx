@@ -147,6 +147,11 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
             Discovery data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap contributors</a> · ODbL 1.0
           </p>
         ) : null}
+        {overview.prospects.some((prospect) => prospect.sourceName?.toLowerCase() === "overture") ? (
+          <p className="osm-attribution">
+            Discovery data from <a href="https://docs.overturemaps.org/attribution/" target="_blank" rel="noreferrer">Overture Maps Foundation, overturemaps.org</a> · CDLA-P 2.0 / Apache 2.0
+          </p>
+        ) : null}
 
         {overview.summary.total === 0 ? (
           <EmptyState />

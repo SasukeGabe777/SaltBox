@@ -4,6 +4,8 @@ import {
   OSM_CATEGORY_MAPPING_VERSION,
 } from "../config/osm-category-mapping-v1.ts";
 import { DiscoverySourceError } from "../errors.ts";
+import { NominatimResolver } from "../location/nominatim.ts";
+import { normalizeWebsite } from "../normalize/website.ts";
 import type {
   DiscoveryBatch,
   DiscoveryQuery,
@@ -31,16 +33,6 @@ export interface OpenStreetMapAdapterOptions {
   maxOverpassRetries?: number;
   retryDelayMs?: number;
   rateLimitDelayMs?: number;
-}
-
-interface NominatimResult {
-  place_id?: number | string;
-  osm_type?: string;
-  osm_id?: number | string;
-  lat?: string;
-  lon?: string;
-  display_name?: string;
-  address?: Record<string, unknown>;
 }
 
 export interface OverpassElement {
@@ -89,72 +81,32 @@ export class OpenStreetMapOverpassAdapter implements DiscoverySourceAdapter {
   private readonly fetchImpl: typeof fetch;
   private readonly sleep: (milliseconds: number) => Promise<void>;
   private readonly userAgent: string;
-  private readonly nominatimEndpoint: string;
   private readonly overpassEndpoint: string;
-  private readonly nominatimTimeoutMs: number;
   private readonly overpassTimeoutMs: number;
   private readonly maxOverpassRetries: number;
   private readonly retryDelayMs: number;
   private readonly rateLimitDelayMs: number;
-  private readonly locationCache = new Map<string, ResolvedLocation>();
+  private readonly nominatim: NominatimResolver;
 
   constructor(options: OpenStreetMapAdapterOptions = {}) {
     this.fetchImpl = options.fetch ?? fetch;
     this.sleep = options.sleep ?? ((milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds)));
     this.userAgent = options.userAgent?.trim() || DEFAULT_DISCOVERY_USER_AGENT;
-    this.nominatimEndpoint = options.nominatimEndpoint ?? "https://nominatim.openstreetmap.org/search";
     this.overpassEndpoint = options.overpassEndpoint ?? "https://overpass-api.de/api/interpreter";
-    this.nominatimTimeoutMs = options.nominatimTimeoutMs ?? 15_000;
     this.overpassTimeoutMs = options.overpassTimeoutMs ?? 35_000;
     this.maxOverpassRetries = options.maxOverpassRetries ?? 1;
     this.retryDelayMs = options.retryDelayMs ?? 2_000;
     this.rateLimitDelayMs = options.rateLimitDelayMs ?? 30_000;
+    this.nominatim = new NominatimResolver({
+      fetch: this.fetchImpl,
+      userAgent: this.userAgent,
+      ...(options.nominatimEndpoint !== undefined ? { endpoint: options.nominatimEndpoint } : {}),
+      timeoutMs: options.nominatimTimeoutMs ?? 15_000,
+    });
   }
 
   async resolveLocation(location: string): Promise<ResolvedLocation> {
-    const normalized = location.trim().toLowerCase();
-    const cached = this.locationCache.get(normalized);
-    if (cached) return cached;
-
-    const url = new URL(this.nominatimEndpoint);
-    url.searchParams.set("q", location.trim());
-    url.searchParams.set("format", "jsonv2");
-    url.searchParams.set("addressdetails", "1");
-    url.searchParams.set("limit", "1");
-
-    const payload = await this.requestJson(
-      "nominatim",
-      url,
-      { headers: this.headers() },
-      this.nominatimTimeoutMs,
-      false,
-    );
-    if (!Array.isArray(payload)) {
-      throw new DiscoverySourceError("malformed_response", "nominatim", "Nominatim returned a non-array response.");
-    }
-    const raw = payload[0] as NominatimResult | undefined;
-    if (!raw) {
-      throw new DiscoverySourceError("location_not_found", "nominatim", `Location "${location}" was not found.`);
-    }
-    const latitude = Number(raw.lat);
-    const longitude = Number(raw.lon);
-    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
-      throw new DiscoverySourceError("malformed_response", "nominatim", "Nominatim returned invalid coordinates.");
-    }
-
-    const address = asRecord(raw.address);
-    const resolved: ResolvedLocation = {
-      query: location.trim(),
-      displayName: typeof raw.display_name === "string" ? raw.display_name : location.trim(),
-      latitude,
-      longitude,
-      city: firstString(address, ["city", "town", "village", "municipality"]),
-      state: firstString(address, ["state", "region"]),
-      countryCode: firstString(address, ["country_code"]),
-      sourceLocator: url.toString(),
-    };
-    this.locationCache.set(normalized, resolved);
-    return resolved;
+    return this.nominatim.resolveLocation(location);
   }
 
   async discover(query: DiscoveryQuery, location: ResolvedLocation): Promise<DiscoveryBatch> {
@@ -393,16 +345,6 @@ function firstString(record: Record<string, unknown> | null, keys: readonly stri
 function joinAddress(houseNumber: string | null, street: string | null): string | null {
   const parts = [houseNumber, street].filter((part): part is string => Boolean(part));
   return parts.length === 0 ? null : parts.join(" ");
-}
-
-function normalizeWebsite(value: string | null): string | null {
-  if (!value) return null;
-  try {
-    const url = new URL(/^https?:\/\//i.test(value) ? value : `https://${value}`);
-    return url.protocol === "http:" || url.protocol === "https:" ? url.toString() : null;
-  } catch {
-    return null;
-  }
 }
 
 function boundedTagRecord(tags: Record<string, unknown> | null): Record<string, string> {

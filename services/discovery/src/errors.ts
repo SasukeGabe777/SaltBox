@@ -6,7 +6,8 @@ export type DiscoveryErrorCode =
   | "provider_server_error"
   | "provider_request_failed"
   | "unsupported_category"
-  | "unsupported_source";
+  | "unsupported_source"
+  | "dataset_unavailable";
 
 export class DiscoverySourceError extends Error {
   readonly code: DiscoveryErrorCode;

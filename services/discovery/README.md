@@ -1,22 +1,77 @@
 # @saltbox/discovery
 
-Local, operator-triggered real-business discovery for SaltBox Phase 5B.
+Local, operator-triggered real-business discovery for SaltBox (Phases 5B/5C).
 Discovery is a deterministic input adapter; it does not own business identity,
 website analysis, scoring, decisions, or prospect lifecycle behavior.
 
 ```text
 human query
-  → DiscoverySourceAdapter
+  → DiscoverySourceAdapter (openstreetmap | overture)
   → normalized DiscoveryResult
-  → existing prospecting ingestion
+  → existing prospecting ingestion (+ conservative cross-source identity)
   → existing Phase 4 qualification pipeline
   → Phase 5A admin viewer
 ```
 
-This phase performs discovery and analysis only. It does not send email, SMS,
-phone calls, social messages, demo links, or any other outreach.
+This service performs discovery and analysis only. It does not send email,
+SMS, phone calls, social messages, demo links, or any other outreach.
 
-## Selected source
+## Sources
+
+Two adapters implement the same `DiscoverySourceAdapter` boundary:
+
+- `OpenStreetMapOverpassAdapter` (`openstreetmap`) — Phase 5B; live bounded
+  Overpass queries; best for categories volunteers map well (restaurants).
+- `OvertureMapsPlacesAdapter` (`overture`) — Phase 5C; answers queries from a
+  bounded local regional extract of the Overture Maps places theme; much
+  stronger coverage of small service businesses (roofers, plumbers, HVAC),
+  largely via Meta-contributed business pages.
+
+### Overture local extract (required before `--source overture`)
+
+The adapter never queries the internet. Build a git-ignored regional extract
+once per area + release (a single bounded read of the public Overture
+GeoParquet on S3; no account or API key):
+
+```text
+pnpm discovery:data --location "Ogden, UT" --radius-km 30
+```
+
+This writes `.data/overture/<area>-r<km>km-<release>.parquet` plus a manifest
+recording release, bbox, row count, and retrieval time. Any query whose
+circle is fully covered by a manifest is answerable; anything else fails as
+`dataset_unavailable` (never a silent empty result). Rebuild on a new machine
+or release with the same command — no manually downloaded mystery files.
+
+Extract defaults pin release `2026-08-19.0`; override with `--release`.
+
+### Cross-source identity (`cross-source-identity-v1`)
+
+When a provider identity `(source, external_id)` is unknown, ingestion may
+link it to an existing business only on exact strong signals:
+
+- exact normalized registrable website host (IP/localhost never counts), or
+- exact phone number (10+-digit numbers compare their final ten digits so
+  "+1 801…" and "(801) …" formatting cannot defeat an exact-number match).
+
+If all matched signals agree on exactly ONE business, the record auto-links
+and an `entity_match_candidate` row (status `auto_linked`, policy
+`cross-source-identity-v1`) records the evidence. If signals point at more
+than one business, a separate business is created and pending
+`entity_match_candidate` rows are left for review. Name similarity alone
+never links or merges anything. False merges are worse than duplicates.
+
+### Comparing coverage (non-persisting)
+
+```text
+pnpm discovery:compare --location "Ogden, UT" --category roofing,plumbing --radius-km 15 --limit 20
+```
+
+Queries every source for the same bounded query, ingests nothing, and prints
+per-source counts plus strong-signal overlap. Results feed
+[`docs/DISCOVERY_COVERAGE_BENCHMARK.md`](../../docs/DISCOVERY_COVERAGE_BENCHMARK.md).
+
+## OpenStreetMap source detail
 
 The first adapter is `OpenStreetMapOverpassAdapter`:
 

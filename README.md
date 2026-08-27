@@ -165,15 +165,20 @@ authorization are implemented. See [apps/admin/README.md](apps/admin/README.md).
 
 The database foundation lives in [packages/database](packages/database/README.md) (`pnpm db:up`, `db:migrate`, `db:verify`). The deterministic prospect-qualification slice lives in [services/prospecting](services/prospecting/README.md); exercise it locally with `pnpm prospect:qualify --fixture roofing-good`.
 
-Phase 5B real-business discovery lives in [services/discovery](services/discovery/README.md).
-For a small, local-only OpenStreetMap proof, run:
+Real-business discovery lives in [services/discovery](services/discovery/README.md)
+with two sources behind one adapter boundary: OpenStreetMap (Phase 5B) and
+Overture Maps places (Phase 5C, much stronger service-business coverage).
+Build the local Overture extract once, then search either or both sources:
 
 ```text
-pnpm discover --category roofing --location "Ogden, UT" --radius-km 10 --limit 5
+pnpm discovery:data --location "Ogden, UT" --radius-km 30
+pnpm discover --category roofing --location "Ogden, UT" --radius-km 10 --limit 5 --source all
+pnpm discovery:compare --location "Ogden, UT" --category roofing --radius-km 15 --limit 20
 ```
 
-Public OSM services are used only for bounded development searches; attribution
-and production-use restrictions are documented with the service. Discovery
+Public OSM services are used only for bounded development searches; Overture
+data is queried from a git-ignored local regional extract. Attribution and
+production-use restrictions are documented with the service. Discovery
 performs analysis and qualification only—it never sends outreach.
 
 ## Fresh-machine bootstrap

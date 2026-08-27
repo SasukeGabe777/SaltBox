@@ -90,6 +90,48 @@ export async function findBusinessByExternalIdentifier(
   return row ? mapBusiness(row) : undefined;
 }
 
+/**
+ * Businesses currently associated with a website on the exact normalized
+ * domain host (cross-source strong signal; ADR-004 entity resolution step 1).
+ */
+export async function findBusinessIdsByDomainHost(db: Database, host: string): Promise<string[]> {
+  const rows = await db
+    .selectFrom("domain")
+    .innerJoin("website_domain", "website_domain.domain_id", "domain.id")
+    .innerJoin("business_website", "business_website.website_id", "website_domain.website_id")
+    .select("business_website.business_id")
+    .distinct()
+    .where("domain.host", "=", host.trim().toLowerCase())
+    .orderBy("business_website.business_id")
+    .execute();
+  return rows.map((row) => row.business_id);
+}
+
+/**
+ * Businesses with the exact same phone number (strong signal). Numbers with
+ * ten or more digits compare on their final ten digits so a country-code
+ * prefix ("+1 801…" vs "(801) …") cannot defeat an exact-number match;
+ * shorter numbers require an exact normalized match.
+ */
+export async function findBusinessIdsByPhone(db: Database, normalizedPhone: string): Promise<string[]> {
+  const digits = normalizedPhone.replace(/\D/g, "");
+  let query = db
+    .selectFrom("contact_method")
+    .select("business_id")
+    .distinct()
+    .where("channel", "=", "phone");
+  query =
+    digits.length >= 10
+      ? query.where(
+          (eb) => eb.fn("right", [eb.fn("regexp_replace", [eb.ref("normalized_value"), eb.val("[^0-9]"), eb.val(""), eb.val("g")]), eb.val(10)]),
+          "=",
+          digits.slice(-10),
+        )
+      : query.where("normalized_value", "=", normalizedPhone);
+  const rows = await query.orderBy("business_id").execute();
+  return rows.map((row) => row.business_id);
+}
+
 interface BusinessRow {
   id: string;
   canonical_name: string;

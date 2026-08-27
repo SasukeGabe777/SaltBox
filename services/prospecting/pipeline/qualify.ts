@@ -30,7 +30,12 @@ import { ensureFeatureDefinitions, createFeatureSet, type FeatureValue } from "@
 import { ensureScoringVersion, createLeadScore } from "@saltbox/database/repositories/scoring";
 import { createDecision } from "@saltbox/database/repositories/decisions";
 import { appendEvent } from "@saltbox/database/repositories/events";
-import { ingestControlledBusiness, type ControlledBusinessInput, type IngestionResult } from "../ingestion/ingest.ts";
+import {
+  ingestControlledBusiness,
+  type BusinessIdentityDisposition,
+  type ControlledBusinessInput,
+  type IngestionResult,
+} from "../ingestion/ingest.ts";
 import { analyzeWebsite, type WebsiteAnalyzerOptions, type WebsiteCheckResult } from "../analysis/analyzer.ts";
 import { deriveFeatures } from "../features/derive.ts";
 import { calculateScore } from "../scoring/score.ts";
@@ -59,6 +64,8 @@ export interface QualificationOutcome {
   sourceRecordId: string;
   businessId: string;
   businessCreated: boolean;
+  identityDisposition: BusinessIdentityDisposition;
+  crossSourceSignals?: Record<string, string>;
   prospectId: string;
   featureSetId: string;
   leadScoreId: string;
@@ -205,6 +212,8 @@ export async function qualifyBusiness(
     sourceRecordId: ingestion.sourceRecordId,
     businessId: ingestion.businessId,
     businessCreated: ingestion.businessCreated,
+    identityDisposition: ingestion.identityDisposition,
+    ...(ingestion.crossSourceSignals !== undefined ? { crossSourceSignals: ingestion.crossSourceSignals } : {}),
     prospectId: prospect.id,
     featureSetId,
     leadScoreId,

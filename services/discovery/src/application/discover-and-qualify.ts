@@ -50,6 +50,8 @@ export interface DiscoveryRunResult {
   discovered: number;
   newBusinesses: number;
   rediscovered: number;
+  crossSourceLinked: number;
+  ambiguousMatches: number;
   analyzed: number;
   qualified: number;
   rejected: number;
@@ -196,7 +198,11 @@ export async function discoverAndQualify(
     adapterVersion: batch.adapterVersion,
     discovered: batch.candidates.length,
     newBusinesses: successes.filter((result) => result.outcome.businessCreated).length,
-    rediscovered: successes.filter((result) => !result.outcome.businessCreated).length,
+    rediscovered: successes.filter(
+      (result) => !result.outcome.businessCreated && result.outcome.identityDisposition !== "cross_source_linked",
+    ).length,
+    crossSourceLinked: successes.filter((result) => result.outcome.identityDisposition === "cross_source_linked").length,
+    ambiguousMatches: successes.filter((result) => result.outcome.identityDisposition === "created_ambiguous").length,
     analyzed: successes.length,
     qualified: successes.filter((result) => result.outcome.decision === "qualified").length,
     rejected: successes.filter((result) => result.outcome.decision === "rejected").length,
@@ -209,6 +215,8 @@ export async function discoverAndQualify(
     discovered: run.discovered,
     newBusinesses: run.newBusinesses,
     rediscovered: run.rediscovered,
+    crossSourceLinked: run.crossSourceLinked,
+    ambiguousMatches: run.ambiguousMatches,
     analyzed: run.analyzed,
     qualified: run.qualified,
     rejected: run.rejected,
