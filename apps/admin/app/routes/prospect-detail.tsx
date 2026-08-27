@@ -7,6 +7,7 @@ import type {
 } from "@saltbox/database/queries/admin";
 import type { Route } from "./+types/prospect-detail";
 import { RefreshControl } from "../components/RefreshControl";
+import { WebsiteIntelligencePanel } from "../components/WebsiteIntelligencePanel";
 import { ScoreBars } from "../components/ScoreBars";
 import { StatusBadge } from "../components/StatusBadge";
 import {
@@ -178,6 +179,8 @@ export default function ProspectDetailPage({ loaderData }: Route.ComponentProps)
         </div>
         <WebsiteAnalysis analysis={selectedRun?.websiteAnalysis ?? null} fallbackUrl={detail.websiteUrl} />
       </section>
+
+      <WebsiteIntelligencePanel runs={detail.websiteIntelligence} />
 
       <section className="panel history-panel">
         <div className="panel-heading split-heading">

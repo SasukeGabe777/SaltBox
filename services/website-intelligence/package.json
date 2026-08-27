@@ -1,25 +1,25 @@
 {
-  "name": "@saltbox/prospecting",
+  "name": "@saltbox/website-intelligence",
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "exports": {
-    "./pipeline": "./pipeline/qualify.ts",
-    "./ingestion": "./ingestion/ingest.ts",
-    "./analysis": "./analysis/analyzer.ts",
-    "./net-safety": "./analysis/net-safety.ts"
-  },
   "engines": {
     "node": ">=24.0.0 <25"
   },
+  "exports": {
+    ".": "./src/types.ts",
+    "./analyzer": "./src/analyze-website.ts"
+  },
   "scripts": {
-    "qualify": "node scripts/qualify.ts",
+    "intelligence": "node scripts/intelligence.ts",
     "check": "tsc --noEmit",
     "test": "node --test \"testing/**/*.test.ts\""
   },
   "dependencies": {
     "@saltbox/database": "workspace:*",
-    "node-html-parser": "^9.0.1"
+    "@saltbox/prospecting": "workspace:*",
+    "lighthouse": "13.4.1",
+    "puppeteer": "25.9.0"
   },
   "devDependencies": {
     "@types/node": "^26.3.0",

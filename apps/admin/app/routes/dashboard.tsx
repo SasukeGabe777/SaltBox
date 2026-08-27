@@ -31,6 +31,7 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
     filters.search ||
       filters.source ||
       filters.category ||
+      filters.intelligence ||
       (filters.status && filters.status !== "all") ||
       filters.minimumScore !== undefined ||
       filters.maximumScore !== undefined
@@ -131,6 +132,14 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
             <input name="category" defaultValue={filters.category ?? ""} placeholder="roofing" />
           </label>
           <label>
+            <span>Intelligence</span>
+            <select name="intelligence" defaultValue={filters.intelligence ?? ""}>
+              <option value="">All</option>
+              <option value="analyzed">Analyzed</option>
+              <option value="none">Not analyzed</option>
+            </select>
+          </label>
+          <label>
             <span>Minimum score</span>
             <input name="minScore" type="number" min="0" max="100" defaultValue={filters.minimumScore ?? ""} placeholder="0" />
           </label>
@@ -174,6 +183,7 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
                   <th scope="col">Activity</th>
                   <th scope="col">Reach</th>
                   <th scope="col">Status</th>
+                  <th scope="col">Intel</th>
                   <th scope="col">Analyzed</th>
                 </tr>
               </thead>
@@ -224,6 +234,7 @@ function ProspectRow({ prospect }: { prospect: ProspectListItem }) {
       <td>{prospect.activityScore ?? "—"}</td>
       <td>{prospect.reachabilityScore ?? "—"}</td>
       <td><StatusBadge status={prospect.decision ?? prospect.lifecycleState} /></td>
+      <td className="intel-cell">{prospect.intelligenceAnalyzed ? <span className="intel-flag">analyzed</span> : <span className="intel-none">—</span>}</td>
       <td className="date-cell">{formatDateTime(prospect.analyzedAt)}</td>
     </tr>
   );

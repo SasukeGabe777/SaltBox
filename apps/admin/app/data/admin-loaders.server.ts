@@ -28,9 +28,11 @@ export function parseProspectFilters(url: string): ProspectListFilters {
   const search = params.get("search")?.trim() || undefined;
   const source = params.get("source")?.trim() || undefined;
   const category = params.get("category")?.trim() || undefined;
+  const rawIntelligence = params.get("intelligence");
+  const intelligence = rawIntelligence === "analyzed" || rawIntelligence === "none" ? rawIntelligence : undefined;
   const minimumScore = parseScore(params.get("minScore"));
   const maximumScore = parseScore(params.get("maxScore"));
-  return { status, search, source, category, minimumScore, maximumScore };
+  return { status, search, source, category, intelligence, minimumScore, maximumScore };
 }
 
 export async function loadDashboardRequest(

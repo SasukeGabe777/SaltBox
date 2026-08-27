@@ -52,8 +52,15 @@ function isPrivateIpv6(address: string): boolean {
   if (bare.startsWith("fe8") || bare.startsWith("fe9") || bare.startsWith("fea") || bare.startsWith("feb")) {
     return true; // link-local fe80::/10
   }
-  const mapped = bare.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/); // IPv4-mapped
+  const mapped = bare.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/); // IPv4-mapped, dotted form
   if (mapped) return isPrivateIpv4(mapped[1]!);
+  // IPv4-mapped in hex-group form (URL parsing normalizes ::ffff:10.0.0.1 to ::ffff:a00:1).
+  const mappedHex = bare.match(/^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
+  if (mappedHex) {
+    const high = Number.parseInt(mappedHex[1]!, 16);
+    const low = Number.parseInt(mappedHex[2]!, 16);
+    return isPrivateIpv4(`${high >> 8}.${high & 255}.${low >> 8}.${low & 255}`);
+  }
   return false;
 }
 

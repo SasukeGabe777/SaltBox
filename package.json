@@ -17,6 +17,7 @@
     "discover": "pnpm --filter @saltbox/discovery discover",
     "discovery:data": "pnpm --filter @saltbox/discovery data",
     "discovery:compare": "pnpm --filter @saltbox/discovery compare",
+    "website:intelligence": "pnpm --filter @saltbox/website-intelligence intelligence",
     "build": "pnpm -r build",
     "build:website": "pnpm --filter @saltbox/website build",
     "check": "pnpm -r check",

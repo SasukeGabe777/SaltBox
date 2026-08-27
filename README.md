@@ -181,6 +181,17 @@ data is queried from a git-ignored local regional extract. Attribution and
 production-use restrictions are documented with the service. Discovery
 performs analysis and qualification only—it never sends outreach.
 
+Phase 6 deep website intelligence lives in
+[services/website-intelligence](services/website-intelligence/README.md):
+a bounded, hardened Chromium + Lighthouse condition report (performance,
+accessibility, SEO, mobile, conversion paths, link/asset health, platform)
+persisted as versioned append-only evidence and shown in the admin case file.
+It is informational only — qualification-v1 scoring is unchanged:
+
+```text
+pnpm website:intelligence --category roofing --limit 5
+```
+
 ## Fresh-machine bootstrap
 
 Prerequisites:

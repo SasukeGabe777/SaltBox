@@ -5,4 +5,7 @@ packages:
 
 allowBuilds:
   esbuild: true
+  # Puppeteer's postinstall downloads Chrome for Testing, required by the
+  # website-intelligence service (Phase 6 browser/Lighthouse analysis).
+  puppeteer: true
   sharp: true

@@ -18,6 +18,8 @@ export interface ProspectListFilters {
   search?: string;
   source?: string;
   category?: string;
+  /** Phase 6 website-intelligence presence filter. */
+  intelligence?: "analyzed" | "none";
   minimumScore?: number;
   maximumScore?: number;
 }
@@ -50,6 +52,8 @@ export interface ProspectListItem {
   scoringVersion: string | null;
   policyVersion: string | null;
   analyzedAt: string | null;
+  /** True when at least one website-intelligence analysis exists for the business. */
+  intelligenceAnalyzed: boolean;
 }
 
 export type ActivityKind =
@@ -213,6 +217,22 @@ export interface ContactMethodView {
   validationStatus: string;
 }
 
+export interface IntelligenceSnapshotView {
+  id: string;
+  requestedUrl: string;
+  crawlScope: string | null;
+  httpStatus: number | null;
+}
+
+export interface WebsiteIntelligenceView {
+  analysisId: string;
+  websiteId: string;
+  analyzerVersion: string;
+  calculatedAt: string;
+  structuredFindings: Record<string, unknown>;
+  snapshots: IntelligenceSnapshotView[];
+}
+
 export interface ProspectDetail {
   prospectId: string;
   businessId: string;
@@ -232,6 +252,7 @@ export interface ProspectDetail {
   observations: ObservationView[];
   scoreHistory: ScoreHistoryEntry[];
   timeline: TimelineEntry[];
+  websiteIntelligence: WebsiteIntelligenceView[];
 }
 
 export async function getProspectOverview(
@@ -402,6 +423,39 @@ export async function listProspects(
   if (filters.maximumScore !== undefined) {
     query = query.where("latest_score.overall_score", "<=", filters.maximumScore);
   }
+  if (filters.intelligence === "analyzed") {
+    query = query.where(({ exists, selectFrom }) =>
+      exists(
+        selectFrom("business_website as ibw")
+          .innerJoin("website_analysis as iwa", "iwa.website_id", "ibw.website_id")
+          .select("iwa.id")
+          .whereRef("ibw.business_id", "=", "business.id")
+          .where("iwa.analyzer_version", "like", "website-intelligence-%"),
+      ),
+    );
+  }
+  if (filters.intelligence === "none") {
+    query = query.where(({ not, exists, selectFrom }) =>
+      not(
+        exists(
+          selectFrom("business_website as ibw")
+            .innerJoin("website_analysis as iwa", "iwa.website_id", "ibw.website_id")
+            .select("iwa.id")
+            .whereRef("ibw.business_id", "=", "business.id")
+            .where("iwa.analyzer_version", "like", "website-intelligence-%"),
+        ),
+      ),
+    );
+  }
+  query = query.select(({ exists, selectFrom }) =>
+    exists(
+      selectFrom("business_website as ibw")
+        .innerJoin("website_analysis as iwa", "iwa.website_id", "ibw.website_id")
+        .select("iwa.id")
+        .whereRef("ibw.business_id", "=", "business.id")
+        .where("iwa.analyzer_version", "like", "website-intelligence-%"),
+    ).as("intelligence_analyzed"),
+  );
 
   const rows = await query
     .orderBy("latest_score.calculated_at", (order) => order.desc().nullsLast())
@@ -738,6 +792,47 @@ export async function getProspectDetail(db: Database, prospectId: string): Promi
   const headerLocation = findLocation([header.provider_metadata]);
   const location = metadataLocation.city || metadataLocation.state ? metadataLocation : headerLocation;
 
+  // Phase 6 website-intelligence runs for THIS business's websites only
+  // (append-only history, newest first). Snapshots are joined per analysis so
+  // an older run can never borrow a newer run's evidence.
+  const intelligenceRows = await db
+    .selectFrom("website_analysis as wa")
+    .innerJoin("business_website as bw", "bw.website_id", "wa.website_id")
+    .select(["wa.id", "wa.website_id", "wa.analyzer_version", "wa.calculated_at", "wa.structured_findings"])
+    .where("bw.business_id", "=", header.business_id)
+    .where("wa.analyzer_version", "like", "website-intelligence-%")
+    .orderBy("wa.calculated_at", "desc")
+    .limit(12)
+    .execute();
+  const intelligenceSnapshots =
+    intelligenceRows.length === 0
+      ? []
+      : await db
+          .selectFrom("website_analysis_snapshot as was")
+          .innerJoin("website_snapshot as ws", "ws.id", "was.website_snapshot_id")
+          .select(["was.website_analysis_id", "ws.id", "ws.requested_url", "ws.crawl_scope", "ws.http_status"])
+          .where("was.website_analysis_id", "in", intelligenceRows.map((row) => row.id))
+          .orderBy("ws.recorded_at")
+          .execute();
+  const websiteIntelligence: WebsiteIntelligenceView[] = intelligenceRows.map((row) => ({
+    analysisId: row.id,
+    websiteId: row.website_id,
+    analyzerVersion: row.analyzer_version,
+    calculatedAt: toIso(row.calculated_at),
+    structuredFindings:
+      typeof row.structured_findings === "object" && row.structured_findings !== null && !Array.isArray(row.structured_findings)
+        ? (row.structured_findings as Record<string, unknown>)
+        : {},
+    snapshots: intelligenceSnapshots
+      .filter((snapshot) => snapshot.website_analysis_id === row.id)
+      .map((snapshot) => ({
+        id: snapshot.id,
+        requestedUrl: snapshot.requested_url,
+        crawlScope: snapshot.crawl_scope,
+        httpStatus: snapshot.http_status,
+      })),
+  }));
+
   return {
     prospectId: header.prospect_id,
     businessId: header.business_id,
@@ -784,6 +879,7 @@ export async function getProspectDetail(db: Database, prospectId: string): Promi
       decisionId: row.decision_id,
       correlationId: row.correlation_id,
     })),
+    websiteIntelligence,
   };
 }
 
@@ -811,6 +907,7 @@ function mapProspectListRow(row: Awaited<ReturnType<ReturnType<typeof latestPros
     scoringVersion: row.scoring_version,
     policyVersion: row.policy_version,
     analyzedAt: row.calculated_at ? toIso(row.calculated_at) : null,
+    intelligenceAnalyzed: Boolean((row as { intelligence_analyzed?: boolean }).intelligence_analyzed),
   };
 }
 
