@@ -81,8 +81,11 @@ export async function analyzeWebsiteIntelligence(
   const homepage = await resolveHomepage(websiteUrl, safety);
   if (!homepage.ok || !homepage.finalUrl) {
     result.fatal = {
-      stage: homepage.reason?.includes("private") || homepage.reason?.includes("blocked") ? "blocked_target" : "unreachable",
+      stage: homepage.failureKind === "blocked_target" ? "blocked_target" : "unreachable",
       message: homepage.reason ?? "homepage unreachable",
+      ...(homepage.failureKind ? { failureKind: homepage.failureKind } : {}),
+      ...(homepage.failureCode ? { code: homepage.failureCode } : {}),
+      ...(homepage.transient !== undefined ? { transient: homepage.transient } : {}),
     };
     return finish();
   }
@@ -102,6 +105,8 @@ export async function analyzeWebsiteIntelligence(
     result.fatal = {
       stage: "browser_unavailable",
       message: `Chromium launch failed: ${error instanceof Error ? error.message : String(error)}`,
+      failureKind: "browser_unavailable",
+      transient: false,
     };
     return finish();
   }

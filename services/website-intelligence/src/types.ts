@@ -169,5 +169,21 @@ export interface WebsiteIntelligenceResult {
   social: SocialLinks | null;
   artifacts: ArtifactRefs | null;
   /** Fatal-only: set when the site could not be analyzed at all. */
-  fatal?: { stage: "no_website" | "blocked_target" | "unreachable" | "browser_unavailable" | "internal"; message: string };
+  fatal?: {
+    stage: "no_website" | "blocked_target" | "unreachable" | "browser_unavailable" | "internal";
+    message: string;
+    failureKind?:
+      | "invalid_target"
+      | "blocked_target"
+      | "dns_transient"
+      | "dns_not_found"
+      | "dns_failure"
+      | "tls_failure"
+      | "timeout"
+      | "unreachable"
+      | "browser_unavailable"
+      | "internal";
+    code?: string;
+    transient?: boolean;
+  };
 }

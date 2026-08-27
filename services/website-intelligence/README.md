@@ -112,6 +112,10 @@ are never followed. Selection reasons and URLs persist as evidence.
   `website.mobile.*`, `website.technical.*`, `website.links.*`,
   `website.assets.*`, `website.conversion.*`, `website.content.*`,
   `website.structured_data.*`, `website.platform.*`.
+- Fatal target runs persist typed failure evidence under
+  `website.technical.analysis_failure_*` (stage, kind, code, transient).
+  This evidence describes one analysis attempt; it never changes the stored
+  website identity or asserts that the business has no website.
 - Screenshots + raw Lighthouse JSON live in the git-ignored
   `.data/website-intelligence/<run-ref>/`; the analysis stores only the
   relative reference. The admin serves them through a strictly validated
@@ -120,10 +124,30 @@ are never followed. Selection reasons and URLs persist as evidence.
 ## Failure model
 
 `WEBSITE NEGATIVE SIGNAL` (404 page, broken link) is an observation.
-`ANALYSIS TOOL FAILURE` (Lighthouse crash, sub-page timeout) marks that stage
-failed while every other stage's evidence persists. `SYSTEM FAILURE`
-(Chromium unavailable, database down) fails the run. Prospects without a
-website report `NO WEBSITE TO ANALYZE`.
+`TARGET FAILURE` (DNS/TLS/unreachable/timeout/malformed target, or an
+isolated Lighthouse/stage failure) persists the run and its available
+evidence, does not stop other targets, and is prominent in the final target
+list. `SYSTEM/BATCH FAILURE` (database/schema/configuration failure,
+Chromium unavailable for every analyzable target, or an unrecoverable
+exception) produces a failed batch and a non-zero process exit.
+
+Every terminal batch has one explicit result:
+
+- `completed`: selected targets reached terminal outcomes with no target
+  analysis failures (a known no-website skip is not an analyzer failure).
+- `completed_with_target_failures`: the batch itself completed and one or
+  more targets/stages failed. Normal operator execution exits 0 so pnpm does
+  not misreport the completed batch as an ELIFECYCLE failure.
+- `failed`: the batch/system could not complete safely; exits non-zero.
+
+`--strict` changes `completed_with_target_failures` to exit code 2 for CI
+and debugging, without changing persistence or the displayed batch status.
+
+DNS failures preserve resolver semantics where Node exposes them:
+`EAI_AGAIN` (plus timeout/service/refused resolver errors) is recorded as
+`dns_transient`; `ENOTFOUND`/`ENODATA` is recorded as
+`dns_not_found`. A temporary DNS error is evidence about that attempt only
+and is never converted into permanent "no website" evidence.
 
 **Known limitation — bot protection:** some hosts serve challenge or
 "Access Denied" pages to repeated same-hour automated visits. SaltBox records
@@ -138,6 +162,7 @@ pnpm website:intelligence --prospect <prospect-id>
 pnpm website:intelligence --business <business-id>
 pnpm website:intelligence --category roofing --limit 5
 pnpm website:intelligence --status qualified --limit 10 --concurrency 2
+pnpm website:intelligence --category roofing --limit 5 --strict
 ```
 
 Intelligence is intentionally NOT attached to discovery runs yet; discovery

@@ -173,6 +173,15 @@ export function intelligenceObservations(result: WebsiteIntelligenceResult): Arr
     if (value !== null && value !== "") rows.push([key, { kind: "text", value }]);
   };
 
+  if (result.fatal) {
+    text("website.technical.analysis_failure_stage", result.fatal.stage);
+    text("website.technical.analysis_failure_kind", result.fatal.failureKind ?? null);
+    text("website.technical.analysis_failure_code", result.fatal.code ?? null);
+    if (result.fatal.transient !== undefined) {
+      boolean("website.technical.analysis_failure_transient", result.fatal.transient);
+    }
+  }
+
   if (result.lab) {
     number("website.performance.lighthouse_performance", result.lab.performance);
     number("website.accessibility.lighthouse_accessibility", result.lab.accessibility);

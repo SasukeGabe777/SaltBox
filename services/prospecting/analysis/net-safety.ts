@@ -66,7 +66,17 @@ function isPrivateIpv6(address: string): boolean {
 
 export type HostSafetyResult =
   | { ok: true; addresses: string[] }
-  | { ok: false; reason: "blocked_hostname" | "private_address" | "dns_failure"; detail: string };
+  | {
+      ok: false;
+      reason: "blocked_hostname" | "private_address" | "dns_failure";
+      detail: string;
+      dnsFailure?: DnsFailure;
+    };
+
+export type DnsFailure = {
+  classification: "transient" | "not_found" | "other";
+  code: string | null;
+};
 
 const defaultLookup: LookupFn = async (hostname) => dnsLookup(hostname, { all: true });
 
@@ -88,10 +98,20 @@ export async function checkHostSafety(hostname: string, lookup: LookupFn = defau
   try {
     results = await lookup(normalized);
   } catch (error) {
-    return { ok: false, reason: "dns_failure", detail: error instanceof Error ? error.message : String(error) };
+    return {
+      ok: false,
+      reason: "dns_failure",
+      detail: error instanceof Error ? error.message : String(error),
+      dnsFailure: classifyDnsFailure(error),
+    };
   }
   if (results.length === 0) {
-    return { ok: false, reason: "dns_failure", detail: `no addresses resolved for ${normalized}` };
+    return {
+      ok: false,
+      reason: "dns_failure",
+      detail: `no addresses resolved for ${normalized}`,
+      dnsFailure: { classification: "not_found", code: "NO_ADDRESSES" },
+    };
   }
   const privateHit = results.find((r) => isPrivateAddress(r.address));
   if (privateHit) {
@@ -102,4 +122,25 @@ export async function checkHostSafety(hostname: string, lookup: LookupFn = defau
     };
   }
   return { ok: true, addresses: results.map((r) => r.address) };
+}
+
+export function classifyDnsFailure(error: unknown): DnsFailure {
+  const code = errorCode(error);
+  if (code && new Set(["EAI_AGAIN", "ETIMEOUT", "ESERVFAIL", "EREFUSED"]).has(code)) {
+    return { classification: "transient", code };
+  }
+  if (code && new Set(["ENOTFOUND", "ENODATA", "ENONAME"]).has(code)) {
+    return { classification: "not_found", code };
+  }
+  return { classification: "other", code };
+}
+
+function errorCode(error: unknown): string | null {
+  let current: unknown = error;
+  for (let depth = 0; depth < 4 && current && typeof current === "object"; depth += 1) {
+    const candidate = current as { code?: unknown; cause?: unknown };
+    if (typeof candidate.code === "string") return candidate.code.toUpperCase();
+    current = candidate.cause;
+  }
+  return null;
 }

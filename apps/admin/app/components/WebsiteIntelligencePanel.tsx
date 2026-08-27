@@ -67,7 +67,7 @@ interface Findings {
   platform?: { platform?: string | null; confidence?: string; evidence?: string[] } | null;
   social?: Record<string, string | string[] | null> | null;
   artifacts?: { ref?: string; desktopScreenshot?: string | null; mobileScreenshot?: string | null; lighthouseReport?: string | null };
-  fatal?: { stage?: string; message?: string };
+  fatal?: { stage?: string; message?: string; failureKind?: string; code?: string; transient?: boolean };
   finalHomepageUrl?: string | null;
   durationMs?: number;
 }
@@ -122,7 +122,13 @@ export function WebsiteIntelligencePanel({ runs }: { runs: WebsiteIntelligenceVi
 
       {!isLatest ? <p className="historical-banner">HISTORICAL WEBSITE ANALYSIS — showing only evidence from this run.</p> : null}
       {findings.fatal ? (
-        <p className="intelligence-fatal">Analysis failed ({findings.fatal.stage}): {findings.fatal.message}</p>
+        <p className="intelligence-fatal">
+          Analysis failed (
+          {[findings.fatal.stage, findings.fatal.failureKind, findings.fatal.code, findings.fatal.transient ? "transient" : null]
+            .filter(Boolean)
+            .join(" · ")}
+          ): {findings.fatal.message}
+        </p>
       ) : null}
 
       <p className="intelligence-disclaimer">

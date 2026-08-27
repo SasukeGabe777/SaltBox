@@ -13,6 +13,7 @@ import { isIP } from "node:net";
 import {
   BLOCKED_HOSTNAMES,
   checkHostSafety,
+  classifyDnsFailure,
   isPrivateAddress,
   type LookupFn,
 } from "@saltbox/prospecting/net-safety";
@@ -28,18 +29,48 @@ export interface UrlSafetyOptions {
 export interface SafeTargetResult {
   ok: boolean;
   reason?: string;
+  failureKind?: TargetFailureKind;
+  failureCode?: string;
+  transient?: boolean;
   /** Public addresses the hostname resolved to (for --host-resolver-rules pinning). */
   addresses?: string[];
 }
 
+export type TargetFailureKind =
+  | "invalid_target"
+  | "blocked_target"
+  | "dns_transient"
+  | "dns_not_found"
+  | "dns_failure"
+  | "tls_failure"
+  | "timeout"
+  | "unreachable";
+
 /** Validate one URL as an allowed http(s) navigation target on a public host. */
 export async function checkNavigationTarget(url: URL, options: UrlSafetyOptions = {}): Promise<SafeTargetResult> {
   if (url.protocol !== "http:" && url.protocol !== "https:") {
-    return { ok: false, reason: `unsupported protocol ${url.protocol}` };
+    return { ok: false, reason: `unsupported protocol ${url.protocol}`, failureKind: "invalid_target" };
   }
   if (options.allowPrivateNetworks) return { ok: true, addresses: [] };
   const safety = await checkHostSafety(url.hostname, options.lookup);
-  if (!safety.ok) return { ok: false, reason: safety.detail };
+  if (!safety.ok) {
+    if (safety.reason === "dns_failure") {
+      const classification = safety.dnsFailure?.classification ?? "other";
+      return {
+        ok: false,
+        reason: safety.detail,
+        failureKind:
+          classification === "transient"
+            ? "dns_transient"
+            : classification === "not_found"
+              ? "dns_not_found"
+              : "dns_failure",
+        ...(safety.dnsFailure?.code ? { failureCode: safety.dnsFailure.code } : {}),
+        transient: classification === "transient",
+      };
+    }
+    return { ok: false, reason: safety.detail, failureKind: "blocked_target", transient: false };
+  }
   return { ok: true, addresses: safety.addresses };
 }
 
@@ -54,6 +85,9 @@ export function isObviouslyForbiddenHost(hostname: string): boolean {
 export interface ResolvedHomepage {
   ok: boolean;
   reason?: string;
+  failureKind?: TargetFailureKind;
+  failureCode?: string;
+  transient?: boolean;
   finalUrl?: URL;
   redirectChain: string[];
   httpStatus?: number;
@@ -77,13 +111,28 @@ export async function resolveHomepage(url: string, options: UrlSafetyOptions = {
   try {
     current = new URL(url);
   } catch {
-    return { ok: false, reason: `"${url}" is not a valid URL`, redirectChain, pinnedHosts };
+    return {
+      ok: false,
+      reason: `"${url}" is not a valid URL`,
+      failureKind: "invalid_target",
+      transient: false,
+      redirectChain,
+      pinnedHosts,
+    };
   }
 
   for (let hop = 0; hop <= MAX_REDIRECT_HOPS; hop++) {
     const safety = await checkNavigationTarget(current, options);
     if (!safety.ok) {
-      return { ok: false, reason: safety.reason ?? "blocked target", redirectChain, pinnedHosts };
+      return {
+        ok: false,
+        reason: safety.reason ?? "blocked target",
+        ...(safety.failureKind ? { failureKind: safety.failureKind } : {}),
+        ...(safety.failureCode ? { failureCode: safety.failureCode } : {}),
+        ...(safety.transient !== undefined ? { transient: safety.transient } : {}),
+        redirectChain,
+        pinnedHosts,
+      };
     }
     if (safety.addresses && safety.addresses.length > 0) {
       pinnedHosts.set(current.hostname.toLowerCase(), safety.addresses);
@@ -97,11 +146,15 @@ export async function resolveHomepage(url: string, options: UrlSafetyOptions = {
         headers: { "user-agent": INTELLIGENCE_HTTP_UA, accept: "text/html,*/*;q=0.8" },
       });
     } catch (error) {
+      const failure = classifyRequestFailure(error);
       return {
         ok: false,
         reason: error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError")
           ? "homepage request timed out"
           : `homepage request failed: ${error instanceof Error ? error.message : String(error)}`,
+        failureKind: failure.kind,
+        ...(failure.code ? { failureCode: failure.code } : {}),
+        transient: failure.transient,
         redirectChain,
         pinnedHosts,
       };
@@ -111,9 +164,29 @@ export async function resolveHomepage(url: string, options: UrlSafetyOptions = {
       const location = response.headers.get("location");
       await response.body?.cancel();
       if (!location) {
-        return { ok: false, reason: `redirect ${response.status} without Location`, redirectChain, pinnedHosts, httpStatus: response.status };
+        return {
+          ok: false,
+          reason: `redirect ${response.status} without Location`,
+          failureKind: "invalid_target",
+          transient: false,
+          redirectChain,
+          pinnedHosts,
+          httpStatus: response.status,
+        };
       }
-      current = new URL(location, current);
+      try {
+        current = new URL(location, current);
+      } catch {
+        return {
+          ok: false,
+          reason: `redirect ${response.status} contained an invalid Location`,
+          failureKind: "invalid_target",
+          transient: false,
+          redirectChain,
+          pinnedHosts,
+          httpStatus: response.status,
+        };
+      }
       redirectChain.push(current.toString());
       continue;
     }
@@ -129,7 +202,32 @@ export async function resolveHomepage(url: string, options: UrlSafetyOptions = {
       pinnedHosts,
     };
   }
-  return { ok: false, reason: `more than ${MAX_REDIRECT_HOPS} redirects`, redirectChain, pinnedHosts };
+  return {
+    ok: false,
+    reason: `more than ${MAX_REDIRECT_HOPS} redirects`,
+    failureKind: "unreachable",
+    transient: false,
+    redirectChain,
+    pinnedHosts,
+  };
+}
+
+function classifyRequestFailure(error: unknown): {
+  kind: TargetFailureKind;
+  code: string | null;
+  transient: boolean;
+} {
+  if (error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError")) {
+    return { kind: "timeout", code: error.name, transient: true };
+  }
+  const dns = classifyDnsFailure(error);
+  if (dns.classification === "transient") return { kind: "dns_transient", code: dns.code, transient: true };
+  if (dns.classification === "not_found") return { kind: "dns_not_found", code: dns.code, transient: false };
+  const detail = error instanceof Error ? `${error.name} ${error.message}` : String(error);
+  if (/tls|ssl|certificate|cert_|_cert|unable_to_verify/i.test(`${dns.code ?? ""} ${detail}`)) {
+    return { kind: "tls_failure", code: dns.code, transient: false };
+  }
+  return { kind: "unreachable", code: dns.code, transient: false };
 }
 
 /** True when two URLs belong to the same site (host equal, ignoring www.). */
