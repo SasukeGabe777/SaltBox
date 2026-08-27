@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import type {
   DecisionReasonView,
   ObservationView,
+  ProspectDemoView,
   WebsiteAnalysisView,
 } from "@saltbox/database/queries/admin";
 import type { Route } from "./+types/prospect-detail";
@@ -73,7 +74,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
 }
 
 export default function ProspectDetailPage({ loaderData }: Route.ComponentProps) {
-  const { detail, loadedAt } = loaderData;
+  const { detail, loadedAt, demosBaseUrl } = loaderData;
   const [selectedScoreId, setSelectedScoreId] = useState(detail.currentScoreId ?? detail.scoreHistory[0]?.id ?? "");
 
   useEffect(() => {
@@ -224,6 +225,8 @@ export default function ProspectDetailPage({ loaderData }: Route.ComponentProps)
       </section>
 
       <WebsiteIntelligencePanel runs={detail.websiteIntelligence} />
+
+      <DemoPanel demo={detail.demo} demosBaseUrl={demosBaseUrl} />
 
       <section className="panel history-panel">
         <div className="panel-heading split-heading">
@@ -390,6 +393,109 @@ export default function ProspectDetailPage({ loaderData }: Route.ComponentProps)
         )}
       </section>
     </main>
+  );
+}
+
+function DemoPanel({ demo, demosBaseUrl }: { demo: ProspectDemoView | null; demosBaseUrl: string }) {
+  return (
+    <section className="panel demo-panel">
+      <div className="panel-heading split-heading">
+        <div>
+          <p className="section-kicker">PHASE 8 · GENERATED DEMO</p>
+          <h2>Demo website</h2>
+        </div>
+        {demo?.currentVersion ? (
+          <span className="version-chip">
+            {demo.currentVersion.templateName}@{demo.currentVersion.templateVersion}
+          </span>
+        ) : null}
+      </div>
+      {!demo ? (
+        <p className="panel-empty">
+          No demo has been generated for this prospect. Qualified-v2 prospects are eligible via{" "}
+          <code>pnpm demo:generate</code>.
+        </p>
+      ) : (
+        <>
+          <div className="demo-headline-row">
+            <StatusBadge status={demo.status} />
+            {demo.locatorToken && demo.currentVersion ? (
+              <a
+                className="view-demo-link"
+                href={`${demosBaseUrl}/d/${demo.locatorToken}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                VIEW DEMO ↗
+              </a>
+            ) : (
+              <span className="muted">No viewable version yet.</span>
+            )}
+            <small className="muted">Served by the local demo renderer ({demosBaseUrl}); start it with pnpm demos:dev.</small>
+          </div>
+          {demo.currentVersion ? (
+            <dl className="fact-list demo-facts">
+              <Fact label="Demo version" value={`v${demo.currentVersion.versionNumber}`} />
+              <Fact label="Generated" value={formatDateTime(demo.currentVersion.createdAt)} />
+              <Fact label="Content schema" value={demo.currentVersion.contentInputVersion ?? "Not recorded"} />
+              <Fact label="Copy generator" value={demo.currentVersion.generatedContentVersion ?? "Not recorded"} />
+              <Fact
+                label="Source qualification"
+                value={demo.sourceScoringVersion ? `${demo.sourceScoringVersion} · score ${demo.sourceScore ?? "—"}` : "Not recorded"}
+              />
+              <Fact label="Versions persisted" value={String(demo.versions.length)} />
+            </dl>
+          ) : null}
+          {demo.planSummary ? <DemoPlanSummary summary={demo.planSummary} /> : null}
+        </>
+      )}
+    </section>
+  );
+}
+
+function DemoPlanSummary({ summary }: { summary: Record<string, unknown> }) {
+  const deficiencies = Array.isArray(summary.deficiencies)
+    ? (summary.deficiencies as Array<{ code?: unknown; addressedBy?: unknown }>)
+    : [];
+  const fallbacks = Array.isArray(summary.fallbacks)
+    ? (summary.fallbacks as unknown[]).filter((item): item is string => typeof item === "string")
+    : [];
+  const override =
+    typeof summary.override === "object" && summary.override !== null
+      ? (summary.override as { note?: unknown })
+      : null;
+  return (
+    <div className="demo-plan-summary">
+      <h3>Demo-plan decisions</h3>
+      {override ? (
+        <p className="demo-override-note">
+          Generated under an explicit operator override — this does not change qualification history.
+          {typeof override.note === "string" ? ` ${override.note}` : ""}
+        </p>
+      ) : null}
+      {deficiencies.length > 0 ? (
+        <ul className="demo-deficiency-list">
+          {deficiencies.map((deficiency, index) => (
+            <li key={index}>
+              <code>{typeof deficiency.code === "string" ? deficiency.code : "UNKNOWN"}</code>
+              <span>{typeof deficiency.addressedBy === "string" ? deficiency.addressedBy : ""}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="muted">No website deficiencies were recorded in the demo plan.</p>
+      )}
+      {fallbacks.length > 0 ? (
+        <details className="raw-details">
+          <summary>Fallback decisions ({fallbacks.length})</summary>
+          <ul>
+            {fallbacks.map((fallback, index) => (
+              <li key={index}>{fallback}</li>
+            ))}
+          </ul>
+        </details>
+      ) : null}
+    </div>
   );
 }
 

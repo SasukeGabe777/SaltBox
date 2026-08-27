@@ -1,0 +1,30 @@
+{
+  "name": "@saltbox/demo-generation",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.0.0 <25"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./config": "./src/config/demo-v1.ts",
+    "./content-model": "./src/types.ts",
+    "./eligibility": "./src/eligibility.ts",
+    "./generate": "./src/generate.ts"
+  },
+  "scripts": {
+    "generate": "node scripts/generate.ts",
+    "check": "tsc --noEmit",
+    "test": "node --test \"testing/**/*.test.ts\""
+  },
+  "dependencies": {
+    "@saltbox/database": "workspace:*"
+  },
+  "devDependencies": {
+    "@saltbox/qualification": "workspace:*",
+    "@saltbox/website-intelligence": "workspace:*",
+    "@types/node": "^26.3.0",
+    "typescript": "5.9.3"
+  }
+}

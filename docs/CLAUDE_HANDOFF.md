@@ -25,7 +25,7 @@ dab572d Select PostgreSQL access and migration tooling
 
 ## Current architecture and completed phases
 
-SaltBox is a pnpm/TypeScript monorepo with deterministic, local-first business discovery and qualification. No current workflow sends outreach, uses paid APIs or AI, generates demos, or deploys production services.
+SaltBox is a pnpm/TypeScript monorepo with deterministic, local-first business discovery, qualification, and demo generation. No current workflow sends outreach, uses paid APIs or AI, or deploys production services.
 
 Completed work includes:
 
@@ -210,41 +210,40 @@ All persisted results were readable through the live admin route.
 - Bot challenges are recorded as served and never evaded; they are not automatically treated as verified business deficiencies.
 - The system remains local-only, read-only in the admin, without UI orchestration, authentication, outreach, demos, billing, paid enrichment, or production deployment.
 
+## Phase 8 — Automated Demo Generation (COMPLETE)
+
+Phase 8 is implemented, tested, and documented in
+`docs/DEMO_GENERATION.md`. Summary:
+
+- `services/demo-generation`: eligibility (latest qualified
+  `qualification-policy-v2` decision, no active suppression, intelligence
+  present, local-service category), deterministic facts/DemoPlan
+  (`demo-plan-v1`) / content (`demo-content-v1`, `demo-copy-v1`) with a
+  claims guard and full provenance, append-only Demo/DemoVersion
+  persistence over the existing schema (no migration), opaque locators, and
+  a `demo_published` domain event.
+- `apps/demos`: ONE loopback renderer (port 5175) serving MANY demos at
+  `/d/<locator>` with `noindex`, strict CSP (`form-action 'none'`), escaped
+  plain-text-only rendering, and the `local-service` @ `1.0.0` template.
+- Admin prospect detail shows a read-only demo section with VIEW DEMO.
+- Operator commands: `pnpm demos:dev`, `pnpm demo:generate --prospect <id>`
+  (or `--latest-qualified`), `pnpm demo:qa --token <locator>`.
+- Regeneration is idempotent on unchanged inputs and append-only otherwise;
+  overrides (`--override-ineligible`) never clear suppression or alter
+  qualification/lifecycle history. No outreach exists anywhere.
+- Real smoke: Utah Roof and Solar (qualified v2, score 65) generated demo
+  versions 1 and 2 on this machine; renderer returned HTTP 200; 16/16
+  desktop/mobile Chromium QA checks passed; the live admin rendered VIEW
+  DEMO. The 141-test suite, `pnpm check`, `pnpm build`, and `pnpm db:verify`
+  are green. Demo rows are machine-local; regenerate on another machine.
+
 ## Current roadmap
 
-The next planned phase is Phase 8. Do not begin it until the repository and environment have been independently verified.
-
-### PHASE 8 — AUTOMATED DEMO GENERATION
-
-Intended architecture:
-
-```text
-qualified-v2 prospect
-  -> demo eligibility
-  -> DemoPlan
-  -> structured business/demo content
-  -> deterministic template selection
-  -> reusable local-service template
-  -> persisted Demo + DemoVersion
-  -> one renderer serving many demos
-  -> public-safe demo locator
-  -> admin VIEW DEMO link
-```
-
-Phase 8 constraints:
-
-- One renderer serves many demos; do not create a standalone application/project per prospect.
-- Deterministic-first. No paid AI and no local LLM requirement yet.
-- No outreach and no fabricated business claims, reviews, credentials, services, or results.
-- Reuse existing Demo/DemoVersion persistence where possible and make regeneration append-only through DemoVersion.
-- Never render raw prospect HTML/scripts and do not put large artifacts in PostgreSQL.
-- Demo pages must be `noindex` and use a public-safe, unguessable locator rather than internal IDs.
-- Start with one reusable local-service-business template.
-- Qualified-v2 prospects are eligible by default; any override must be explicit and safe.
-- A demo must visibly address issues detected by website intelligence rather than merely reskinning content.
-- Utah Roof and Solar is a suitable first real smoke candidate if it is still present and qualified in the local database.
-- Admin should expose a read-only `VIEW DEMO` link when a persisted demo version exists.
-- Once Phase 8 is fully green and no genuine blocker exists, it may be committed and pushed without an unnecessary approval pause.
+Phase 9 is not started and is not authorized to start automatically.
+Candidate directions (operator decision required): outreach foundations
+(consent/suppression-first message intent without sending), brand/asset
+extraction to strengthen demos, additional template families, or an
+operator-facing demo approval flow.
 
 ## FOR CLAUDE: FIRST ACTIONS
 

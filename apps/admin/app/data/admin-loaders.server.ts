@@ -43,10 +43,15 @@ export async function loadDashboardRequest(
   return { overview: await service.getOverview(filters), filters };
 }
 
+/** Base URL of the local demo renderer (apps/demos); loopback by default. */
+export function demosBaseUrl(): string {
+  return (process.env.SALTBOX_DEMOS_BASE_URL ?? "http://127.0.0.1:5175").replace(/\/+$/, "");
+}
+
 export async function loadProspectRequest(
   prospectId: string | undefined,
   service: AdminQueryService = adminQueryService
-): Promise<{ detail: ProspectDetail; loadedAt: string }> {
+): Promise<{ detail: ProspectDetail; loadedAt: string; demosBaseUrl: string }> {
   if (!prospectId || !isUuid(prospectId)) {
     throw new Response("Malformed prospect identifier.", { status: 400, statusText: "Invalid prospect ID" });
   }
@@ -54,7 +59,7 @@ export async function loadProspectRequest(
   if (!detail) {
     throw new Response("Prospect not found.", { status: 404, statusText: "Prospect not found" });
   }
-  return { detail, loadedAt: new Date().toISOString() };
+  return { detail, loadedAt: new Date().toISOString(), demosBaseUrl: demosBaseUrl() };
 }
 
 export function rethrowAsOperatorResponse(error: unknown): never {

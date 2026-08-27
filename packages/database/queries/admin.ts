@@ -9,6 +9,9 @@
 import { sql } from "kysely";
 import type { Database } from "../client/kysely.ts";
 import type { JsonValue, ProspectLifecycleState } from "../generated/db.ts";
+import { getProspectDemoView, type ProspectDemoView } from "./demos.ts";
+
+export type { ProspectDemoView } from "./demos.ts";
 
 export type QualificationResult = "qualified" | "rejected";
 export type ProspectStatusFilter = "all" | QualificationResult;
@@ -254,6 +257,8 @@ export interface ProspectDetail {
   scoreHistory: ScoreHistoryEntry[];
   timeline: TimelineEntry[];
   websiteIntelligence: WebsiteIntelligenceView[];
+  /** Phase 8: the prospect's persisted demo, when one exists (read-only). */
+  demo: ProspectDemoView | null;
 }
 
 export async function getProspectOverview(
@@ -826,6 +831,7 @@ export async function getProspectDetail(db: Database, prospectId: string): Promi
           .where("was.website_analysis_id", "in", intelligenceRows.map((row) => row.id))
           .orderBy("ws.recorded_at")
           .execute();
+  const demo = await getProspectDemoView(db, prospectId);
   const websiteIntelligence: WebsiteIntelligenceView[] = intelligenceRows.map((row) => ({
     analysisId: row.id,
     websiteId: row.website_id,
@@ -892,6 +898,7 @@ export async function getProspectDetail(db: Database, prospectId: string): Promi
       correlationId: row.correlation_id,
     })),
     websiteIntelligence,
+    demo,
   };
 }
 

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { ProspectDetail, ProspectOverview } from "@saltbox/database/queries/admin";
 import {
+  demosBaseUrl,
   isUuid,
   loadDashboardRequest,
   loadProspectRequest,
@@ -95,4 +96,56 @@ test("prospect loader returns qualified and rejected detail view models unchange
 test("UUID validation accepts SaltBox IDs and rejects arbitrary strings", () => {
   assert.equal(isUuid(VALID_ID), true);
   assert.equal(isUuid("../../database"), false);
+});
+
+test("prospect loader surfaces the demo view model and the renderer base URL for VIEW DEMO links", async () => {
+  const detail = {
+    prospectId: VALID_ID,
+    businessName: "Utah Roof and Solar",
+    lifecycleState: "qualified",
+    scoreHistory: [],
+    demo: {
+      demoId: "33333333-3333-4333-8333-333333333333",
+      status: "ready",
+      concept: "local-service demo (roofing)",
+      createdAt: "2026-08-27T18:00:00.000Z",
+      updatedAt: "2026-08-27T18:00:00.000Z",
+      locatorToken: "u9PiE1s5V2c9rPBltmDCw49f",
+      currentVersion: {
+        demoVersionId: "44444444-4444-4444-8444-444444444444",
+        versionNumber: 1,
+        templateName: "local-service",
+        templateVersion: "1.0.0",
+        contentInputVersion: "demo-content-v1",
+        generatedContentVersion: "demo-copy-v1",
+        contentHash: "abc",
+        createdAt: "2026-08-27T18:00:00.000Z",
+        publishedAt: "2026-08-27T18:00:00.000Z",
+        isCurrent: true,
+      },
+      versions: [],
+      planSummary: { deficiencyCodes: ["CTA_MISSING"] },
+      sourceFeatureSetId: null,
+      sourceScore: 65,
+      sourceScoringVersion: "qualification-v2",
+    },
+  } as unknown as ProspectDetail;
+  const service: AdminQueryService = {
+    getOverview: async () => emptyOverview,
+    getDetail: async () => detail,
+  };
+  const loaded = await loadProspectRequest(VALID_ID, service);
+  assert.equal(loaded.detail.demo?.status, "ready");
+  assert.equal(loaded.detail.demo?.sourceScore, 65);
+  assert.match(loaded.demosBaseUrl, /^http:\/\/127\.0\.0\.1:5175$/);
+  assert.ok(`${loaded.demosBaseUrl}/d/${loaded.detail.demo?.locatorToken}`.endsWith("/d/u9PiE1s5V2c9rPBltmDCw49f"));
+
+  const previous = process.env.SALTBOX_DEMOS_BASE_URL;
+  process.env.SALTBOX_DEMOS_BASE_URL = "http://127.0.0.1:9999/";
+  try {
+    assert.equal(demosBaseUrl(), "http://127.0.0.1:9999");
+  } finally {
+    if (previous === undefined) delete process.env.SALTBOX_DEMOS_BASE_URL;
+    else process.env.SALTBOX_DEMOS_BASE_URL = previous;
+  }
 });

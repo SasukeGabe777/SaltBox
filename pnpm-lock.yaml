@@ -51,6 +51,25 @@ importers:
         specifier: 8.2.2
         version: 8.2.2(@types/node@26.3.0)(esbuild@0.27.7)(jiti@2.7.0)(yaml@2.9.0)
 
+  apps/demos:
+    dependencies:
+      '@saltbox/database':
+        specifier: workspace:*
+        version: link:../../packages/database
+      '@saltbox/demo-generation':
+        specifier: workspace:*
+        version: link:../../services/demo-generation
+    devDependencies:
+      '@types/node':
+        specifier: ^26.3.0
+        version: 26.3.0
+      puppeteer:
+        specifier: 25.9.0
+        version: 25.9.0
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+
   apps/website:
     dependencies:
       astro:
@@ -85,6 +104,25 @@ importers:
       node-pg-migrate:
         specifier: ^9.0.0
         version: 9.0.0(@types/pg@8.23.1)(pg@8.23.0)
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+
+  services/demo-generation:
+    dependencies:
+      '@saltbox/database':
+        specifier: workspace:*
+        version: link:../../packages/database
+    devDependencies:
+      '@saltbox/qualification':
+        specifier: workspace:*
+        version: link:../qualification
+      '@saltbox/website-intelligence':
+        specifier: workspace:*
+        version: link:../website-intelligence
+      '@types/node':
+        specifier: ^26.3.0
+        version: 26.3.0
       typescript:
         specifier: 5.9.3
         version: 5.9.3

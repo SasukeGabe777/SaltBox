@@ -92,12 +92,15 @@ saltbox/
 ├── apps/
 │   ├── website/          # Astro production marketing website
 │   ├── admin/            # Local read-only React Router prospect viewer
-│   └── demo-sites/       # Future demo-site delivery surface
+│   └── demos/            # One renderer serving many prospect demos (Phase 8)
 ├── services/
 │   ├── prospecting/
+│   ├── discovery/
+│   ├── website-intelligence/
+│   ├── qualification/
+│   ├── demo-generation/  # Deterministic demo planning/content/persistence (Phase 8)
 │   ├── website-analysis/
 │   ├── lead-scoring/
-│   ├── demo-generator/
 │   ├── outreach/
 │   ├── support/
 │   └── learning/         # Future metrics, experiments, and learning domain
@@ -204,6 +207,21 @@ See [docs/QUALIFICATION_V2.md](docs/QUALIFICATION_V2.md) and
 [services/qualification/README.md](services/qualification/README.md). Target
 analysis failures are `completed_with_target_failures` and exit 0 by default;
 `--strict` makes them non-zero for CI/debugging.
+
+Phase 8 automated demo generation turns a qualified-v2 prospect into a
+personalized, viewable website demo — deterministic copy, no AI, no outreach,
+no fabricated claims. One renderer serves every demo at an unguessable
+`noindex` locator URL, and the admin shows a read-only `VIEW DEMO` link:
+
+```text
+pnpm demos:dev                                   # demo renderer on http://127.0.0.1:5175/
+pnpm demo:generate --latest-qualified --limit 1  # or --prospect <uuid>
+pnpm demo:qa --token <public-locator>            # Chromium desktop/mobile QA + screenshots
+```
+
+See [docs/DEMO_GENERATION.md](docs/DEMO_GENERATION.md),
+[services/demo-generation/README.md](services/demo-generation/README.md), and
+[apps/demos/README.md](apps/demos/README.md).
 
 ## Fresh-machine bootstrap
 
