@@ -144,7 +144,7 @@ test("full generation: qualified v2 prospect -> plan -> content -> Demo -> DemoV
     const summary = result.summary;
     assert.equal(summary.versionNumber, 1);
     assert.equal(summary.templateName, "local-service-clean", "no brand evidence: typography-led composition");
-    assert.equal(summary.templateVersion, "1.0.0");
+    assert.equal(summary.templateVersion, "2.0.0");
     assert.ok(summary.deficiencyCodes.includes("CTA_MISSING"));
     assert.ok(summary.deficiencyCodes.includes("CONTACT_FORM_MISSING"));
     assert.match(summary.url, /^http:\/\/127\.0\.0\.1:5175\/d\/[A-Za-z0-9_-]{20,}$/);
@@ -164,8 +164,8 @@ test("full generation: qualified v2 prospect -> plan -> content -> Demo -> DemoV
       .selectAll()
       .where("id", "=", summary.demoVersionId)
       .executeTakeFirstOrThrow();
-    assert.equal(versionRow.content_input_version, "demo-content-v2");
-    assert.equal(versionRow.generated_content_version, "demo-copy-v2");
+    assert.equal(versionRow.content_input_version, "demo-content-v3");
+    assert.equal(versionRow.generated_content_version, "demo-copy-v3");
     assert.equal(versionRow.feature_set_id, outcome.featureSetId);
     assert.ok(versionRow.published_at !== null);
 
@@ -185,7 +185,7 @@ test("full generation: qualified v2 prospect -> plan -> content -> Demo -> DemoV
     const resolved = await resolveDemoByLocator(ctx.db, summary.locatorToken);
     assert.ok(resolved);
     assert.equal(resolved.version.demoVersionId, summary.demoVersionId);
-    assert.equal(resolved.version.content?.contentVersion, "demo-content-v2");
+    assert.equal(resolved.version.content?.contentVersion, "demo-content-v3");
     assert.equal(await resolveDemoByLocator(ctx.db, "unknown-token-000000000000"), undefined);
 
     // Admin read model exposes the demo with plan summary and lineage.
@@ -330,8 +330,8 @@ test("active suppression blocks generation even with the override", async () => 
 function testBrandProfile(): BrandProfile {
   return {
     kind: "brand-intelligence",
-    profileVersion: "brand-profile-v1",
-    analyzerVersion: "brand-intelligence-v1",
+    profileVersion: "brand-profile-v2",
+    analyzerVersion: "brand-intelligence-v2",
     websiteUrl: "https://brand-enhanced.test/",
     finalUrl: "https://brand-enhanced.test/",
     collectedAt: "2026-08-27T18:00:00.000Z",
@@ -425,12 +425,12 @@ test("brand-enhanced regeneration: same Demo identity and locator, new v2 versio
     assert.equal(after.summary.plan.brand?.logo.confidence, "high");
     assert.deepEqual(after.summary.plan.brand?.extractedServices, ["Roof Replacement", "Solar"]);
 
-    // The locator resolves the NEW current version with v2 content and assets.
+    // The locator resolves the NEW current version with v3 content and assets.
     const resolved = await resolveDemoByLocator(ctx.db, after.summary.locatorToken);
     assert.ok(resolved);
     assert.equal(resolved.version.demoVersionId, after.summary.demoVersionId);
     assert.equal(resolved.version.templateName, "local-service-premium");
-    assert.equal(resolved.version.content?.contentVersion, "demo-content-v2");
+    assert.equal(resolved.version.content?.contentVersion, "demo-content-v3");
     const brandBlock = resolved.version.content?.brand as { logo?: { url?: string } } | undefined;
     assert.match(brandBlock?.logo?.url ?? "", /^\/demo-assets\/20260827180000-brand-enhanced-roofing\/logo\.png$/);
 

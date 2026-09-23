@@ -60,6 +60,15 @@ export function decideQualificationV2(
       explanation: "no discovered or website-derived contact path exists",
       featureRef: "qualification_v2.reachability",
     };
+  } else if (features.intelligenceFailureKind === "access_denied") {
+    blocker = {
+      reasonCode: "WEBSITE_BLOCKS_AUTOMATED_ANALYSIS",
+      contribution: "neutral",
+      explanation:
+        "the website refused automated analysis (bot protection); it cannot be evaluated, and a block page is not a website deficiency",
+      featureRef: "qualification_v2.intelligence_status",
+      ...(features.evidence["website_failure_kind"]?.[0] ? { evidence: features.evidence["website_failure_kind"][0] } : {}),
+    };
   } else if (features.intelligenceTransient) {
     blocker = {
       reasonCode: "TRANSIENT_INTELLIGENCE_RETRY_REQUIRED",

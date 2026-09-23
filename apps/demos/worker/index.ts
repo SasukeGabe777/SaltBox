@@ -22,8 +22,9 @@ import { findPublishedDemoAsset } from "@saltbox/database/repositories/demo-host
 import { R2ArtifactStore, type R2BucketLike } from "@saltbox/artifact-store/r2";
 import { demoAssetKey } from "@saltbox/artifact-store";
 import { BASE_HEADERS, handleDemoRequest, statusPage } from "../server/handler.ts";
+import { offerFromEnv, type SalesOfferEnv } from "../server/offer.ts";
 
-export interface DemoWorkerEnv {
+export interface DemoWorkerEnv extends SalesOfferEnv {
   /** Hyperdrive binding (ADR-005: cache disabled for authoritative reads). */
   HYPERDRIVE?: { connectionString: string };
   /** Direct connection string; used when Hyperdrive is not bound. */
@@ -51,9 +52,10 @@ export default {
     try {
       const url = new URL(request.url);
       const response = await handleDemoRequest(
-        { method: request.method, path: url.pathname },
+        { method: request.method, path: url.pathname + url.search },
         {
           mode: "public",
+          offer: offerFromEnv(env),
           resolveDemo: (token) => resolveDemoByLocator(db, token, { mode: "public" }),
           loadAsset: async (assetRef, fileName) => {
             if (!assets) return undefined;

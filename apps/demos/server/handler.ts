@@ -13,6 +13,7 @@
 
 import type { DemoResolutionMode, PublicDemoView } from "@saltbox/database/queries/demos";
 import { esc } from "./html.ts";
+import type { SalesOffer } from "./offer.ts";
 import { asDemoContent, resolveTemplateRenderer } from "./templates/registry.ts";
 
 export const LOCATOR_PATH = /^\/d\/([A-Za-z0-9_-]{16,128})$/;
@@ -23,7 +24,9 @@ export const BASE_HEADERS: Readonly<Record<string, string>> = {
   // 'self' in img-src covers validated demo assets served by this origin only;
   // no other origin can ever be requested from a demo page.
   "content-security-policy":
-    "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+    // frame-src/frame-ancestors 'self': the before/after slider frames the
+    // demo's own bare view; no other origin may frame or be framed.
+    "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data:; frame-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'self'",
   "referrer-policy": "no-referrer",
   "x-content-type-options": "nosniff",
   "cache-control": "no-store",
@@ -39,6 +42,8 @@ export interface DemoHandlerPorts {
   mode: DemoResolutionMode;
   resolveDemo: (token: string) => Promise<PublicDemoView | undefined>;
   loadAsset: (assetRef: string, fileName: string) => Promise<LoadedDemoAsset | undefined>;
+  /** SaltBox's configured call to action after the owner tour. */
+  offer?: SalesOffer;
   log?: (message: string, detail?: Record<string, unknown>) => void;
 }
 
@@ -123,7 +128,8 @@ export async function handleDemoRequest(
     versionNumber: demo.version.versionNumber,
     mode: demo.resolvedFrom,
   });
-  return html(200, renderer(content));
+  const bare = /(?:^|&)view=bare(?:&|$)/.test(request.path.split("?")[1] ?? "");
+  return html(200, renderer(content, bare ? { bare: true } : { ...(ports.offer ? { offer: ports.offer } : {}) }));
 }
 
 function html(status: number, body: string): DemoHttpResponse {

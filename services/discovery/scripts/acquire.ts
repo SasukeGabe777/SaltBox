@@ -29,6 +29,7 @@ const { values } = parseArgs({
     source: { type: "string", default: "overture" },
     concurrency: { type: "string", default: String(DEFAULT_ACQUIRE_CONCURRENCY) },
     strict: { type: "boolean", default: false },
+    "new-only": { type: "boolean", default: false },
     help: { type: "boolean", short: "h", default: false },
   },
   strict: true,
@@ -40,7 +41,10 @@ if (values.help || !values.category || !values.location) {
 }
 
 const source = values.source!.trim().toLowerCase();
-const category = values.category.trim().toLowerCase();
+/** Friendly names for discovery category keys (SaltBox category -> discovery key). */
+const CATEGORY_ALIASES: Readonly<Record<string, string>> = { electrical: "electrician" };
+const requestedCategory = values.category.trim().toLowerCase();
+const category = CATEGORY_ALIASES[requestedCategory] ?? requestedCategory;
 if (!(SUPPORTED_SOURCES as readonly string[]).includes(source)) fail(`Unsupported --source ${source}.`);
 const radiusKm = integerOption("radius-km", values["radius-km"]!, 1, 25);
 const limit = integerOption("limit", values.limit!, 1, MAX_ACQUIRE_LIMIT);
@@ -82,6 +86,7 @@ try {
         adapter,
         {
           concurrency,
+          newOnly: values["new-only"] === true,
           artifactForCandidate: artifactLocation,
           log: operatorLog,
         },
@@ -172,7 +177,7 @@ function printUsage() {
   console.error(
     "Usage: pnpm acquire --category <category> --location <location> " +
       `[--radius-km 10] [--limit ${DEFAULT_ACQUIRE_LIMIT}] [--source overture|openstreetmap|all] ` +
-      `[--concurrency ${DEFAULT_ACQUIRE_CONCURRENCY}] [--strict]\n\n` +
+      `[--concurrency ${DEFAULT_ACQUIRE_CONCURRENCY}] [--strict] [--new-only]\n\n` +
       `Safe limits: max ${MAX_ACQUIRE_LIMIT} per source, deep concurrency max ${MAX_ACQUIRE_CONCURRENCY}.\n` +
       `OpenStreetMap: ${supportedDiscoveryCategories().join(", ")}\n` +
       `Overture: ${supportedOvertureCategories().join(", ")}\n` +

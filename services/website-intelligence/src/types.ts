@@ -170,7 +170,7 @@ export interface WebsiteIntelligenceResult {
   artifacts: ArtifactRefs | null;
   /** Fatal-only: set when the site could not be analyzed at all. */
   fatal?: {
-    stage: "no_website" | "blocked_target" | "unreachable" | "browser_unavailable" | "internal";
+    stage: "no_website" | "blocked_target" | "unreachable" | "access_denied" | "browser_unavailable" | "internal";
     message: string;
     failureKind?:
       | "invalid_target"
@@ -182,6 +182,8 @@ export interface WebsiteIntelligenceResult {
       | "timeout"
       | "unreachable"
       | "browser_unavailable"
+      /** The site refused automated access (WAF/bot protection); not a site deficiency. */
+      | "access_denied"
       | "internal";
     code?: string;
     transient?: boolean;

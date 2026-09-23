@@ -8,14 +8,22 @@
  * so "where did this logo/photo/color come from?" stays answerable.
  */
 
-export const BRAND_INTELLIGENCE_VERSION = "brand-intelligence-v1";
-export const BRAND_PROFILE_VERSION = "brand-profile-v1";
+export const BRAND_INTELLIGENCE_VERSION = "brand-intelligence-v2";
+export const BRAND_PROFILE_VERSION = "brand-profile-v2";
+/** Every analyzer version whose profiles demo generation may read (newest first). */
+export const READABLE_BRAND_INTELLIGENCE_VERSIONS = ["brand-intelligence-v2", "brand-intelligence-v1"] as const;
 
 /** Bounded-crawl limits for the brand pass. */
 export const MAX_BRAND_PAGES = 3;
 export const MAX_LOGO_CANDIDATES = 12;
 export const MAX_IMAGE_CANDIDATES = 24;
 export const MAX_SELECTED_IMAGES = 4;
+/** v2: photo candidates downloaded and analyzed before slot assignment. */
+export const MAX_ANALYZED_IMAGES = 12;
+/** v2: most gallery images one demo shows. */
+export const MAX_GALLERY_IMAGES = 4;
+/** v2: most per-service card images one demo shows. */
+export const MAX_SERVICE_IMAGES = 6;
 export const MAX_ASSET_BYTES = 8 * 1024 * 1024;
 export const MAX_TOTAL_ASSET_BYTES = 24 * 1024 * 1024;
 export const ASSET_FETCH_TIMEOUT_MS = 15_000;
@@ -25,6 +33,27 @@ export const MIN_PHOTO_WIDTH = 500;
 export const MIN_PHOTO_HEIGHT = 320;
 export const MIN_LOGO_DIMENSION = 40;
 export const MIN_ICON_LOGO_DIMENSION = 64;
+
+/**
+ * v2: what part of the source page an image sat in, inferred from ancestor
+ * tags/ids/classes/aria labels and the nearest section heading. Images from
+ * testimonial, contact, CTA, footer, team, partner, and blog blocks are
+ * decoration for *that* block, not photography of the business's work.
+ */
+export type ImagePageContext =
+  | "hero"
+  | "gallery"
+  | "services"
+  | "about"
+  | "team"
+  | "testimonial"
+  | "contact"
+  | "cta"
+  | "footer"
+  | "header"
+  | "partners"
+  | "blog"
+  | "unknown";
 
 export interface EvidenceImage {
   /** Absolute URL. */
@@ -39,6 +68,14 @@ export interface EvidenceImage {
   classHint: string;
   /** Distance from the top of the document in px (layout position). */
   documentTop: number;
+  /** v2 page-section context (absent on v1 evidence). */
+  context?: ImagePageContext;
+  /** v2: nearest card/section heading text (links an image to a service). */
+  nearHeading?: string | null;
+  /** v2: href of the enclosing link, when the image is a link. */
+  linkHref?: string | null;
+  /** v2: characters of visible text laid over the image's box. */
+  overlayTextChars?: number;
 }
 
 export interface EvidenceBackgroundImage {
@@ -46,6 +83,10 @@ export interface EvidenceBackgroundImage {
   elementWidth: number;
   elementHeight: number;
   documentTop: number;
+  context?: ImagePageContext;
+  nearHeading?: string | null;
+  /** v2: visible text inside the painted element (text-over-background). */
+  overlayTextChars?: number;
 }
 
 export interface EvidenceIcon {
@@ -128,8 +169,50 @@ export interface BrandPalette {
   candidatesConsidered: number;
 }
 
+/** v2 pixel measurements of a normalized photo. */
+export interface ImageVisualMetrics {
+  /** Mean Rec. 601 luma, 0-255. */
+  meanLuma: number;
+  /** Mean per-channel Shannon entropy (photos are typically > 6). */
+  entropy: number;
+  /** Fraction of the original area removed as uniform borders/letterboxing. */
+  borderFraction: number;
+  width: number;
+  height: number;
+  /** 64-bit difference hash (hex) for near-duplicate detection. */
+  dhash: string;
+}
+
+/** v2 zero-shot visual classification (local CLIP; absent when unavailable). */
+export interface ImageClassification {
+  model: string;
+  /** Coarse kind derived from the winning label. */
+  kind: "work" | "person" | "vehicle" | "graphic" | "logo" | "interior" | "other";
+  topLabel: string;
+  topScore: number;
+  /** Summed probability of the category's "real work" labels, 0-1. */
+  relevance: number;
+}
+
+export interface ImageAnalysis {
+  context: ImagePageContext;
+  background: boolean;
+  overlayTextChars: number;
+  nearHeading: string | null;
+  visual: ImageVisualMetrics;
+  classification?: ImageClassification;
+  /** Machine-readable quality flags, e.g. "dark", "letterboxed", "text-overlay". */
+  flags: string[];
+}
+
+export type BrandImageRole = "hero" | "gallery" | "service" | "about";
+
 export interface BrandImage {
-  role: "hero" | "gallery";
+  role: BrandImageRole;
+  /** v2: the extracted service this image illustrates (role "service"). */
+  serviceName?: string;
+  /** v2: why this image was accepted and how it scored. */
+  analysis?: ImageAnalysis;
   sourceUrl: string;
   sourcePage: string;
   /** Relative artifact path under the run directory. */
@@ -164,6 +247,10 @@ export interface BrandProfile {
     selected: BrandImage[];
     consideredCount: number;
     rejectedExamples: string[];
+    /** v2: analyzed-but-rejected photos with structured reasons. */
+    rejected?: Array<{ sourceUrl: string; reasons: string[] }>;
+    /** v2: whether the local visual classifier ran. */
+    classifier?: { status: "used" | "unavailable"; model?: string; detail?: string };
   };
   services: {
     extracted: BrandService[];
@@ -172,6 +259,14 @@ export interface BrandProfile {
   identity: {
     displayName: string | null;
     metaDescription: string | null;
+    /**
+     * v2: the website redirected to a different company's domain (e.g. a
+     * dealer site forwarding to a national distributor). Nothing collected
+     * there is the business's brand, so every brand asset falls back.
+     */
+    foreignRedirect?: { requestedHost: string; finalHost: string };
+    /** v2: the homepage served a bot-protection/WAF page instead of the site. */
+    accessBlocked?: string;
   };
   /** Run directory name under .data/demo-assets (null when nothing downloaded). */
   artifactRef: string | null;

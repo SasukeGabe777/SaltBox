@@ -1,6 +1,6 @@
 /**
  * Brand-intelligence persistence: append-only website_analysis rows under
- * analyzer `brand-intelligence-v1` with the full BrandProfile as structured
+ * analyzer `brand-intelligence-v2` (v1 rows stay readable) with the full BrandProfile as structured
  * findings, plus a per-run source_record for provenance. Reuses the Phase 3
  * schema — no migration. Large binaries stay in .data/demo-assets; the
  * database stores only relative artifact references.
@@ -10,7 +10,7 @@ import { randomUUID } from "node:crypto";
 import type { Database } from "@saltbox/database/client";
 import { ensureSource, linkSourceRecordToBusiness, upsertSourceRecord } from "@saltbox/database/repositories/sources";
 import { recordWebsiteAnalysis } from "@saltbox/database/repositories/websites";
-import { BRAND_INTELLIGENCE_VERSION, type BrandProfile } from "./types.ts";
+import { BRAND_INTELLIGENCE_VERSION, READABLE_BRAND_INTELLIGENCE_VERSIONS, type BrandProfile } from "./types.ts";
 
 export const BRAND_SOURCE_NAME = "brand_intelligence";
 
@@ -65,7 +65,7 @@ export async function getLatestBrandProfile(
     .innerJoin("business_website as bw", "bw.website_id", "wa.website_id")
     .select(["wa.id", "wa.calculated_at", "wa.structured_findings"])
     .where("bw.business_id", "=", businessId)
-    .where("wa.analyzer_version", "=", BRAND_INTELLIGENCE_VERSION)
+    .where("wa.analyzer_version", "in", [...READABLE_BRAND_INTELLIGENCE_VERSIONS])
     .orderBy("wa.calculated_at", "desc")
     .limit(1)
     .executeTakeFirst();

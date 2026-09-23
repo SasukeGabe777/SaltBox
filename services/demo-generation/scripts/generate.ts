@@ -13,6 +13,7 @@ import { parseArgs } from "node:util";
 import { createDatabase } from "@saltbox/database/client";
 import { resolveDatabaseUrl } from "@saltbox/database/client/config";
 import { listProspects } from "@saltbox/database/queries/admin";
+import { createBeforeSnapshotProvider } from "../src/before-snapshots.ts";
 import { createBrandExtractor } from "../src/brand-extraction.ts";
 import { ELIGIBLE_POLICY_VERSION } from "../src/config/demo-v1.ts";
 import {
@@ -22,6 +23,7 @@ import {
 } from "../src/generate.ts";
 
 const DEMO_ASSET_ROOT = resolve(process.cwd(), "../../.data/demo-assets");
+const INTELLIGENCE_ROOT = resolve(process.cwd(), "../../.data/website-intelligence");
 
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
 const DEFAULT_LIMIT = 1;
@@ -99,6 +101,7 @@ try {
               }),
             }),
         ...(values["refresh-brand"] ? { refreshBrand: true } : {}),
+        beforeSnapshots: createBeforeSnapshotProvider({ intelligenceRoot: INTELLIGENCE_ROOT, demoAssetRoot: DEMO_ASSET_ROOT }),
         ...(values["override-ineligible"] !== undefined
           ? { overrideIneligible: { note: values["override-ineligible"] || "operator controlled-testing override" } }
           : {}),

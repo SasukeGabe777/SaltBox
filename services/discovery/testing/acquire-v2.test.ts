@@ -73,6 +73,33 @@ test("global Chromium initialization failure is a failed batch", async () => {
   }
 });
 
+test("newOnly acquisition skips businesses SaltBox already holds and looks deeper", async () => {
+  const ctx = await createTestDatabase();
+  const adapter = new FixtureAdapter([
+    candidate("good", "Good Fixture Roofing", "https://good.test/"),
+    candidate("second", "Second Fixture Roofing", "https://second.test/"),
+    candidate("third", "Third Fixture Roofing", "https://third.test/"),
+  ]);
+  const options = { currentYear: 2026, analyze: async (url: string | null | undefined) => completeResult(url ?? "") };
+  try {
+    const first = await discoverAndAcquireV2(ctx.db, { category: "roofing", location: "Ogden, UT", limit: 1, source: adapter.source }, adapter, options);
+    assert.deepEqual(first.results.map((result) => result.candidate.externalId), ["good"]);
+    // Default behavior re-processes the same top candidate (refresh).
+    const again = await discoverAndAcquireV2(ctx.db, { category: "roofing", location: "Ogden, UT", limit: 1, source: adapter.source }, adapter, options);
+    assert.deepEqual(again.results.map((result) => result.candidate.externalId), ["good"]);
+    // newOnly skips it and takes the next unseen businesses.
+    const fresh = await discoverAndAcquireV2(
+      ctx.db,
+      { category: "roofing", location: "Ogden, UT", limit: 2, source: adapter.source },
+      adapter,
+      { ...options, newOnly: true },
+    );
+    assert.deepEqual(fresh.results.map((result) => result.candidate.externalId), ["second", "third"]);
+  } finally {
+    await ctx.destroy();
+  }
+});
+
 class FixtureAdapter implements DiscoverySourceAdapter {
   readonly source = "acquire_v2_fixture";
   readonly adapterVersion = "acquire-v2-fixture-v1";

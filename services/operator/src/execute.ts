@@ -25,6 +25,7 @@ import {
   type OperatorRunStatus,
 } from "@saltbox/database/repositories/operator-runs";
 import { LocalArtifactStore } from "@saltbox/artifact-store/local";
+import { createBeforeSnapshotProvider } from "@saltbox/demo-generation/before-snapshots";
 import { createBrandExtractor } from "@saltbox/demo-generation/brand-extraction";
 import { generateDemoForProspect } from "@saltbox/demo-generation/generate";
 import { persistDemoQaResult } from "@saltbox/demo-generation/qa";
@@ -359,6 +360,10 @@ async function runDemoGeneration(
     brandExtractor: createBrandExtractor(context.db, {
       assetRoot,
       log: (stage, detail) => context.log(`brand:${stage}`, detail),
+    }),
+    beforeSnapshots: createBeforeSnapshotProvider({
+      intelligenceRoot: resolve(context.dataRoot, "website-intelligence"),
+      demoAssetRoot: assetRoot,
     }),
     log: (stage, detail) => {
       void progress(context, { stage: "generating", message: stage, ...(detail ?? {}) }).catch(() => {});

@@ -8,12 +8,21 @@
 export const DEMO_CONTENT_VERSION_V1 = "demo-content-v1";
 /** Phase 9 structured content schema (brand palette/logo/imagery/services). */
 export const DEMO_CONTENT_VERSION_V2 = "demo-content-v2";
+/**
+ * Phase 12a content schema: customer-facing copy (no demo meta-commentary),
+ * per-service photos and CTAs, a "how it works" process, an about photo.
+ */
+export const DEMO_CONTENT_VERSION_V3 = "demo-content-v3";
 /** Current content schema produced by generation. */
-export const DEMO_CONTENT_VERSION = DEMO_CONTENT_VERSION_V2;
-export const SUPPORTED_DEMO_CONTENT_VERSIONS: readonly string[] = [DEMO_CONTENT_VERSION_V1, DEMO_CONTENT_VERSION_V2];
+export const DEMO_CONTENT_VERSION = DEMO_CONTENT_VERSION_V3;
+export const SUPPORTED_DEMO_CONTENT_VERSIONS: readonly string[] = [
+  DEMO_CONTENT_VERSION_V1,
+  DEMO_CONTENT_VERSION_V2,
+  DEMO_CONTENT_VERSION_V3,
+];
 
 /** Deterministic copy generator version persisted on demo_version. */
-export const DEMO_COPY_VERSION = "demo-copy-v2";
+export const DEMO_COPY_VERSION = "demo-copy-v3";
 /** Pre-render plan schema stored in generator metadata (v1 history preserved). */
 export const DEMO_PLAN_VERSION = "demo-plan-v2";
 /** Orchestration pipeline identifier for lineage/actor references. */
@@ -68,11 +77,16 @@ export function selectDemoTemplate(category: string | null): TemplateSelection |
 
 // --- Phase 9 layout compositions ---------------------------------------------
 
-/** Three meaningfully different local-service compositions (one renderer). */
+/**
+ * Three meaningfully different local-service compositions (one renderer).
+ * 2.0.0 renders demo-content-v3 as a real customer-facing site; the frozen
+ * 1.0.0 layouts stay registered in the renderer so every existing (and
+ * approved) DemoVersion keeps rendering byte-for-byte as reviewed.
+ */
 export const COMPOSITIONS = {
-  premium: { templateName: "local-service-premium", templateVersion: "1.0.0", artifactRef: "apps/demos/server/templates/local-service-premium-v1" },
-  bold: { templateName: "local-service-bold", templateVersion: "1.0.0", artifactRef: "apps/demos/server/templates/local-service-bold-v1" },
-  clean: { templateName: "local-service-clean", templateVersion: "1.0.0", artifactRef: "apps/demos/server/templates/local-service-clean-v1" },
+  premium: { templateName: "local-service-premium", templateVersion: "2.0.0", artifactRef: "apps/demos/server/templates/local-service-premium-v2" },
+  bold: { templateName: "local-service-bold", templateVersion: "2.0.0", artifactRef: "apps/demos/server/templates/local-service-bold-v2" },
+  clean: { templateName: "local-service-clean", templateVersion: "2.0.0", artifactRef: "apps/demos/server/templates/local-service-clean-v2" },
 } as const;
 
 export type CompositionKey = keyof typeof COMPOSITIONS;

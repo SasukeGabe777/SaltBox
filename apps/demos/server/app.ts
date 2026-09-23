@@ -22,6 +22,7 @@ import { resolveDemoByLocator, type DemoResolutionMode } from "@saltbox/database
 import { findPublishedDemoAsset } from "@saltbox/database/repositories/demo-hosting";
 import { loadDemoAsset } from "./assets.ts";
 import { BASE_HEADERS, handleDemoRequest, type DemoHandlerPorts } from "./handler.ts";
+import type { SalesOffer } from "./offer.ts";
 
 export interface DemosAppOptions {
   db: Database;
@@ -33,6 +34,8 @@ export interface DemosAppOptions {
    */
   mode?: DemoResolutionMode;
   log?: (message: string, detail?: Record<string, unknown>) => void;
+  /** SaltBox's call to action after the owner tour (see offer.ts). */
+  offer?: SalesOffer;
 }
 
 export function createDemosRequestHandler(options: DemosAppOptions) {
@@ -43,6 +46,7 @@ export function createDemosRequestHandler(options: DemosAppOptions) {
   const ports: DemoHandlerPorts = {
     mode,
     log,
+    ...(options.offer ? { offer: options.offer } : {}),
     resolveDemo: (token) => resolveDemoByLocator(options.db, token, { mode }),
     loadAsset: async (assetRef, fileName) => {
       // In public mode an asset must be a recorded, published asset of an

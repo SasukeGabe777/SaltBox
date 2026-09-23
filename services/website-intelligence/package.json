@@ -16,6 +16,8 @@
     "./brand/derive": "./src/brand/derive.ts",
     "./brand/color": "./src/brand/color.ts",
     "./brand/assets": "./src/brand/assets.ts",
+    "./brand/image-classifier": "./src/brand/image-classifier.ts",
+    "./snapshots": "./src/snapshots.ts",
     "./brand/persistence": "./src/brand/persist-brand.ts"
   },
   "scripts": {
@@ -24,11 +26,12 @@
     "test": "node --test \"testing/**/*.test.ts\""
   },
   "dependencies": {
+    "@huggingface/transformers": "^4.3.0",
     "@saltbox/database": "workspace:*",
     "@saltbox/prospecting": "workspace:*",
     "lighthouse": "13.4.1",
     "puppeteer": "25.9.0",
-    "sharp": "^0.34.5"
+    "sharp": "^0.35.4"
   },
   "devDependencies": {
     "@types/node": "^26.3.0",

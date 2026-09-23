@@ -39,16 +39,26 @@ const BANNED_CLAIM_PATTERNS: ReadonlyArray<{ pattern: RegExp; label: string }> =
   { pattern: /\bpartner(?:s|ed|ship)?\b|\bauthorized dealer\b/i, label: "partnership claim" },
 ];
 
+/** True when free text contains a claim generated copy may never make. */
+export function containsUnsupportedClaim(text: string): boolean {
+  return BANNED_CLAIM_PATTERNS.some(({ pattern }) => pattern.test(text));
+}
+
 /**
  * Scan every generated/placeholder text field. Returns each violation so
  * callers can fail generation loudly instead of shipping an invented claim.
  */
 export function findUnsupportedClaims(content: DemoContent): UnsupportedClaim[] {
   const violations: UnsupportedClaim[] = [];
+  // The business's own name is an observed fact ("Utah's Best Heating &
+  // Cooling", "Trusted Roofing"): it is reported verbatim, never scanned as
+  // generated copy. Everything around it still is.
+  const ownName = content.business.name.trim();
   const check = (field: string, text: string | undefined) => {
     if (text === undefined) return;
+    const generated = ownName.length > 0 ? text.split(ownName).join(" ") : text;
     for (const { pattern, label } of BANNED_CLAIM_PATTERNS) {
-      if (pattern.test(text)) violations.push({ field, text, pattern: label });
+      if (pattern.test(generated)) violations.push({ field, text, pattern: label });
     }
   };
 
@@ -66,11 +76,22 @@ export function findUnsupportedClaims(content: DemoContent): UnsupportedClaim[] 
     // generated and stay guarded.
     if (item.evidence !== true) check(`services.items[${index}].title`, item.title);
     check(`services.items[${index}].description`, item.description);
+    check(`services.items[${index}].ctaLabel`, item.ctaLabel);
   });
   check("trust.heading", content.trust.heading);
   content.trust.points.forEach((point, index) => {
     check(`trust.points[${index}].title`, point.title);
     check(`trust.points[${index}].description`, point.description);
+  });
+  check("process.heading", content.process?.heading);
+  content.process?.steps.forEach((step, index) => {
+    check(`process.steps[${index}].title`, step.title);
+    check(`process.steps[${index}].description`, step.description);
+  });
+  content.improvements?.forEach((improvement, index) => {
+    check(`improvements[${index}].title`, improvement.title);
+    check(`improvements[${index}].before`, improvement.before);
+    check(`improvements[${index}].after`, improvement.after);
   });
   check("serviceArea.heading", content.serviceArea?.heading);
   check("serviceArea.description", content.serviceArea?.description);

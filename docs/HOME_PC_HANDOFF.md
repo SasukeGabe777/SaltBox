@@ -5,6 +5,40 @@ Prepared 2026-08-27 after Phase 11 on the Windows work PC in
 This is the current cross-machine operational handoff; older phase handoffs
 are historical context only.
 
+## Latest work (2026-09-23): demo quality + owner tour — READ FIRST
+
+Committed after Phase 11 on the work PC. Full detail: `docs/DEMO_QUALITY_V3.md`.
+
+- Demos are now customer-facing sites (demo-content-v3, `local-service-*@2.0.0`;
+  the frozen 1.0.0 layouts still render every older/approved version).
+- Free local image intelligence picks and places photos (DOM context, pixel
+  checks, local CLIP). The CLIP model (~90 MB) downloads automatically into
+  git-ignored `.data/models` on the first `pnpm demo:generate`.
+- Owner layer on every 2.0.0 demo: before/after drag slider (their analyzed
+  homepage capture over the live redesign), a spotlight tour of
+  evidence-backed "what's improved" notes, and a closing "Book a 15-minute
+  call" card driven by `SALTBOX_OFFER_*` (see `.env.example`; unset -> "reply
+  to the email").
+- Qualification scoring artifact 2.1.0: blocked sites are "cannot evaluate",
+  national chains / brand location pages / suppliers are excluded; no-website
+  businesses get demos and a "built a website" email variant.
+- `pnpm acquire ... --new-only` finds businesses you don't already have.
+- 227 tests green at this commit.
+
+Home-PC notes: your local database and `.data` do not travel through Git, so
+the demos generated on the work PC (Froggy Plumbing etc.) will not exist at
+home. Recreate a batch with, for example:
+
+```powershell
+pnpm acquire --category plumbing --location "Ogden, UT" --radius-km 25 --limit 4 --source overture --new-only
+pnpm demo:generate --prospect <uuid>
+pnpm demos:dev   # then open the printed http://127.0.0.1:5175/d/<token> link
+```
+
+(`pnpm discovery:data --location "Ogden, UT" --radius-km 30` first if the
+Overture extract is not present at home.) Demo links on :5175 are local-only;
+sharing one requires approve -> stage -> publish -> deploy (see below).
+
 ## Exact resume point
 
 - Branch: `main`

@@ -92,6 +92,10 @@ test("qualified-v2 prospects are eligible; rejected, unsuppressed-policy, and su
 
   const noIntelligence = evaluateDemoEligibility(qualifiedFacts({ intelligence: undefined as never }));
   assert.ok(noIntelligence.reasons.some((reason) => reason.code === "INTELLIGENCE_MISSING" && reason.overridable));
+  // A business with no website at all needs no website intelligence: its demo
+  // is built from listing facts (the clearest "I built you a website" case).
+  const noWebsite = evaluateDemoEligibility(qualifiedFacts({ intelligence: undefined as never, websiteUrl: undefined as never }));
+  assert.deepEqual(noWebsite, { eligible: true, reasons: [], blocking: [] });
 
   const noRun = evaluateDemoEligibility(qualifiedFacts({ latestQualification: undefined as never }));
   assert.ok(noRun.reasons.some((reason) => reason.code === "NO_QUALIFICATION_RUN"));
@@ -169,15 +173,17 @@ test("content is deterministic, claim-safe, provenance-tracked, and addresses de
   // Addresses CTA_MISSING / PHONE_LINK_MISSING / CONTACT_FORM_MISSING.
   assert.equal(first.hero.primaryCta.label, "Get a Quote");
   assert.equal(first.hero.secondaryCta?.kind, "phone");
-  assert.equal(first.contact.formDemoNotice.includes("does not send"), true);
+  assert.equal(first.contact.formDemoNotice.includes("wasn't sent"), true);
   // Observed facts pass through verbatim.
   assert.equal(first.business.phone?.e164, "+18012078222");
   assert.equal(first.business.email, "support@utahroofandsolar.com");
   assert.equal(first.serviceArea?.description.includes("Ogden"), true);
   // Testimonials are never fabricated.
   assert.equal(first.testimonials, undefined);
-  // Category-typical services are disclosed and never presented as verified offerings.
-  assert.match(first.services.disclosure, /demo presentation/i);
+  // Category-typical services only top up, carry no evidence flag, and the
+  // page discloses its preview status once, in the footer.
+  assert.ok(first.services.items.every((item) => item.evidence !== true));
+  assert.match(first.footer.demoDisclosure, /shown for preview/);
 
   assert.deepEqual(findUnsupportedClaims(first), []);
   const provenanceFields = first.provenance.map((entry) => entry.field);
@@ -235,4 +241,82 @@ test("deterministic helpers: stable stringify, variant picking, and logotypes", 
   assert.equal(logotypeFor("Utah Roof and Solar"), "UR");
   assert.equal(logotypeFor("Acme"), "A");
   assert.equal(logotypeFor("The Plumbing Co"), "P");
+});
+
+test("no-website businesses get a WEBSITE_MISSING plan and clean listing-fact content", () => {
+  const facts = qualifiedFacts({ intelligence: undefined as never, websiteUrl: undefined as never });
+  const plan = buildDemoPlan(facts);
+  assert.deepEqual(plan.deficiencies.map((deficiency) => deficiency.code), ["WEBSITE_MISSING"]);
+  assert.equal(plan.template.templateName, "local-service-clean");
+  assert.ok(plan.fallbacks.some((fallback) => fallback.startsWith("no website exists")));
+  const content = buildDemoContent(facts, plan);
+  assert.ok(content.services.items.length >= 3, "typical services fill the page");
+  assert.deepEqual(findUnsupportedClaims(content), []);
+});
+
+test("listing location suffixes are dropped from the displayed name only when they match the location", async () => {
+  const { displayBusinessName } = await import("../src/content.ts");
+  assert.equal(displayBusinessName("Genuine Comfort Heating & Air - Ogden", "Ogden", "UT"), "Genuine Comfort Heating & Air");
+  assert.equal(displayBusinessName("Weed Man | Ogden, UT", "Ogden", "UT"), "Weed Man");
+  assert.equal(displayBusinessName("Smith - Jones Plumbing", "Ogden", "UT"), "Smith - Jones Plumbing");
+  const facts = qualifiedFacts({ businessName: "Genuine Comfort Heating & Air - Ogden" });
+  const content = buildDemoContent(facts, buildDemoPlan(facts));
+  assert.equal(content.business.name, "Genuine Comfort Heating & Air");
+  assert.ok(!JSON.stringify(content.about).includes("- Ogden"));
+  assert.equal(content.provenance.find((entry) => entry.field === "business.displayName")?.kind, "generated");
+});
+
+test("a business name containing a banned word is an observed fact, not a generated claim", () => {
+  const facts = qualifiedFacts({ businessName: "Utah's Best Heating & Cooling", category: "hvac" });
+  const content = buildDemoContent(facts, buildDemoPlan(facts));
+  assert.deepEqual(findUnsupportedClaims(content), []);
+  // Generated copy around the name is still guarded.
+  const tampered = { ...content, about: { ...content.about, body: `${content.about.body} The best in town.` } };
+  assert.ok(findUnsupportedClaims(tampered).some((claim) => claim.field === "about.body"));
+});
+
+test("shouting listing place names are shown in title case", async () => {
+  const { tidyPlaceName } = await import("../src/content.ts");
+  assert.equal(tidyPlaceName("OGDEN"), "Ogden");
+  assert.equal(tidyPlaceName("north salt lake"), "North Salt Lake");
+  assert.equal(tidyPlaceName("McCall"), "McCall");
+  const facts = qualifiedFacts({ city: "OGDEN" });
+  const content = buildDemoContent(facts, buildDemoPlan(facts));
+  assert.equal(content.business.city, "Ogden");
+  assert.ok(!content.hero.headline.includes("OGDEN") && !content.about.body.includes("OGDEN"));
+});
+
+test("a listing's legal name gives way to the brand on the business's own website, narrowly", async () => {
+  const { websiteBrandName } = await import("../src/content.ts");
+  assert.equal(websiteBrandName("JC Plumbing LLC", "http://froggyplumbing.com/", "HOME | FroggyplumbingCom"), "Froggy Plumbing");
+  assert.equal(websiteBrandName("Riverfront Roofing", "https://riverfront-roofing.com/", "Riverfront Roofing | Honest Roof Inspections"), undefined, "names already match");
+  assert.equal(websiteBrandName("Royal Plumbing Heating & Air Conditioning", "https://royalhomeservices.com/", "Royal Total Home Services"), undefined, "shares 'royal'");
+  assert.equal(websiteBrandName("JC Plumbing LLC", "http://froggyplumbing.com/", "Welcome"), undefined, "site title must confirm the domain");
+  assert.equal(websiteBrandName("JC Plumbing LLC", "http://jcp-utah.com/", "JCP"), undefined, "domain must be <word> + trade");
+});
+
+test("improvement notes come only from measured deficiencies, and the comparison only from real captures", async () => {
+  const { buildImprovements } = await import("../src/improvements.ts");
+  const facts = qualifiedFacts();
+  const plan = buildDemoPlan(facts);
+  const notes = buildImprovements(facts, plan, "Utah Roof and Solar");
+  const deficiencyCodes = new Set(plan.deficiencies.map((deficiency) => deficiency.code));
+  assert.ok(notes.length > 0 && notes.length <= 6);
+  for (const note of notes) {
+    assert.ok(note.evidence.every((code) => deficiencyCodes.has(code)), `${note.id} is backed by a detected deficiency`);
+  }
+  const none = buildImprovements(facts, { ...plan, deficiencies: [] }, "Utah Roof and Solar");
+  assert.deepEqual(none, [], "no deficiency, no note");
+  const noSite = qualifiedFacts({ intelligence: undefined as never, websiteUrl: undefined as never });
+  assert.deepEqual(buildImprovements(noSite, buildDemoPlan(noSite), "Utah Roof and Solar").map((note) => note.id), ["website"]);
+
+  const snapshots = {
+    desktop: { url: "/demo-assets/20260923181008-utah-roof-and-solar/before-desktop.jpg", width: 1366, height: 900, alt: "today" },
+    mobile: { url: "/demo-assets/20260923181008-utah-roof-and-solar/before-mobile.jpg", width: 390, height: 844, alt: "today" },
+  };
+  const content = buildDemoContent(facts, plan, { beforeSnapshots: snapshots });
+  assert.equal(content.comparison?.mobile?.url, snapshots.mobile.url);
+  assert.ok(content.improvements && content.improvements.length > 0);
+  assert.deepEqual(findUnsupportedClaims(content), []);
+  assert.equal(buildDemoContent(facts, plan).comparison, undefined, "no captures, no slider");
 });

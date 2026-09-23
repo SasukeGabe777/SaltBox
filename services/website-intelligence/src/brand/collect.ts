@@ -55,6 +55,88 @@ export async function collectPageBrandEvidence(page: Page, url: string, role: st
       }))
       .filter((icon) => icon.href !== "");
 
+    // ---- v2 image context ---------------------------------------------------
+    // Ordered: the first matching rule wins, so specific blocks (testimonial,
+    // contact, CTA) beat broad ones (hero/banner, services).
+    const CONTEXT_RULES: Array<[string, RegExp]> = [
+      ["testimonial", /testimonial|review|quote(?!-?form)|feedback|what[- ]?(our )?(customers|clients|homeowners)[- ]?say/i],
+      ["contact", /contact|get[- ]?in[- ]?touch|request[- ]?(a[- ]?)?(quote|estimate)|free[- ]?estimate|estimate[- ]?form|quote[- ]?form/i],
+      ["cta", /\bcta\b|call[- ]?to[- ]?action|financ|coupon|special[- ]?offer|promo/i],
+      ["team", /\bteam\b|\bstaff\b|meet[- ]?(the|our)|our[- ]?people|employee/i],
+      ["partners", /partner|manufacturer|certif|affiliat|brands?[- ]?we|as[- ]?seen/i],
+      // Not bare "post"/"article": WordPress wraps whole pages in
+      // <article class="post-123 page">, which says nothing about a block.
+      ["blog", /\bblog\b|\bnews\b|\bposts\b|\bpost-(list|grid|card|item|feed)\b|related-(posts|articles)|latest-(posts|articles)/i],
+      ["gallery", /gallery|portfolio|project|our[- ]?work|recent[- ]?work|before[- ]?(and[- ]?)?after/i],
+      ["hero", /hero|slider|carousel|jumbotron|masthead|banner/i],
+      ["about", /about/i],
+      ["services", /service|what[- ]?we[- ]?do|solution|product/i],
+    ];
+    const describe = (element: Element): string => {
+      const html = element as HTMLElement;
+      const className = typeof html.className === "string" ? html.className : "";
+      return `${element.tagName.toLowerCase()} ${html.id ?? ""} ${className} ${element.getAttribute("aria-label") ?? ""}`;
+    };
+    /** Page-level wrappers describe the whole page (body classes, WP article shells), not a block. */
+    const isPageWrapper = (element: Element): boolean =>
+      /^(html|body|main)$/i.test(element.tagName) ||
+      /^post-\d+$/.test((element as HTMLElement).id ?? "") ||
+      element.getBoundingClientRect().height > Math.max(2400, document.documentElement.scrollHeight * 0.6);
+    const sectionHeadingOf = (element: Element): string => {
+      let current: Element | null = element.parentElement;
+      for (let depth = 0; current && depth < 10; depth += 1, current = current.parentElement) {
+        if (isPageWrapper(current)) break;
+        if (current.getBoundingClientRect().height < 160) continue;
+        const heading = current.querySelector("h1, h2, h3");
+        if (heading) return text(heading.textContent);
+      }
+      return "";
+    };
+    const contextOf = (element: Element): string => {
+      if (element.closest("footer, [role='contentinfo']")) return "footer";
+      if (element.closest("header, [role='banner'], nav")) return "header";
+      let current: Element | null = element;
+      for (let depth = 0; current && depth < 10; depth += 1, current = current.parentElement) {
+        if (isPageWrapper(current)) break;
+        const descriptor = describe(current);
+        for (const [context, pattern] of CONTEXT_RULES) {
+          if (pattern.test(descriptor)) return context;
+        }
+      }
+      const heading = sectionHeadingOf(element);
+      for (const [context, pattern] of CONTEXT_RULES) {
+        if (heading && pattern.test(heading)) return context;
+      }
+      return "unknown";
+    };
+    /** Nearest heading in the image's own card (links images to services). */
+    const nearHeadingOf = (element: Element): string | null => {
+      let current: Element | null = element.parentElement;
+      for (let depth = 0; current && depth < 4; depth += 1, current = current.parentElement) {
+        const heading = current.querySelector("h2, h3, h4, h5");
+        if (heading) return text(heading.textContent).slice(0, 80) || null;
+      }
+      return null;
+    };
+    /** Visible text whose box substantially overlaps the image's box. */
+    const overlayTextCharsOf = (element: Element, rect: DOMRect): number => {
+      if (rect.width < 1 || rect.height < 1) return 0;
+      // Overlaid captions/CTAs live within a few ancestors of the image.
+      let container: Element | null = element.parentElement;
+      for (let depth = 0; depth < 2 && container?.parentElement; depth += 1) container = container.parentElement;
+      if (!container) return 0;
+      let chars = 0;
+      for (const node of Array.from(container.querySelectorAll("h1, h2, h3, h4, p, blockquote, a.btn, a.button, button")).slice(0, 40)) {
+        if (node.contains(element)) continue;
+        const box = node.getBoundingClientRect();
+        const overlapX = Math.max(0, Math.min(box.right, rect.right) - Math.max(box.left, rect.left));
+        const overlapY = Math.max(0, Math.min(box.bottom, rect.bottom) - Math.max(box.top, rect.top));
+        const area = box.width * box.height;
+        if (area > 0 && (overlapX * overlapY) / area > 0.6) chars += text(node.textContent).length;
+      }
+      return Math.min(chars, 2000);
+    };
+
     const header = document.querySelector("header, [role='banner'], .header, #header, nav");
     const images = cap(Array.from(document.querySelectorAll("img")), 60)
       .map((img) => {
@@ -83,12 +165,24 @@ export async function collectPageBrandEvidence(page: Page, url: string, role: st
               linksToRoot,
               classHint: text(img.className && typeof img.className === "string" ? img.className : "").slice(0, 80),
               documentTop: Math.round(rect.top + window.scrollY),
+              context: contextOf(img),
+              nearHeading: nearHeadingOf(img),
+              linkHref: anchor ? (anchor.getAttribute("href") ?? null) : null,
+              overlayTextChars: overlayTextCharsOf(img, rect),
             };
       })
       .filter((image): image is NonNullable<typeof image> => image !== null);
 
     // Large elements painted with a CSS background image (common hero pattern).
-    const backgroundImages: Array<{ src: string; elementWidth: number; elementHeight: number; documentTop: number }> = [];
+    const backgroundImages: Array<{
+      src: string;
+      elementWidth: number;
+      elementHeight: number;
+      documentTop: number;
+      context: string;
+      nearHeading: string | null;
+      overlayTextChars: number;
+    }> = [];
     for (const element of Array.from(document.querySelectorAll<HTMLElement>("body, body *")).slice(0, 400)) {
       const rect = element.getBoundingClientRect();
       if (rect.width < 500 || rect.height < 260) continue;
@@ -102,6 +196,9 @@ export async function collectPageBrandEvidence(page: Page, url: string, role: st
         elementWidth: Math.round(rect.width),
         elementHeight: Math.round(rect.height),
         documentTop: Math.round(rect.top + window.scrollY),
+        context: contextOf(element),
+        nearHeading: element.querySelector("h1, h2, h3") ? text(element.querySelector("h1, h2, h3")!.textContent).slice(0, 80) : null,
+        overlayTextChars: Math.min(((element as HTMLElement).innerText ?? "").replace(/\s+/g, " ").trim().length, 2000),
       });
       if (backgroundImages.length >= 10) break;
     }
@@ -169,5 +266,6 @@ export async function collectPageBrandEvidence(page: Page, url: string, role: st
     };
   });
 
-  return { url, role, ...evidence };
+  // In-page context strings come from the fixed CONTEXT_RULES vocabulary.
+  return { url, role, ...evidence } as PageBrandEvidence;
 }

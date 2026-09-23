@@ -3,8 +3,9 @@
  *
  * Default rule: the latest persisted qualification run must be a
  * qualification-policy-v2 "qualified" decision, the business must not be
- * actively suppressed, deep intelligence must exist, and the category must
- * map to a Phase 8 template.
+ * actively suppressed, deep intelligence must exist for a business that HAS
+ * a website (a business with no website is the clearest case for a demo and
+ * is built from its listing facts), and the category must map to a template.
  *
  * A controlled-testing override may bypass the qualification/intelligence
  * requirements, but it NEVER bypasses suppression or template availability,
@@ -89,7 +90,7 @@ export function evaluateDemoEligibility(facts: DemoSourceFacts): DemoEligibility
     }
   }
 
-  if (!facts.intelligence) {
+  if (!facts.intelligence && facts.websiteUrl !== undefined) {
     reasons.push({
       code: "INTELLIGENCE_MISSING",
       detail: "No persisted deep website-intelligence analysis exists for this business.",

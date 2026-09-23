@@ -27,6 +27,7 @@ import {
   type BrandPalette,
   type BrandPaletteColors,
   type BrandService,
+  type ImagePageContext,
   type LogoCandidate,
   type PageBrandEvidence,
 } from "./types.ts";
@@ -313,7 +314,23 @@ export interface ImageCandidate {
   alt: string;
   score: number;
   reasons: string[];
+  /** v2 context of the winning occurrence ("unknown" for v1 evidence). */
+  context: ImagePageContext;
+  background: boolean;
+  nearHeading: string | null;
+  overlayTextChars: number;
 }
+
+/** Page blocks whose imagery decorates that block rather than showing the work. */
+export const DECORATIVE_CONTEXTS: ReadonlySet<ImagePageContext> = new Set([
+  "testimonial",
+  "contact",
+  "cta",
+  "footer",
+  "header",
+  "partners",
+  "blog",
+]);
 
 const NON_PHOTO_PATTERN = /sprite|icon|favicon|pixel|spacer|tracking|badge|payment|visa|mastercard|paypal|logo|avatar|emoji|captcha|qr[-_]?code|placeholder|stock-?photo-?watermark/i;
 /**
@@ -336,6 +353,9 @@ export function rankImageCandidates(pages: PageBrandEvidence[], excludeUrls: Set
       documentTop: image.documentTop,
       displayedArea: image.displayedWidth * image.displayedHeight,
       background: false,
+      context: image.context ?? "unknown",
+      nearHeading: image.nearHeading ?? null,
+      overlayTextChars: image.overlayTextChars ?? 0,
     }));
     const fromBackgrounds = page.backgroundImages.map((background) => ({
       src: background.src,
@@ -345,6 +365,9 @@ export function rankImageCandidates(pages: PageBrandEvidence[], excludeUrls: Set
       documentTop: background.documentTop,
       displayedArea: background.elementWidth * background.elementHeight,
       background: true,
+      context: background.context ?? "unknown",
+      nearHeading: background.nearHeading ?? null,
+      overlayTextChars: background.overlayTextChars ?? 0,
     }));
     for (const image of [...fromImgTags, ...fromBackgrounds]) {
       if (excludeUrls.has(image.src)) continue;
@@ -376,6 +399,13 @@ export function rankImageCandidates(pages: PageBrandEvidence[], excludeUrls: Set
         score += 8;
         reasons.push("rendered large on the page");
       }
+      if (image.context === "gallery" || image.context === "services") {
+        score += 12;
+        reasons.push(`sits in the site's ${image.context} section`);
+      } else if (DECORATIVE_CONTEXTS.has(image.context)) {
+        score -= 25;
+        reasons.push(`decorates a ${image.context} block`);
+      }
       const existing = byUrl.get(image.src);
       if (!existing || score > existing.score) {
         byUrl.set(image.src, {
@@ -386,6 +416,10 @@ export function rankImageCandidates(pages: PageBrandEvidence[], excludeUrls: Set
           alt: image.alt.trim(),
           score,
           reasons,
+          context: image.context,
+          background: image.background,
+          nearHeading: image.nearHeading,
+          overlayTextChars: image.overlayTextChars,
         });
       }
     }
@@ -453,6 +487,14 @@ const SERVICE_LEXICON: Readonly<Record<string, ServicePattern[]>> = {
     { pattern: /\boutlet|switch/i, canonical: "Outlets & Switches" },
   ],
 };
+
+/** Canonical service names whose lexicon pattern matches the text (v2 image-to-service linking). */
+export function matchServiceNames(text: string, category: string | null): string[] {
+  const lexicon = category !== null ? SERVICE_LEXICON[category] ?? [] : [];
+  const cleaned = text.replace(/\s+/g, " ").trim();
+  if (cleaned === "") return [];
+  return lexicon.filter(({ pattern }) => pattern.test(cleaned)).map(({ canonical }) => canonical);
+}
 
 const LEGAL_SUFFIX_TOKENS = new Set(["llc", "inc", "co", "corp", "ltd", "company", "and", "the", "of"]);
 

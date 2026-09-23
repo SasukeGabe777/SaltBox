@@ -17,7 +17,17 @@ import type { DemoCta, DemoDeficiency, DemoPlan, DemoPlanBrandSummary, DemoSourc
  */
 export function deriveDemoDeficiencies(facts: DemoSourceFacts): DemoDeficiency[] {
   const intelligence = facts.intelligence;
-  if (!intelligence) return [];
+  if (!intelligence) {
+    return facts.websiteUrl === undefined
+      ? [
+          {
+            code: "WEBSITE_MISSING",
+            detail: "No website is recorded for this business.",
+            addressedBy: "A complete, mobile-ready website built from the business's listing facts.",
+          },
+        ]
+      : [];
+  }
   const findings = intelligence.findings;
   const ref = intelligence.analysisId;
   const conversion = asRecord(findings.conversion);
@@ -137,7 +147,13 @@ export function buildDemoPlan(facts: DemoSourceFacts, options: BuildDemoPlanOpti
   };
   const deficiencies = deriveDemoDeficiencies(facts);
   const fallbacks: string[] = [];
-  if (!brand) fallbacks.push("no brand intelligence exists: category theme, logotype, and asset-free layout");
+  if (!brand) {
+    fallbacks.push(
+      facts.websiteUrl === undefined
+        ? "no website exists: demo built from listing facts with the category theme, logotype, and asset-free layout"
+        : "no brand intelligence exists: category theme, logotype, and asset-free layout",
+    );
+  }
   for (const fallback of brand?.fallbacks ?? []) fallbacks.push(`brand: ${fallback}`);
 
   const phoneAvailable = facts.phone !== undefined;
@@ -155,8 +171,11 @@ export function buildDemoPlan(facts: DemoSourceFacts, options: BuildDemoPlanOpti
     "header",
     "hero",
     "services",
-    ...(brand !== undefined && brand.images.length > 1 ? ["gallery"] : []),
+    ...(brand !== undefined && brand.images.filter((image) => image.role === "hero" || image.role === "gallery").length > 1
+      ? ["gallery"]
+      : []),
     "trust",
+    "process",
     ...(facts.city !== undefined || facts.state !== undefined ? ["service-area"] : []),
     "about",
     "contact",

@@ -190,10 +190,36 @@ export function deriveQualificationFeaturesV2(
   };
 }
 
+/**
+ * National home-service franchise and multi-state brands. Their local pages
+ * are corporate properties: the local operator cannot buy a website.
+ */
+const NATIONAL_BRAND_PATTERN =
+  /^(the )?(home depot|lowes|lowe s|walmart|costco wholesale|weed man|trugreen|lawn doctor|mosquito joe|the grounds guys|grounds guys|roto rooter|mr rooter|mister sparky|mr electric|benjamin franklin plumbing|one hour heating|aire serv|ars rescue rooter|rescue rooter|service experts|dabella|leaffilter|leaf filter|window nation|renewal by andersen|bath fitter|re bath|davey tree|bartlett tree|servpro|servicemaster|chem dry|stanley steemer|molly maid|certapro|five star painting)( |$)/;
+
+/**
+ * A website URL that points at one location page on a brand domain
+ * (dabella.us/location/ogden-ut, weedman.com/en-us/ogden) marks a
+ * multi-location brand rather than an independent local business.
+ */
+const LOCATION_PAGE_PATH = /^\/(locations?|en-[a-z]{2}|areas?-we-serve|service-areas?|branches?|offices?)\/[a-z0-9-]+\/?$/i;
+
+function isLocationPageUrl(websiteUrl: string | undefined): boolean {
+  if (!websiteUrl?.trim()) return false;
+  try {
+    return LOCATION_PAGE_PATH.test(new URL(websiteUrl).pathname);
+  } catch {
+    return false;
+  }
+}
+
 function classifyTargetFit(input: QualificationV2BusinessInput): TargetFitClassification {
   const name = input.name.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
   const context = `${name} ${input.category ?? ""} ${metadataCategory(input.sourceMetadata)}`;
-  if (/^(the )?(home depot|lowes|lowe s|walmart|costco wholesale)( |$)/.test(name)) return "national_chain";
+  if (NATIONAL_BRAND_PATTERN.test(name) || isLocationPageUrl(input.websiteUrl)) return "national_chain";
+  if (/\b(roof(ing|ers)?|plumbing|electric(al)?|hvac|building|lumber|landscape|irrigation) suppl(y|ies)\b|\bsupply (co|company|inc|house|center)\b|\bdistribution\b/.test(name)) {
+    return "supplier_manufacturer";
+  }
   if (/\b(city of|county of|state of|department of|municipal|government)\b/.test(context)) return "government";
   if (/\b(school district|elementary school|middle school|high school|university|community college)\b/.test(context)) return "education";
   if (/\b(hospital|medical center|health system)\b/.test(context)) return "major_institution";

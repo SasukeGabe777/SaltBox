@@ -7,6 +7,7 @@
 import { createDatabase } from "@saltbox/database/client";
 import { resolveDatabaseUrl } from "@saltbox/database/client/config";
 import { createDemosServer } from "./app.ts";
+import { offerFromEnv } from "./offer.ts";
 
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
 
@@ -34,6 +35,7 @@ const db = createDatabase({ connectionString: databaseUrl, maxConnections: 6 });
 const server = createDemosServer({
   db,
   mode,
+  offer: offerFromEnv(process.env),
   log: (message, detail) => console.error(JSON.stringify({ message, ...(detail ?? {}) })),
 });
 

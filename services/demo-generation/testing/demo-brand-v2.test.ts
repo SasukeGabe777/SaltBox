@@ -201,6 +201,7 @@ test("demo-plan-v2 carries brand summary, composition reasoning, and gallery sec
   assert.equal(plan.brand.imageryCount, 2);
   assert.deepEqual(plan.brand.extractedServices, ["Roof Replacement", "Solar"]);
   assert.ok(plan.sections.includes("gallery"));
+  assert.ok(plan.sections.includes("process"), "v3 adds a how-it-works section");
 
   const withoutBrand: DemoSourceFacts = { ...facts, brand: undefined as never };
   const fallbackPlan = buildDemoPlan(withoutBrand);
@@ -209,11 +210,11 @@ test("demo-plan-v2 carries brand summary, composition reasoning, and gallery sec
   assert.ok(fallbackPlan.fallbacks.some((fallback) => fallback.includes("no brand intelligence")));
 });
 
-test("demo-content-v2 maps brand palette/logo/imagery and merges real services without duplication", () => {
+test("demo-content-v3 maps brand palette/logo/imagery and merges real services without duplication", () => {
   const facts = brandedFacts();
   const plan = buildDemoPlan(facts);
   const content = buildDemoContent(facts, plan);
-  assert.equal(content.contentVersion, "demo-content-v2");
+  assert.equal(content.contentVersion, "demo-content-v3");
   assert.equal(content.brand.palette?.primary, "#14395c");
   assert.equal(content.brand.logo?.url, `/demo-assets/${ARTIFACT_REF}/logo.png`);
   assert.equal(content.imagery?.hero?.url, `/demo-assets/${ARTIFACT_REF}/image-1.jpg`);
@@ -226,8 +227,28 @@ test("demo-content-v2 maps brand palette/logo/imagery and merges real services w
   assert.equal(titles[1], "Solar");
   assert.equal(content.services.items[0]?.evidence, true);
   assert.equal(titles.filter((title) => similarServiceTitle(title, "Roof Replacement")).length, 1);
-  assert.ok(content.services.items.some((item) => item.evidence !== true), "typical items still fill the grid");
-  assert.match(content.services.disclosure, /found on the business's own website/);
+  assert.ok(content.services.items.some((item) => item.evidence !== true), "fewer than 3 found: typical items top up");
+  assert.ok(content.services.items.every((item) => item.ctaLabel?.startsWith("Ask about")), "every card has a CTA");
+
+  // Customer-facing copy: no demo meta-commentary anywhere in the page body.
+  const body = [
+    content.hero.headline,
+    content.hero.subheadline,
+    content.services.intro,
+    ...content.services.items.flatMap((item) => [item.title, item.description, item.ctaLabel ?? ""]),
+    content.trust.heading,
+    ...content.trust.points.flatMap((point) => [point.title, point.description]),
+    ...(content.process?.steps ?? []).flatMap((step) => [step.title, step.description]),
+    content.serviceArea?.description ?? "",
+    content.about.body,
+    content.contact.intro,
+  ].join(" | ");
+  for (const meta of [/current site/i, /this (page|site) (shows|gets)/i, /demo/i, /what this site/i]) {
+    assert.doesNotMatch(body, meta, `no meta copy matching ${meta}`);
+  }
+  assert.equal(content.indicator.enabled, false);
+  assert.match(content.footer.demoDisclosure, /Preview website designed by SaltBox/);
+  assert.equal(content.process?.steps.length, 3);
 
   // Copy references the real services and stays claim-free.
   assert.match(content.hero.subheadline, /roof replacement.*solar|solar.*roof replacement/i);

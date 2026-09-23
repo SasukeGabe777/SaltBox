@@ -1,17 +1,22 @@
 /**
- * Bounded deterministic brand/asset intelligence (brand-intelligence-v1):
+ * Bounded deterministic brand/asset intelligence (brand-intelligence-v2):
  *
- *   resolve homepage safely -> hardened Chromium visit of <= MAX_BRAND_PAGES
- *   pages -> pure derivation (logo ranking, palette, photos, services) ->
- *   safe asset download/normalization into the local demo-asset store ->
- *   BrandProfile.
+ *   resolve homepage safely -> refuse a redirect to another company's domain
+ *   -> hardened Chromium visit of <= MAX_BRAND_PAGES pages (with per-image
+ *   page-section context) -> pure derivation (logo ranking, palette,
+ *   services) -> photo candidates downloaded, normalized, and measured in
+ *   memory -> optional zero-cost local visual classification -> pure slot
+ *   assignment (hero / service / gallery / about) -> only selected assets
+ *   written to the local demo-asset store -> BrandProfile.
  *
  * Extraction failure is never fatal to demo generation: a site with nothing
  * usable yields an honest all-fallback profile with recorded reasons.
  */
 
 import { randomUUID } from "node:crypto";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { detectAccessBlock } from "../access-block.ts";
 import { launchBrowserSession } from "../browser-session.ts";
 import { selectPages } from "../page-selection.ts";
 import { parseRobotsTxt, permissiveRobots, type RobotsRules } from "../robots.ts";
@@ -22,9 +27,11 @@ import {
   extractLogoColors,
   fetchImageAsset,
   processLogoAsset,
-  processPhotoAsset,
 } from "./assets.ts";
 import { collectPageBrandEvidence } from "./collect.ts";
+import type { ImageClassifier } from "./image-classifier.ts";
+import { normalizeAndMeasurePhoto, type NormalizedPhoto } from "./image-analysis.ts";
+import { selectImagery, type AnalyzedPhoto } from "./select-imagery.ts";
 import {
   buildBrandPalette,
   deriveColorCandidates,
@@ -36,8 +43,8 @@ import {
 import {
   BRAND_INTELLIGENCE_VERSION,
   BRAND_PROFILE_VERSION,
+  MAX_ANALYZED_IMAGES,
   MAX_BRAND_PAGES,
-  MAX_SELECTED_IMAGES,
   MAX_TOTAL_ASSET_BYTES,
   MIN_ICON_LOGO_DIMENSION,
   MIN_LOGO_DIMENSION,
@@ -58,6 +65,55 @@ export interface AnalyzeBrandOptions {
   category?: string | null;
   safety?: UrlSafetyOptions;
   log?: BrandLog;
+  /**
+   * Optional zero-cost visual classifier (local CLIP). Absent or failing, photo
+   * selection uses DOM-context and pixel heuristics only and says so.
+   */
+  imageClassifier?: ImageClassifier;
+}
+
+/** Raw bytes fetched for photo analysis (normalized copies are far smaller). */
+const MAX_ANALYSIS_FETCH_BYTES = 48 * 1024 * 1024;
+
+/** Registrable-ish domain: last two labels, or three for short second levels (co.uk, com.au). */
+export function registrableDomain(host: string): string {
+  const labels = host.toLowerCase().replace(/^www\./, "").split(".").filter((label) => label !== "");
+  if (labels.length <= 2) return labels.join(".");
+  const secondLevel = labels[labels.length - 2]!;
+  const take = secondLevel.length <= 3 && labels[labels.length - 1]!.length <= 2 ? 3 : 2;
+  return labels.slice(-take).join(".");
+}
+
+/** Generic trade words that do not identify one business's domain. */
+const GENERIC_NAME_TOKENS = new Set(["roofing", "roofers", "plumbing", "electric", "electrical", "services", "company", "supply", "home", "homes"]);
+
+/**
+ * A website that lands on a different company's domain (a dealer URL that
+ * forwards to a national distributor, a parked domain, an acquirer) is not
+ * this business's brand. A rebrand to a new domain that still carries the
+ * business's name is allowed.
+ */
+export function detectForeignRedirect(
+  requestedUrl: string,
+  finalUrl: string,
+  businessName: string,
+): { requestedHost: string; finalHost: string } | null {
+  let requested: URL;
+  let final: URL;
+  try {
+    requested = new URL(requestedUrl);
+    final = new URL(finalUrl);
+  } catch {
+    return null;
+  }
+  if (registrableDomain(requested.hostname) === registrableDomain(final.hostname)) return null;
+  const finalLabel = registrableDomain(final.hostname).replace(/[^a-z0-9]/g, "");
+  const nameTokens = businessName
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((token) => token.length >= 4 && !GENERIC_NAME_TOKENS.has(token));
+  if (nameTokens.some((token) => finalLabel.includes(token))) return null;
+  return { requestedHost: requested.hostname, finalHost: final.hostname };
 }
 
 export function newBrandArtifactRef(businessName: string, now: Date = new Date()): string {
@@ -108,6 +164,22 @@ export async function analyzeBrandIntelligence(websiteUrl: string, options: Anal
   }
   base.finalUrl = homepage.finalUrl.toString();
 
+  const foreign = detectForeignRedirect(websiteUrl, base.finalUrl, options.businessName);
+  if (foreign) {
+    const reason = `website redirects to a different company's domain (${foreign.requestedHost} -> ${foreign.finalHost}); none of its branding is used`;
+    fallbacks.push(reason);
+    log("brand-foreign-redirect", foreign);
+    return {
+      ...base,
+      durationMs: Date.now() - startedAt,
+      identity: { displayName: null, metaDescription: null, foreignRedirect: foreign },
+      logo: { status: "fallback", confidence: "none", reasons: [reason], candidatesConsidered: 0 },
+      palette: { status: "fallback", confidence: "none", sources: [], candidatesConsidered: 0 },
+      imagery: { selected: [], consideredCount: 0, rejectedExamples: [], rejected: [] },
+      services: { extracted: [], consideredCount: 0 },
+    };
+  }
+
   // Robots gate the additional automated pages, exactly like Phase 6.
   let robots: RobotsRules = permissiveRobots();
   try {
@@ -124,11 +196,17 @@ export async function analyzeBrandIntelligence(websiteUrl: string, options: Anal
 
   const session = await launchBrowserSession({ pinnedHosts: homepage.pinnedHosts, safety });
   const pages: PageBrandEvidence[] = [];
+  let accessBlocked: string | null = null;
   try {
     const visit = async (url: string, role: string) => {
       const page = await session.newHardenedPage();
       try {
-        await page.goto(url, { waitUntil: "networkidle2", timeout: NAVIGATION_TIMEOUT_MS });
+        const response = await page.goto(url, { waitUntil: "networkidle2", timeout: NAVIGATION_TIMEOUT_MS });
+        if (role === "homepage") {
+          const wordCount = await page.evaluate(() => (document.body?.innerText ?? "").split(/\s+/).filter(Boolean).length);
+          accessBlocked = detectAccessBlock({ status: response?.status() ?? null, title: await page.title(), wordCount });
+          if (accessBlocked) return;
+        }
         const evidence = await collectPageBrandEvidence(page, url, role);
         pages.push(evidence);
         base.pagesInspected.push({ url, role });
@@ -139,6 +217,21 @@ export async function analyzeBrandIntelligence(websiteUrl: string, options: Anal
     };
 
     await visit(homepage.finalUrl.toString(), "homepage");
+    if (accessBlocked) {
+      await session.close();
+      const reason = `website refused automated access (${accessBlocked}); none of its branding could be read`;
+      fallbacks.push(reason);
+      log("brand-access-blocked", { reason: accessBlocked });
+      return {
+        ...base,
+        durationMs: Date.now() - startedAt,
+        identity: { displayName: null, metaDescription: null, accessBlocked },
+        logo: { status: "fallback", confidence: "none", reasons: [reason], candidatesConsidered: 0 },
+        palette: { status: "fallback", confidence: "none", sources: [], candidatesConsidered: 0 },
+        imagery: { selected: [], consideredCount: 0, rejectedExamples: [], rejected: [] },
+        services: { extracted: [], consideredCount: 0 },
+      };
+    }
     const home = pages[0];
     if (home) {
       base.identity.displayName = home.title;
@@ -227,39 +320,90 @@ export async function analyzeBrandIntelligence(websiteUrl: string, options: Anal
   if (palette.status === "fallback") fallbacks.push("palette fell back to the deterministic category theme");
   log("brand-palette", { status: palette.status, confidence: palette.confidence, sources: palette.sources });
 
-  // Photography: download the best-ranked candidates within budget.
+  const services = extractServices(pages, options.category ?? null, options.businessName);
+  log("brand-services", { extracted: services.extracted.map((service) => service.name) });
+
+  // Photography: download, normalize, measure, and classify candidates in
+  // memory, then assign slots; only winners are written to the asset store.
   const excluded = new Set<string>([...(logo.sourceUrl ? [logo.sourceUrl] : []), ...logoCandidates.map((c) => c.src)]);
   const photoCandidates = rankImageCandidates(pages, excluded);
-  const selectedImages: BrandImage[] = [];
   const rejectedExamples: string[] = [];
+  const analyzed: Array<AnalyzedPhoto & { normalized: NormalizedPhoto }> = [];
+  let fetchedBytes = 0;
+  let classifierStatus: NonNullable<BrandProfile["imagery"]["classifier"]> = options.imageClassifier
+    ? { status: "used", model: options.imageClassifier.model }
+    : { status: "unavailable", detail: "no visual classifier configured; heuristics only" };
   for (const candidate of photoCandidates) {
-    if (selectedImages.length >= MAX_SELECTED_IMAGES) break;
+    if (analyzed.length >= MAX_ANALYZED_IMAGES) break;
     try {
       const asset = await fetchImageAsset(candidate.src, safety);
-      if (asset.bytes.byteLength > budgetLeft()) throw new AssetRejectedError("asset budget exhausted", "too_large");
-      const processed = await processPhotoAsset(asset, artifactDir, `image-${selectedImages.length + 1}`);
-      bytesDownloaded += processed.bytes;
-      selectedImages.push({
-        role: selectedImages.length === 0 ? "hero" : "gallery",
-        sourceUrl: candidate.src,
-        sourcePage: candidate.sourcePage,
-        assetFile: processed.file,
-        width: processed.width,
-        height: processed.height,
-        alt: candidate.alt,
-        reasons: candidate.reasons,
-      });
+      fetchedBytes += asset.bytes.byteLength;
+      if (fetchedBytes > MAX_ANALYSIS_FETCH_BYTES) throw new AssetRejectedError("photo analysis budget exhausted", "too_large");
+      const normalized = await normalizeAndMeasurePhoto(asset);
+      let classification: AnalyzedPhoto["classification"];
+      if (options.imageClassifier && classifierStatus.status === "used") {
+        try {
+          classification = await options.imageClassifier.classify(normalized.jpeg, options.category ?? null);
+        } catch (error) {
+          classifierStatus = {
+            status: "unavailable",
+            model: options.imageClassifier.model,
+            detail: `classifier failed: ${error instanceof Error ? error.message : String(error)}`,
+          };
+          fallbacks.push(`visual classifier unavailable (${classifierStatus.detail}); photo selection used heuristics only`);
+        }
+      }
+      analyzed.push({ candidate, visual: normalized.metrics, normalized, ...(classification ? { classification } : {}) });
     } catch (error) {
       if (rejectedExamples.length < 6) {
         rejectedExamples.push(`${candidate.src}: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
   }
-  if (selectedImages.length === 0) fallbacks.push("no usable business photography was found");
-  log("brand-imagery", { considered: photoCandidates.length, selected: selectedImages.length });
+  // A classifier that failed midway leaves some photos unclassified; drop the
+  // partial labels so every photo is judged by the same rules.
+  if (classifierStatus.status === "unavailable") for (const photo of analyzed) delete photo.classification;
 
-  const services = extractServices(pages, options.category ?? null, options.businessName);
-  log("brand-services", { extracted: services.extracted.map((service) => service.name) });
+  const selection = selectImagery(analyzed, {
+    category: options.category ?? null,
+    services: services.extracted.map((service) => service.name),
+  });
+  const selectedImages: BrandImage[] = [];
+  for (const assignment of selection.selected) {
+    const photo = analyzed[assignment.index]!;
+    if (photo.normalized.jpeg.byteLength > budgetLeft()) {
+      rejectedExamples.push(`${photo.candidate.src}: asset budget exhausted`);
+      continue;
+    }
+    const file = `image-${selectedImages.length + 1}.jpg`;
+    mkdirSync(artifactDir, { recursive: true });
+    writeFileSync(resolve(artifactDir, file), photo.normalized.jpeg);
+    bytesDownloaded += photo.normalized.jpeg.byteLength;
+    selectedImages.push({
+      role: assignment.role,
+      ...(assignment.serviceName !== undefined ? { serviceName: assignment.serviceName } : {}),
+      sourceUrl: photo.candidate.src,
+      sourcePage: photo.candidate.sourcePage,
+      assetFile: file,
+      width: photo.visual.width,
+      height: photo.visual.height,
+      alt: photo.candidate.alt,
+      reasons: assignment.reasons,
+      analysis: selection.analyses[assignment.index]!,
+    });
+  }
+  const rejected = selection.rejected.slice(0, 16).map((entry) => ({
+    sourceUrl: analyzed[entry.index]!.candidate.src,
+    reasons: entry.reasons,
+  }));
+  if (selectedImages.length === 0) fallbacks.push("no usable business photography was found");
+  log("brand-imagery", {
+    considered: photoCandidates.length,
+    analyzed: analyzed.length,
+    selected: selectedImages.map((image) => (image.serviceName ? `${image.role}:${image.serviceName}` : image.role)),
+    rejected: rejected.length,
+    classifier: classifierStatus.status,
+  });
 
   return {
     ...base,
@@ -268,7 +412,13 @@ export async function analyzeBrandIntelligence(websiteUrl: string, options: Anal
     assetBytesDownloaded: bytesDownloaded,
     logo,
     palette,
-    imagery: { selected: selectedImages, consideredCount: photoCandidates.length, rejectedExamples },
+    imagery: {
+      selected: selectedImages,
+      consideredCount: photoCandidates.length,
+      rejectedExamples,
+      rejected,
+      classifier: classifierStatus,
+    },
     services,
   };
 }

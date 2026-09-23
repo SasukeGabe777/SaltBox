@@ -9,6 +9,7 @@
 
 import type { Database } from "@saltbox/database/client";
 import { activeQualificationSuppressions } from "@saltbox/database/repositories/suppressions";
+import { READABLE_BRAND_INTELLIGENCE_VERSIONS } from "@saltbox/website-intelligence/brand/types";
 import type { DemoSourceFacts } from "./types.ts";
 
 export async function collectDemoSourceFacts(db: Database, prospectId: string): Promise<DemoSourceFacts | undefined> {
@@ -67,7 +68,7 @@ export async function collectDemoSourceFacts(db: Database, prospectId: string): 
       .innerJoin("business_website as bw", "bw.website_id", "wa.website_id")
       .select(["wa.id", "wa.calculated_at", "wa.structured_findings"])
       .where("bw.business_id", "=", header.business_id)
-      .where("wa.analyzer_version", "=", "brand-intelligence-v1")
+      .where("wa.analyzer_version", "in", [...READABLE_BRAND_INTELLIGENCE_VERSIONS])
       .orderBy("wa.calculated_at", "desc")
       .limit(1)
       .executeTakeFirst(),

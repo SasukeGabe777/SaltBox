@@ -86,6 +86,8 @@ export interface DemoBrandContent {
 export interface DemoImageryContent {
   hero?: DemoImage;
   gallery: DemoImage[];
+  /** demo-content-v3: team/about-section photo. */
+  about?: DemoImage;
 }
 
 export interface DemoCta {
@@ -106,6 +108,10 @@ export interface DemoServiceItem {
   description: string;
   /** True when the service name was extracted from the business's own site (v2). */
   evidence?: boolean;
+  /** demo-content-v3: photo from the service's own card on the business's site. */
+  image?: DemoImage;
+  /** demo-content-v3: per-card call to action, e.g. "Ask about roof repair". */
+  ctaLabel?: string;
 }
 
 export interface DemoServicesContent {
@@ -114,6 +120,12 @@ export interface DemoServicesContent {
   items: DemoServiceItem[];
   /** Non-deceptive disclosure that items are typical category services. */
   disclosure: string;
+}
+
+/** demo-content-v3: customer-facing "how it works" steps (claim-free). */
+export interface DemoProcessContent {
+  heading: string;
+  steps: Array<{ title: string; description: string }>;
 }
 
 export interface DemoTrustPoint {
@@ -184,6 +196,12 @@ export interface DemoContent {
   hero: DemoHeroContent;
   services: DemoServicesContent;
   trust: { heading: string; points: DemoTrustPoint[] };
+  /** demo-content-v3. */
+  process?: DemoProcessContent;
+  /** demo-content-v3: owner-facing "what's improved" notes (evidence-backed). */
+  improvements?: DemoImprovement[];
+  /** demo-content-v3: before/after slider using their analyzed homepage captures. */
+  comparison?: DemoComparison;
   serviceArea?: DemoServiceAreaContent;
   about: DemoAboutContent;
   testimonials?: DemoTestimonialsContent;
@@ -191,6 +209,42 @@ export interface DemoContent {
   footer: DemoFooterContent;
   indicator: DemoIndicatorContent;
   provenance: ProvenanceEntry[];
+}
+
+/** Where on the demo page an improvement note's dot is pinned. */
+export type DemoImprovementAnchor =
+  | "header-cta"
+  | "hero"
+  | "hero-section"
+  | "hero-contact"
+  | "services"
+  | "about"
+  | "contact-form"
+  | "footer";
+
+/**
+ * One owner-facing "what's improved" note. `before` states only what SaltBox
+ * measured on the business's current site; `after` states what this demo does.
+ */
+export interface DemoImprovement {
+  id: string;
+  anchor: DemoImprovementAnchor;
+  title: string;
+  before: string;
+  after: string;
+  /** Deficiency code(s) the note is built from. */
+  evidence: string[];
+}
+
+export interface DemoComparison {
+  heading: string;
+  intro: string;
+  /** Human date the "before" captures were taken, e.g. "September 2026". */
+  capturedLabel: string;
+  /** Homepage capture at 1366x900. */
+  desktop?: DemoImage;
+  /** Homepage capture at 390x844. */
+  mobile?: DemoImage;
 }
 
 /** A website deficiency the demo visibly addresses. */

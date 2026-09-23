@@ -1,5 +1,5 @@
 /**
- * Defensive typed view over a persisted brand-profile-v1 JSON document.
+ * Defensive typed view over a persisted brand-profile-v1/v2 JSON document.
  * Demo generation never trusts stored JSON blindly: every field is
  * shape-checked, and anything malformed simply degrades to "absent" so a
  * bad profile can never break generation.
@@ -18,7 +18,10 @@ export interface BrandLogoView {
 }
 
 export interface BrandImageView extends DemoImage {
-  role: "hero" | "gallery";
+  /** v1 profiles only ever carry hero/gallery; v2 adds service/about slots. */
+  role: "hero" | "gallery" | "service" | "about";
+  /** v2: the extracted service this photo illustrates. */
+  serviceName?: string;
   sourceUrl: string;
   sourcePage: string;
   reasons: string[];
@@ -47,9 +50,16 @@ export interface BrandProfileView {
   images: BrandImageView[];
   services: BrandServiceView[];
   fallbacks: string[];
+  /** v2: the website forwarded to another company's domain. */
+  foreignRedirect?: { requestedHost: string; finalHost: string };
+  /** v2: the website refused automated access; no branding could be read. */
+  accessBlocked?: string;
+  /** The homepage <title> as collected (brand-name evidence). */
+  siteTitle?: string;
 }
 
 const CONFIDENCES = new Set(["high", "medium", "low", "none"]);
+const IMAGE_ROLES = new Set(["hero", "gallery", "service", "about"]);
 /** Renderer route prefix for locally stored demo assets. */
 export const DEMO_ASSET_URL_PREFIX = "/demo-assets";
 const ASSET_REF_PATTERN = /^[0-9]{14}-[a-z0-9-]{1,60}$/;
@@ -116,8 +126,12 @@ export function parseBrandProfile(
     const width = numberOr(image.width, 0);
     const height = numberOr(image.height, 0);
     if (url === undefined || width <= 0 || height <= 0) continue;
+    const role = typeof image.role === "string" && IMAGE_ROLES.has(image.role) ? (image.role as BrandImageView["role"]) : "gallery";
     images.push({
-      role: image.role === "hero" ? "hero" : "gallery",
+      role,
+      ...(role === "service" && typeof image.serviceName === "string" && image.serviceName.trim() !== ""
+        ? { serviceName: sanitizeText(image.serviceName, 60) }
+        : {}),
       url,
       width,
       height,
@@ -157,6 +171,13 @@ export function parseBrandProfile(
     images,
     services,
     fallbacks: stringArray(raw.fallbacks),
+    ...foreignRedirectOf(asRecord(raw.identity)),
+    ...(typeof asRecord(raw.identity)?.displayName === "string"
+      ? { siteTitle: sanitizeText(asRecord(raw.identity)!.displayName as string, 160) }
+      : {}),
+    ...(typeof asRecord(raw.identity)?.accessBlocked === "string"
+      ? { accessBlocked: sanitizeText(asRecord(raw.identity)!.accessBlocked as string, 200) }
+      : {}),
   };
 }
 
@@ -168,6 +189,14 @@ export function sanitizeText(value: string, maxLength: number): string {
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, maxLength);
+}
+
+function foreignRedirectOf(identity: Record<string, unknown> | null): Pick<BrandProfileView, "foreignRedirect"> {
+  const redirect = asRecord(identity?.foreignRedirect);
+  if (redirect && typeof redirect.requestedHost === "string" && typeof redirect.finalHost === "string") {
+    return { foreignRedirect: { requestedHost: redirect.requestedHost, finalHost: redirect.finalHost } };
+  }
+  return {};
 }
 
 function confidence(value: unknown): BrandConfidence {

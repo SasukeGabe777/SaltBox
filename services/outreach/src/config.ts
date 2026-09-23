@@ -6,6 +6,12 @@ export const SEQUENCE_VERSION = 1;
 export const OUTREACH_CONTENT_VERSION = "saltbox-demo-email-v1";
 export const SUBJECT_TEMPLATE_VERSION = "outreach-subject-rebuilt-v1";
 export const BODY_TEMPLATE_VERSION = "outreach-body-demo-v1";
+/**
+ * Variants for a business with NO website: "I rebuilt your website" would be
+ * false, so the message says a site was built for them instead.
+ */
+export const SUBJECT_TEMPLATE_VERSION_NEW_SITE = "outreach-subject-built-v1";
+export const BODY_TEMPLATE_VERSION_NEW_SITE = "outreach-body-new-site-v1";
 export const SENDER_PROFILE_VERSION = "saltbox-sender-v1";
 export const RECENT_OUTREACH_DAYS = 30;
 export const MAX_BULK_PREPARATION = 10;

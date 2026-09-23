@@ -29,8 +29,8 @@ const OPERATOR = "test-operator";
 function brandProfile(): BrandProfile {
   return {
     kind: "brand-intelligence",
-    profileVersion: "brand-profile-v1",
-    analyzerVersion: "brand-intelligence-v1",
+    profileVersion: "brand-profile-v2",
+    analyzerVersion: "brand-intelligence-v2",
     websiteUrl: "https://publishable.test/",
     finalUrl: "https://publishable.test/",
     collectedAt: "2026-08-27T18:00:00.000Z",

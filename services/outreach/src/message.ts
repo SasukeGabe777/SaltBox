@@ -1,8 +1,10 @@
 import type { Database } from "@saltbox/database/client";
 import {
   BODY_TEMPLATE_VERSION,
+  BODY_TEMPLATE_VERSION_NEW_SITE,
   OUTREACH_CONTENT_VERSION,
   SUBJECT_TEMPLATE_VERSION,
+  SUBJECT_TEMPLATE_VERSION_NEW_SITE,
   type SenderProfile,
 } from "./config.ts";
 import type { SelectedEmailContact } from "./types.ts";
@@ -22,41 +24,47 @@ export interface RenderOutreachMessageInput {
   contact: SelectedEmailContact;
   observation: SupportedObservation | null;
   sender: SenderProfile;
+  /** False when the business has no website: the demo is a new site, not a rebuild. */
+  hasWebsite?: boolean;
 }
 
 export interface RenderedOutreachMessage {
   subject: string;
   body: string;
   contentVersion: typeof OUTREACH_CONTENT_VERSION;
-  subjectTemplateVersion: typeof SUBJECT_TEMPLATE_VERSION;
-  bodyTemplateVersion: typeof BODY_TEMPLATE_VERSION;
+  subjectTemplateVersion: typeof SUBJECT_TEMPLATE_VERSION | typeof SUBJECT_TEMPLATE_VERSION_NEW_SITE;
+  bodyTemplateVersion: typeof BODY_TEMPLATE_VERSION | typeof BODY_TEMPLATE_VERSION_NEW_SITE;
   observation: SupportedObservation | null;
 }
 
 /** Small, inspectable future subject strategy. Phase 11 deliberately uses A. */
 export const SUBJECT_STRATEGY = [
   { version: SUBJECT_TEMPLATE_VERSION, template: "I rebuilt the {{business_name}} website", active: true },
+  { version: SUBJECT_TEMPLATE_VERSION_NEW_SITE, template: "I built a website for {{business_name}}", active: true },
   { version: "outreach-subject-concept-v1", template: "Made a website concept for {{business_name}}", active: false },
   { version: "outreach-subject-put-together-v1", template: "I put this together for {{business_name}}", active: false },
 ] as const;
 
 export function renderOutreachMessage(input: RenderOutreachMessageInput): RenderedOutreachMessage {
-  const businessName = inline(input.businessName);
+  const businessName = inline(displayBusinessName(input.businessName, input.city, input.state));
+  const newSite = input.hasWebsite === false;
   const category = inline(input.category ?? "local service");
-  const location = [input.city, input.state].map((part) => part && inline(part)).filter(Boolean).join(", ");
+  const location = [input.city && tidyPlaceName(input.city), input.state].map((part) => part && inline(part)).filter(Boolean).join(", ");
   const greetingName = firstName(input.contact.contactName);
   const greeting = greetingName ? `Hi ${greetingName},` : "Hi,";
   const context = location
     ? `I came across ${businessName} while looking at ${category} businesses in ${location}.`
     : `I came across ${businessName} while looking at ${category} businesses.`;
-  const bridge = input.observation
-    ? `I noticed ${input.observation.text}, so I put together a redesigned version of the site:`
-    : "I put together a redesigned direction for the site so you could see the idea instead of reading a generic pitch:";
+  const bridge = newSite
+    ? `I couldn't find a website for ${businessName}, so I put one together to show what it could look like:`
+    : input.observation
+      ? `I noticed ${input.observation.text}, so I put together a redesigned version of the site:`
+      : "I put together a redesigned direction for the site so you could see the idea instead of reading a generic pitch:";
   const demoUrl = safeHttpsUrl(input.demoUrl);
   const displayName = inline(input.sender.displayName);
   const businessIdentity = inline(input.sender.businessIdentity);
   return {
-    subject: `I rebuilt the ${businessName} website`,
+    subject: newSite ? `I built a website for ${businessName}` : `I rebuilt the ${businessName} website`,
     body: [
       greeting,
       "",
@@ -68,15 +76,15 @@ export function renderOutreachMessage(input: RenderOutreachMessageInput): Render
       "",
       "No obligation — I thought it would be easier to show you what I had in mind than send a generic sales pitch.",
       "",
-      "If you want, I can walk you through what I changed.",
+      newSite ? "If you want, I can walk you through it." : "If you want, I can walk you through what I changed.",
       "",
       `— ${displayName}`,
       businessIdentity,
     ].join("\n"),
     contentVersion: OUTREACH_CONTENT_VERSION,
-    subjectTemplateVersion: SUBJECT_TEMPLATE_VERSION,
-    bodyTemplateVersion: BODY_TEMPLATE_VERSION,
-    observation: input.observation,
+    subjectTemplateVersion: newSite ? SUBJECT_TEMPLATE_VERSION_NEW_SITE : SUBJECT_TEMPLATE_VERSION,
+    bodyTemplateVersion: newSite ? BODY_TEMPLATE_VERSION_NEW_SITE : BODY_TEMPLATE_VERSION,
+    observation: newSite ? null : input.observation,
   };
 }
 
@@ -144,4 +152,25 @@ function record(value: unknown): Record<string, unknown> | null {
   return typeof value === "object" && value !== null && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : null;
+}
+
+/**
+ * Listing names often carry a location suffix ("Genuine Comfort Heating &
+ * Air - Ogden"). A suffix equal to the observed city/state is dropped; any
+ * other name is used verbatim. Mirrors demo-generation's display name.
+ */
+export function displayBusinessName(observed: string, city: string | null, state: string | null): string {
+  const match = /^(.*?\S)\s*(?:[-\u2013\u2014|:]\s*|\()\s*([^()|]+?)\)?\s*$/.exec(observed);
+  if (!match) return observed;
+  const base = match[1]!.trim();
+  const norm = (value: string | null | undefined) => (value ?? "").toLowerCase().replace(/[^a-z]/g, "");
+  const locations = new Set([norm(city), norm(state), norm(`${city ?? ""}${state ?? ""}`)].filter((value) => value !== ""));
+  return base.length >= 3 && locations.has(norm(match[2])) ? base : observed;
+}
+
+/** "OGDEN" -> "Ogden"; mixed-case names are kept. Mirrors demo-generation. */
+export function tidyPlaceName(place: string): string {
+  const trimmed = place.trim();
+  if (trimmed !== trimmed.toUpperCase() && trimmed !== trimmed.toLowerCase()) return trimmed;
+  return trimmed.toLowerCase().replace(/(^|[\s-])([a-z])/g, (_, lead: string, letter: string) => lead + letter.toUpperCase());
 }

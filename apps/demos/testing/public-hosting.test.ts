@@ -154,7 +154,7 @@ test("the public surface serves the approved version only, and the same URL foll
       assert.equal((await fetch(`${base}/d/unknown-token-aaaaaaaaaaaa`)).status, 404);
 
       // The demo form cannot deliver anywhere: no action, and CSP forbids one.
-      assert.match(html, /<form id="quote-form"/);
+      assert.match(html, /<form (id="quote-form"|class="quote-form")/);
       assert.ok(!/<form[^>]+action=/.test(html), "the demo form has no action target");
     });
 

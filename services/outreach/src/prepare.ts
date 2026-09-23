@@ -96,8 +96,23 @@ export async function prepareOutreach(
       sequenceVersionId: config.sequenceVersionId,
     });
     const observation = await selectSupportedObservation(trx, eligibility.businessId);
+    const website = await trx
+      .selectFrom("business_website")
+      .select("website_id")
+      .where("business_id", "=", eligibility.businessId)
+      .executeTakeFirst();
+    // Say the name exactly as the approved demo shows it ("Froggy Plumbing",
+    // not the listing's "JC Plumbing LLC").
+    const pinnedVersion = await trx
+      .selectFrom("demo_version")
+      .select("generator_metadata")
+      .where("id", "=", eligibility.artifact.demoVersionId)
+      .executeTakeFirst();
+    const pinnedContent = (pinnedVersion?.generator_metadata as { content?: { business?: { name?: unknown } } } | null)?.content;
+    const demoName = typeof pinnedContent?.business?.name === "string" ? pinnedContent.business.name : undefined;
     const rendered = renderOutreachMessage({
-      businessName: eligibility.businessName,
+      hasWebsite: website !== undefined,
+      businessName: demoName ?? eligibility.businessName,
       category: eligibility.category,
       city: eligibility.city,
       state: eligibility.state,

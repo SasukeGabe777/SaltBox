@@ -6,6 +6,9 @@ import { renderLocalServiceV1 } from "../server/templates/local-service-v1.ts";
 import { renderLocalServiceCleanV1 } from "../server/templates/local-service-clean-v1.ts";
 import { renderLocalServiceBoldV1 } from "../server/templates/local-service-bold-v1.ts";
 import { renderLocalServicePremiumV1 } from "../server/templates/local-service-premium-v1.ts";
+import { renderLocalServiceCleanV2 } from "../server/templates/local-service-clean-v2.ts";
+import { renderLocalServiceBoldV2 } from "../server/templates/local-service-bold-v2.ts";
+import { renderLocalServicePremiumV2 } from "../server/templates/local-service-premium-v2.ts";
 import { asDemoContent, resolveTemplateRenderer } from "../server/templates/registry.ts";
 
 function facts(overrides: Partial<DemoSourceFacts> = {}): DemoSourceFacts {
@@ -26,8 +29,26 @@ function facts(overrides: Partial<DemoSourceFacts> = {}): DemoSourceFacts {
   };
 }
 
+/**
+ * The frozen 1.0.0 templates only ever render PERSISTED v1/v2 content. Current
+ * generation emits demo-content-v3, so legacy-template tests reshape it into
+ * the v2 wording those versions were reviewed with.
+ */
+function legacyContent(content: DemoContent): DemoContent {
+  return {
+    ...content,
+    contentVersion: "demo-content-v2",
+    contact: { ...content.contact, formDemoNotice: "Demo preview — this form does not send messages." },
+    footer: {
+      ...content.footer,
+      demoDisclosure: `SaltBox demo preview created for ${content.business.name}. This is not the business's live website.`,
+    },
+    indicator: { enabled: true, label: "Demo preview" },
+  };
+}
+
 function renderFor(input: DemoSourceFacts): string {
-  return renderLocalServiceV1(buildDemoContent(input, buildDemoPlan(input)));
+  return renderLocalServiceV1(legacyContent(buildDemoContent(input, buildDemoPlan(input))));
 }
 
 test("the template renders a complete, noindex, self-contained website", () => {
@@ -92,6 +113,9 @@ test("the registry resolves exactly the persisted template identity and validate
   assert.equal(resolveTemplateRenderer("local-service-clean", "1.0.0"), renderLocalServiceCleanV1);
   assert.equal(resolveTemplateRenderer("local-service-bold", "1.0.0"), renderLocalServiceBoldV1);
   assert.equal(resolveTemplateRenderer("local-service-premium", "1.0.0"), renderLocalServicePremiumV1);
+  assert.equal(resolveTemplateRenderer("local-service-clean", "2.0.0"), renderLocalServiceCleanV2);
+  assert.equal(resolveTemplateRenderer("local-service-bold", "2.0.0"), renderLocalServiceBoldV2);
+  assert.equal(resolveTemplateRenderer("local-service-premium", "2.0.0"), renderLocalServicePremiumV2);
   assert.equal(resolveTemplateRenderer("local-service", "9.9.9"), undefined);
   assert.equal(resolveTemplateRenderer("unknown", "1.0.0"), undefined);
   const content = buildDemoContent(facts(), buildDemoPlan(facts()));
@@ -103,7 +127,7 @@ test("the registry resolves exactly the persisted template identity and validate
 });
 
 function brandedContent(): DemoContent {
-  const base = buildDemoContent(facts(), buildDemoPlan(facts()));
+  const base = legacyContent(buildDemoContent(facts(), buildDemoPlan(facts())));
   return {
     ...base,
     brand: {
@@ -171,8 +195,141 @@ test("premium never breaks without a hero photo, and missing brand falls back to
   const html = renderLocalServicePremiumV1(noHero);
   assert.ok(!html.includes('<img class="hero-photo"'), "no broken image element");
   assert.ok(html.includes('data-section="hero"'), "gradient hero still renders");
-  const plain = buildDemoContent(facts(), buildDemoPlan(facts()));
+  const plain = legacyContent(buildDemoContent(facts(), buildDemoPlan(facts())));
   const fallbackHtml = renderLocalServiceCleanV1(plain);
   assert.ok(fallbackHtml.includes("--primary:#1d3a5f"), "category theme drives the fallback palette");
   assert.ok(fallbackHtml.includes('data-qa="brand-mark"'), "logotype mark renders without a logo");
+});
+
+/** demo-content-v3 as generation emits it, plus brand assets and per-service/about photos. */
+function v3Content(): DemoContent {
+  const base = buildDemoContent(facts(), buildDemoPlan(facts()));
+  const asset = (file: string, width = 1200, height = 800, alt = "Roof photo") => ({
+    url: `/demo-assets/20260923120000-utah-roof-and-solar/${file}`,
+    width,
+    height,
+    alt,
+  });
+  return {
+    ...base,
+    brand: { ...brandedContent().brand },
+    imagery: {
+      hero: asset("image-1.jpg", 1600, 900, "Completed roof"),
+      gallery: [asset("image-2.jpg"), asset("image-3.jpg")],
+      about: asset("image-4.jpg", 1200, 800, "The Utah Roof and Solar team"),
+    },
+    services: {
+      ...base.services,
+      items: base.services.items.map((item, index) => (index === 0 ? { ...item, image: asset("image-5.jpg", 900, 600, item.title) } : item)),
+    },
+  };
+}
+
+test("2.0.0 compositions render v3 content as a customer-facing site with one disclosure", () => {
+  const content = v3Content();
+  assert.equal(content.contentVersion, "demo-content-v3");
+  const rendered = [
+    { name: "clean", html: renderLocalServiceCleanV2(content) },
+    { name: "bold", html: renderLocalServiceBoldV2(content) },
+    { name: "premium", html: renderLocalServicePremiumV2(content) },
+  ];
+  for (const { name, html } of rendered) {
+    assert.match(html, /<meta name="robots" content="noindex, nofollow">/, `${name}: noindex`);
+    assert.equal((html.match(/<h1[ >]/g) ?? []).length, 1, `${name}: exactly one h1`);
+    // No demo meta-commentary in the page body.
+    for (const meta of ["From their current site", 'class="services-disclosure"', 'class="service-evidence"', "What This Site Gets Right", "Why it works", "Their work", 'class="demo-indicator"', 'class="form-demo-note"']) {
+      assert.ok(!html.includes(meta), `${name}: must not render "${meta}"`);
+    }
+    // Exactly one preview disclosure, in the footer.
+    assert.equal((html.match(/data-qa="demo-disclosure"/g) ?? []).length, 1, `${name}: one disclosure`);
+    assert.ok(html.includes("Preview website designed by SaltBox for Utah Roof and Solar"), `${name}: disclosure text`);
+    // Customer-facing sections.
+    for (const section of ["hero", "services", "trust", "process", "about", "contact"]) {
+      assert.ok(html.includes(`data-section="${section}"`), `${name}: missing section ${section}`);
+    }
+    assert.ok(html.includes("How It Works"), `${name}: process heading`);
+    assert.ok(html.includes('class="service-link" href="#contact"'), `${name}: per-service CTA`);
+    assert.ok(html.includes("image-5.jpg"), `${name}: service card photo`);
+    assert.ok(html.includes('class="about-photo"') && html.includes("image-4.jpg"), `${name}: about photo`);
+    // Demo-safe forms: no action, confirmation hidden until submit.
+    assert.ok(!/<form[^>]*action=/.test(html), `${name}: no form submission target`);
+    assert.match(html, /<p class="form-confirmation" role="status" hidden>Thanks! This is a preview site/, `${name}: confirmation`);
+    assert.ok(!/src="https?:/.test(html), `${name}: no external assets`);
+    assert.ok(!html.includes("undefined"), `${name}: no leaked undefined`);
+  }
+  // Bold's two forms have unique ids.
+  const bold = rendered[1]!.html;
+  const ids = [...bold.matchAll(/ id="([^"]+)"/g)].map((match) => match[1]);
+  assert.equal(new Set(ids).size, ids.length, "bold: element ids are unique");
+  assert.ok(rendered[2]!.html.includes('class="hero-photo"'), "premium keeps the photo hero");
+  assert.match(rendered[2]!.html, /Project Gallery/);
+});
+
+test("2.0.0 compositions stay clean without photos or optional facts", () => {
+  const sparseFacts = facts({ phone: undefined as never, email: undefined as never, city: undefined as never, state: undefined as never });
+  const content = buildDemoContent(sparseFacts, buildDemoPlan(sparseFacts));
+  for (const render of [renderLocalServiceCleanV2, renderLocalServiceBoldV2, renderLocalServicePremiumV2]) {
+    const html = render(content);
+    assert.ok(!html.includes("undefined"), "no leaked undefined values");
+    assert.ok(!html.includes('class="about-photo"'), "no about photo element without a photo");
+    assert.ok(!html.includes('class="thumb"'), "no empty service thumbs");
+    assert.ok(!html.includes('href="#gallery"'), "no gallery link without a gallery");
+    assert.ok(!html.includes('href="tel:'), "no phone links without an observed phone");
+  }
+});
+
+test("the owner layer renders notes and the before/after slider, and bare mode strips it", () => {
+  const content: DemoContent = {
+    ...v3Content(),
+    improvements: [
+      { id: "quote", anchor: "header-cta", title: "An obvious way to get a quote", before: "We didn't find a quote button </script><b>x</b>", after: "Get a Quote everywhere.", evidence: ["CTA_MISSING"] },
+    ],
+    comparison: {
+      heading: "Your website today, and the redesign",
+      intro: "Drag the handle.",
+      capturedLabel: "September 2026",
+      mobile: { url: "/demo-assets/20260923181008-utah-roof-and-solar/before-mobile.jpg", width: 390, height: 844, alt: "today" },
+      desktop: { url: "/demo-assets/20260923181008-utah-roof-and-solar/before-desktop.jpg", width: 1366, height: 900, alt: "today" },
+    },
+  };
+  for (const render of [renderLocalServiceCleanV2, renderLocalServiceBoldV2, renderLocalServicePremiumV2]) {
+    const html = render(content);
+    assert.ok(html.includes('id="sb-data"') && html.includes('id="sb-compare"'), "layer present");
+    assert.ok(html.includes('data-sb-stage="mobile"') && html.includes('data-sb-stage="desktop"'), "both views");
+    assert.ok(html.includes('data-src="?view=bare"'), "slider frames the bare page");
+    assert.ok(!html.includes("</script><b>x</b>"), "note text cannot break out of the JSON script");
+    for (const anchor of ["header-cta", "hero", "hero-contact", "services", "contact-form", "footer", "about"]) {
+      assert.ok(html.includes(`data-improve-anchor="${anchor}"`), `anchor ${anchor}`);
+    }
+    const bare = render(content, { bare: true });
+    assert.ok(!bare.includes('id="sb-data"') && !bare.includes("sb-compare"), "bare mode has no owner layer");
+  }
+  const without = renderLocalServiceCleanV2({ ...v3Content(), improvements: [] });
+  assert.ok(!without.includes('id="sb-data"'), "no notes and no captures render nothing extra");
+});
+
+test("framing is same-origin only: the slider may frame the demo, nothing else may", async () => {
+  const { BASE_HEADERS } = await import("../server/handler.ts");
+  const csp = BASE_HEADERS["content-security-policy"]!;
+  assert.match(csp, /frame-src 'self'/);
+  assert.match(csp, /frame-ancestors 'self'/);
+  assert.match(csp, /form-action 'none'/);
+  assert.match(csp, /default-src 'none'/);
+});
+
+test("the sales offer is validated config: bad values vanish, nothing is invented", async () => {
+  const { offerFromEnv } = await import("../server/offer.ts");
+  assert.deepEqual(offerFromEnv({}), {});
+  assert.deepEqual(
+    offerFromEnv({ SALTBOX_OFFER_BOOKING_URL: "https://cal.com/saltbox/15min", SALTBOX_OFFER_PHONE: "801-555-0100", SALTBOX_OFFER_EMAIL: "hello@saltbox.test" }),
+    { bookingUrl: "https://cal.com/saltbox/15min", phone: { display: "(801) 555-0100", e164: "+18015550100" }, email: "hello@saltbox.test" },
+  );
+  assert.deepEqual(offerFromEnv({ SALTBOX_OFFER_BOOKING_URL: "javascript:alert(1)", SALTBOX_OFFER_PHONE: "12", SALTBOX_OFFER_EMAIL: "nope" }), {});
+  assert.deepEqual(offerFromEnv({ SALTBOX_OFFER_BOOKING_URL: "http://cal.com/x" }), {}, "https only");
+
+  const content: DemoContent = { ...v3Content() };
+  const withOffer = renderLocalServiceCleanV2(content, { offer: { bookingUrl: "https://cal.com/saltbox/15min" } });
+  assert.ok(withOffer.includes('"bookingUrl":"https://cal.com/saltbox/15min"'));
+  assert.ok(withOffer.includes('id="sb-final"'), "final call to action is present");
+  assert.ok(!renderLocalServiceCleanV2(content).includes('"bookingUrl":'), "no offer configured, no booking link");
 });

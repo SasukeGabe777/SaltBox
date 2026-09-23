@@ -7,7 +7,12 @@
 
 export const FEATURE_SCHEMA_VERSION_V2 = "prospect-qualification-features-v2";
 export const SCORING_VERSION_V2 = "qualification-v2";
-export const SCORING_ARTIFACT_VERSION_V2 = "2.0.0";
+/**
+ * 2.1.0: target fit also excludes national franchise brands, location pages
+ * on brand domains, and trade suppliers ("Roofers Supply"); a website that
+ * refuses automated analysis is "cannot evaluate", never a deficiency.
+ */
+export const SCORING_ARTIFACT_VERSION_V2 = "2.1.0";
 export const DECISION_POLICY_VERSION_V2 = "qualification-policy-v2";
 export const PIPELINE_VERSION_V2 = "deep-intelligence-qualification-pipeline-v2";
 export const QUALIFICATION_THRESHOLD_V2 = 60;

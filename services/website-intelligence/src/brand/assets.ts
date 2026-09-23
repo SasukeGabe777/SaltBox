@@ -187,7 +187,7 @@ export async function processPhotoAsset(
   return writeProcessed(pipeline, directory, `${baseName}.jpg`);
 }
 
-async function writeProcessed(pipeline: sharp.Sharp, directory: string, fileName: string): Promise<ProcessedImage> {
+async function writeProcessed(pipeline: ReturnType<typeof sharp>, directory: string, fileName: string): Promise<ProcessedImage> {
   const { data, info } = await pipeline.toBuffer({ resolveWithObject: true });
   mkdirSync(directory, { recursive: true });
   const path = resolve(directory, fileName);

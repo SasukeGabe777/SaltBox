@@ -139,6 +139,40 @@ test("policy threshold is inclusive and target-fit rules remain narrow and deter
   assert.equal(deriveQualificationFeaturesV2({ name: "Ogden School District", category: "roofing", phone: "1" }, null).targetFit, "education");
 });
 
+test("a website that refuses automated analysis is never scored as a deficient site", () => {
+  const result = intelligenceFixture({
+    fatal: {
+      stage: "access_denied",
+      message: 'homepage answered HTTP 403 ("403 Forbidden") to automated analysis',
+      failureKind: "access_denied",
+      transient: false,
+    },
+  });
+  const features = deriveQualificationFeaturesV2(
+    { name: "Blocked Plumbing", category: "plumbing", websiteUrl: result.websiteUrl, phone: "801-555-0101", email: "a@b.test" },
+    result,
+  );
+  const score = calculateQualificationScoreV2(features);
+  const decision = decideQualificationV2(features, score);
+  assert.equal(decision.resultCode, "rejected");
+  assert.ok(decision.reasons.some((reason) => reason.reasonCode === "WEBSITE_BLOCKS_AUTOMATED_ANALYSIS"));
+  assert.ok(!score.components.some((component) => component.reasonCode === "CTA_MISSING"), "no invented deficiencies");
+});
+
+test("franchise brands, brand location pages, and trade suppliers are not target fits", () => {
+  const fit = (name: string, websiteUrl?: string) =>
+    deriveQualificationFeaturesV2({ name, category: "roofing", phone: "1", ...(websiteUrl ? { websiteUrl } : {}) }, null).targetFit;
+  assert.equal(fit("Weed Man Lawn Care"), "national_chain");
+  assert.equal(fit("DaBella"), "national_chain");
+  assert.equal(fit("Acme Lawn Co", "https://www.acmelawn.com/en-us/ogden"), "national_chain");
+  assert.equal(fit("Some Roofing", "https://brand.example/location/ogden-ut/"), "national_chain");
+  assert.equal(fit("Roofers Supply"), "supplier_manufacturer");
+  assert.equal(fit("Standard Plumbing Supply"), "supplier_manufacturer");
+  assert.equal(fit("Riverfront Roofing", "https://riverfront-roofing.com/"), "eligible");
+  assert.equal(fit("Riverfront Roofing", "https://riverfront-roofing.com/services/roof-repair"), "eligible", "deep service pages are fine");
+  assert.equal(fit("Carpenter Furnace Company", "https://www.carpenterfurnace.com/"), "eligible");
+});
+
 function intelligenceFixture(overrides: Partial<WebsiteIntelligenceResult> = {}): WebsiteIntelligenceResult {
   return {
     analyzerVersion: "website-intelligence-v1",

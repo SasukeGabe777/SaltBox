@@ -12,3 +12,8 @@ allowBuilds:
   # website-intelligence service (Phase 6 browser/Lighthouse analysis).
   puppeteer: true
   sharp: true
+  # Local CPU inference runtime for the zero-cost image classifier
+  # (transformers.js CLIP) used by brand/asset intelligence.
+  onnxruntime-node: true
+  # protobufjs' postinstall is only a version-compat notice; not needed.
+  protobufjs: false

@@ -35,7 +35,8 @@ import {
   DEMO_PIPELINE_VERSION,
   type CompositionKey,
 } from "./config/demo-v1.ts";
-import { buildDemoContent } from "./content.ts";
+import type { BeforeSnapshotProvider } from "./before-snapshots.ts";
+import { buildDemoContent, type BeforeSnapshots } from "./content.ts";
 import { evaluateDemoEligibility, type DemoEligibility } from "./eligibility.ts";
 import { collectDemoSourceFacts } from "./facts.ts";
 import { buildDemoPlan } from "./plan.ts";
@@ -67,6 +68,8 @@ export interface GenerateDemoOptions {
   brandExtractor?: BrandExtractor;
   /** Re-run brand extraction even when a persisted profile exists. */
   refreshBrand?: boolean;
+  /** Supplies "before" homepage captures for the comparison slider (IO layer). */
+  beforeSnapshots?: BeforeSnapshotProvider;
   /**
    * Phase 10 operator regeneration intent: force one of the committed Phase 9
    * compositions instead of the deterministic choice. Recorded in the plan.
@@ -149,7 +152,15 @@ export async function generateDemoForProspect(
     ...(override ? { override } : {}),
     ...(options.composition ? { compositionOverride: options.composition } : {}),
   });
-  const content = buildDemoContent(facts, plan);
+  let beforeSnapshots: BeforeSnapshots | undefined;
+  if (options.beforeSnapshots) {
+    try {
+      beforeSnapshots = await options.beforeSnapshots(facts);
+    } catch (error) {
+      log("BEFORE SNAPSHOTS FAILED", { message: error instanceof Error ? error.message : String(error) });
+    }
+  }
+  const content = buildDemoContent(facts, plan, beforeSnapshots ? { beforeSnapshots } : {});
   log("PLANNED", {
     template: plan.template.templateName,
     deficiencies: plan.deficiencies.length,

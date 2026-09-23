@@ -43,6 +43,26 @@ export interface SourceRecordRef {
 }
 
 /**
+ * External ids (within one named source) that already have a source record.
+ * Lets acquisition skip businesses SaltBox has already processed.
+ */
+export async function findKnownExternalIds(
+  db: Database,
+  sourceName: string,
+  externalIds: readonly string[],
+): Promise<Set<string>> {
+  if (externalIds.length === 0) return new Set();
+  const rows = await db
+    .selectFrom("source_record as sr")
+    .innerJoin("source as s", "s.id", "sr.source_id")
+    .select("sr.external_id")
+    .where("s.name", "=", sourceName)
+    .where("sr.external_id", "in", [...externalIds])
+    .execute();
+  return new Set(rows.map((row) => row.external_id));
+}
+
+/**
  * Idempotent per (source, external_id): reprocessing the same provider record
  * refreshes retrieval metadata but never creates a duplicate identity row.
  */

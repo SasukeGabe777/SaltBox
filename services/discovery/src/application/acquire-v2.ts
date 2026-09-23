@@ -1,6 +1,8 @@
 /** One operator-facing discovery -> deep-intelligence qualification v2 run. */
 
 import type { Database } from "@saltbox/database/client";
+import { findKnownExternalIds } from "@saltbox/database/repositories/sources";
+import { MAX_DISCOVERY_LIMIT } from "../types.ts";
 import {
   qualifyBusinessV2,
   type QualifyV2Options,
@@ -24,6 +26,13 @@ export const MAX_ACQUIRE_CONCURRENCY = 2;
 export type AcquireLog = (event: string, detail: Record<string, unknown>) => void;
 
 export interface AcquireV2Options {
+  /**
+   * Skip candidates whose provider record SaltBox already holds, looking
+   * deeper into the source (up to MAX_DISCOVERY_LIMIT) to fill the limit
+   * with new businesses. Off by default: re-acquiring known businesses is
+   * how their evidence and qualification are refreshed.
+   */
+  newOnly?: boolean;
   concurrency?: number;
   analyzer?: QualifyV2Options["analyzer"];
   analyze?: QualifyV2Options["analyze"];
@@ -78,7 +87,16 @@ export async function discoverAndAcquireV2(
   log("run-started", { correlationId, source: adapter.source, query });
   const resolvedLocation = await adapter.resolveLocation(query.location);
   log("location-resolved", { location: resolvedLocation.displayName, latitude: resolvedLocation.latitude, longitude: resolvedLocation.longitude });
-  const batch = await adapter.discover(query, resolvedLocation);
+  let batch = await adapter.discover(
+    options.newOnly ? { ...query, limit: MAX_DISCOVERY_LIMIT } : query,
+    resolvedLocation,
+  );
+  if (options.newOnly) {
+    const known = await findKnownExternalIds(db, adapter.source, batch.candidates.map((candidate) => candidate.externalId));
+    const fresh = batch.candidates.filter((candidate) => !known.has(candidate.externalId)).slice(0, query.limit);
+    log("known-candidates-skipped", { examined: batch.candidates.length, known: known.size, selected: fresh.length });
+    batch = { ...batch, candidates: fresh };
+  }
   log("candidates-discovered", { candidateCount: batch.candidates.length, sourceDataTimestamp: batch.sourceDataTimestamp });
 
   const results: Array<AcquireCandidateResult | undefined> = new Array(batch.candidates.length);

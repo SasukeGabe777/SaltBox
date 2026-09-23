@@ -161,6 +161,28 @@ test("message rendering is exact, deterministic, claim-backed, and uses a safe f
   assert.equal(first.body.includes("\r"), false);
 });
 
+test("a business with no website is told a site was built, never 'rebuilt'", () => {
+  const input = {
+    businessName: "Champion Services - Ogden",
+    category: "hvac",
+    city: "Ogden",
+    state: "UT",
+    demoUrl: "https://demos.example.test/d/abcdefghijklmnopqrstuvwx",
+    contact: { contactName: null } as never,
+    observation: { code: "CTA_MISSING", text: "the site doesn't have a clear quote button", evidenceRef: "wa-1" },
+    sender: { displayName: "SaltBox", businessIdentity: "SaltBox" } as never,
+    hasWebsite: false,
+  };
+  const message = renderOutreachMessage(input);
+  assert.equal(message.subject, "I built a website for Champion Services");
+  assert.equal(message.subjectTemplateVersion, "outreach-subject-built-v1");
+  assert.equal(message.bodyTemplateVersion, "outreach-body-new-site-v1");
+  assert.ok(message.body.includes("I couldn't find a website for Champion Services"));
+  assert.ok(!/rebuil|redesign|what I changed/i.test(message.body), "no claims about an existing site");
+  assert.equal(message.observation, null, "site observations never apply without a site");
+  assert.equal(renderOutreachMessage({ ...input, hasWebsite: true }).subject, "I rebuilt the Champion Services website");
+});
+
 test("prepare creates one exact SEND-READY intent, is idempotent, and creates no provider attempt", async () => {
   const ctx = await createTestDatabase();
   try {

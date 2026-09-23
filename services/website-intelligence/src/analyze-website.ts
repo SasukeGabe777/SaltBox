@@ -10,6 +10,7 @@
 import { createHash } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { detectAccessBlock } from "./access-block.ts";
 import type { Page } from "puppeteer";
 import { launchBrowserSession, type BrowserSession } from "./browser-session.ts";
 import { extractDomSignals, type DomSignals } from "./dom-signals.ts";
@@ -127,6 +128,19 @@ export async function analyzeWebsiteIntelligence(
       result.stages.homepage = { status: "ok" };
     } catch (error) {
       result.stages.homepage = { status: "failed", error: shortError(error) };
+    }
+
+    // A bot-protection/WAF page is not the business's website: stop here
+    // rather than score an interstitial as a broken site.
+    const block = detectAccessBlock({
+      status: homepageStatus,
+      title: homepageDom?.title ?? null,
+      wordCount: homepageDom?.wordCount ?? null,
+    });
+    if (block) {
+      result.fatal = { stage: "access_denied", message: block, failureKind: "access_denied", transient: false };
+      log(`access denied: ${block}`);
+      return finish();
     }
 
     const pages: AnalyzedPage[] = [];
