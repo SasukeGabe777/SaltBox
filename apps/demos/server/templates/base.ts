@@ -564,7 +564,6 @@ export function improvementsLayer(content: DemoContent, options: RenderOptions =
     </div>`;
       })
       .join("\n    ")}
-    <button type="button" class="sb-go" data-sb="explore">${esc(exploreLabel)} <span aria-hidden="true">&rarr;</span></button>
   </div>
 </div>`
       : "";

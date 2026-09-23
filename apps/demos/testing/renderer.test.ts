@@ -297,6 +297,11 @@ test("the owner layer renders notes and the before/after slider, and bare mode s
     assert.ok(html.includes('id="sb-data"') && html.includes('id="sb-compare"'), "layer present");
     assert.ok(html.includes('data-sb-stage="mobile"') && html.includes('data-sb-stage="desktop"'), "both views");
     assert.ok(html.includes('data-src="?view=bare"'), "slider frames the bare page");
+    assert.equal(
+      (html.match(/<button[^>]*data-sb="explore"/g) ?? []).length,
+      2,
+      "one 'see the improvements' button per slider view (inside the nudge card), no duplicate below",
+    );
     assert.ok(!html.includes("</script><b>x</b>"), "note text cannot break out of the JSON script");
     for (const anchor of ["header-cta", "hero", "hero-contact", "services", "contact-form", "footer", "about"]) {
       assert.ok(html.includes(`data-improve-anchor="${anchor}"`), `anchor ${anchor}`);
