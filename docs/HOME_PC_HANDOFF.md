@@ -1,7 +1,7 @@
 # READ THIS FIRST WHEN RESUMING SALTBOX ON ANOTHER MACHINE.
 
-Prepared 2026-08-27 after Phase 11 on the Windows work PC in
-`C:\dev\SaltBox`. The committed repository and its ADRs are authoritative.
+Prepared 2026-08-27 after Phase 11 and updated 2026-09-23 after the demo
+quality / owner-tour work, on the Windows work PC in `C:\dev\SaltBox`. The committed repository and its ADRs are authoritative.
 This is the current cross-machine operational handoff; older phase handoffs
 are historical context only.
 
@@ -23,7 +23,22 @@ Committed after Phase 11 on the work PC. Full detail: `docs/DEMO_QUALITY_V3.md`.
   national chains / brand location pages / suppliers are excluded; no-website
   businesses get demos and a "built a website" email variant.
 - `pnpm acquire ... --new-only` finds businesses you don't already have.
-- 227 tests green at this commit.
+- 227 tests green; `pnpm check`, `pnpm build`, `pnpm db:verify` pass.
+- Hosted renderer REDEPLOYED with all of this. Live colleague preview (an
+  internal review demo, approved with that note; NOT outreach to the
+  business): https://saltbox-demos.saltbox-demos.workers.dev/d/ul_0udtZGVTy3vfWHbv0yqjr
+  (Froggy Plumbing). No `SALTBOX_OFFER_*` Worker vars are set yet, so the
+  final card says "reply to the email".
+- Sharing another demo: QA -> approve -> `pnpm demos:stage --prospect <uuid>
+  --target-url-file C:\dev\SaltBox\.data\neon-staging.url` (absolute path)
+  -> `pnpm demos:publish --demo <id> --environment hosted --base-url
+  https://saltbox-demos.saltbox-demos.workers.dev` with DATABASE_URL set to
+  the Neon URL for that one command -> hosted `pnpm demo:qa --mode public`.
+  `.data\neon-staging.url` is NOT in Git; copy it privately if you need to
+  publish from home. Hosted QA can 500 in the first minute after a deploy.
+- Open ideas, not started: rank the outreach queue by "most obvious wins"
+  (number of improvement notes); catch suppliers from site titles ("Plumbing
+  Supplies"); a paid vision check for "looks dated" only if ever needed.
 
 Home-PC notes: your local database and `.data` do not travel through Git, so
 the demos generated on the work PC (Froggy Plumbing etc.) will not exist at
@@ -42,11 +57,11 @@ sharing one requires approve -> stage -> publish -> deploy (see below).
 ## Exact resume point
 
 - Branch: `main`
-- Phase 11 implementation commit:
+- Latest work: `6edb3ac Improve demo quality and add the owner before/after
+  tour`, then `5ca8252 Remove the duplicate explore button under the slider`,
+  then this handoff update. Everything is pushed; `HEAD == origin/main`.
+- Phase 11 implementation commit (historical):
   `69aaaf9c82687d422858fcc595e96937580f5b13`
-- Commit subject: `Implement outreach send-ready foundations`
-- At handoff preparation time, that commit was pushed and
-  `HEAD == origin/main`.
 - Completed phases: 3 through 11, including discovery, deep intelligence,
   qualification v2, deterministic demo generation, brand/asset intelligence,
   QA, operator approval, hosted demo delivery, and outreach SEND-READY
@@ -55,6 +70,9 @@ sharing one requires approve -> stage -> publish -> deploy (see below).
 Recent major commits:
 
 ```text
+5ca8252 Remove the duplicate explore button under the slider
+6edb3ac Improve demo quality and add the owner before/after tour
+687bc02 Update home PC development handoff
 69aaaf9 Implement outreach send-ready foundations
 ab556df Update Codex development handoff
 4dc295e Deploy the hosted demo renderer
