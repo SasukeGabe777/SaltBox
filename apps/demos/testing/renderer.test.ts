@@ -338,3 +338,27 @@ test("the sales offer is validated config: bad values vanish, nothing is invente
   assert.ok(withOffer.includes('id="sb-final"'), "final call to action is present");
   assert.ok(!renderLocalServiceCleanV2(content).includes('"bookingUrl":'), "no offer configured, no booking link");
 });
+
+test("the brand showcase renders only for content that carries it", () => {
+  const base = brandedContent();
+  const showcased: DemoContent = {
+    ...base,
+    hero: {
+      ...base.hero,
+      showcase: {
+        logo: { url: "/demo-assets/20260827120000-utah-roof-and-solar/logo.png", width: 512, height: 512, alt: "Utah Roof and Solar logo" },
+        tagline: "Fast! Friendly! <Froggy>!",
+      },
+    },
+  };
+  for (const [name, render] of [
+    ["clean", renderLocalServiceCleanV2],
+    ["bold", renderLocalServiceBoldV2],
+    ["premium", renderLocalServicePremiumV2],
+  ] as const) {
+    const html = render(showcased);
+    assert.ok(html.includes('data-qa="hero-showcase"'), `${name}: showcase rendered`);
+    assert.ok(html.includes("Fast! Friendly! &lt;Froggy&gt;!"), `${name}: tagline escaped`);
+    assert.equal(render(base).includes('data-qa="hero-showcase"'), false, `${name}: absent without content`);
+  }
+});

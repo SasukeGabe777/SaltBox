@@ -456,6 +456,21 @@ function pageRecord(
   };
 }
 
+/** tel: hrefs -> distinct E.164-ish numbers, most frequently linked first (max 3). */
+export function rankPhones(telHrefs: string[]): string[] {
+  const counts = new Map<string, number>();
+  for (const href of telHrefs) {
+    const raw = decodeURIComponent(href.replace(/^tel:/i, "")).trim();
+    const digits = raw.replace(/\D/g, "");
+    let normalized: string | null = null;
+    if (raw.startsWith("+") && digits.length >= 8) normalized = `+${digits}`;
+    else if (digits.length === 10) normalized = `+1${digits}`;
+    else if (digits.length === 11 && digits.startsWith("1")) normalized = `+${digits}`;
+    if (normalized) counts.set(normalized, (counts.get(normalized) ?? 0) + 1);
+  }
+  return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([phone]) => phone);
+}
+
 /** Homepage section headings that mean "here is what we offer" / "who we are". */
 const SERVICES_HEADING = /\b(our\s+(\w+\s+)?services|services\s+(we\s+offer|offered)|what\s+we\s+(do|offer))\b|^services$/i;
 const ABOUT_HEADING = /\b(about\s+(us|the\s+company)|who\s+we\s+are|our\s+story|meet\s+(the|our)\s+(team|owner)|why\s+(choose|trust|homeowners|customers))\b/i;
@@ -553,6 +568,7 @@ function aggregateSignals(
     bookingCtaPresent: bookingCta,
     prominentCtaPresent: homepageDoms.some((dom) => dom.ctaTexts.length > 0),
     bookingLinkPresent: allDoms.some((dom) => dom.bookingLinks.length > 0),
+    websitePhones: rankPhones(homepageDoms.flatMap((dom) => dom.phoneLinks)),
     homepageCtaTexts: Array.from(new Set(homepageDoms.flatMap((dom) => dom.ctaTexts))).slice(0, 10),
     visibleAddressPresent: allDoms.some((dom) => dom.addressSignal),
   };

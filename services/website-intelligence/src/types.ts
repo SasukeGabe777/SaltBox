@@ -95,6 +95,12 @@ export interface ConversionSignals {
   prominentCtaPresent: boolean;
   /** A link to online booking/scheduling (booking platform or /book page). */
   bookingLinkPresent?: boolean;
+  /**
+   * Phone numbers the homepage links with tel: (desktop or phone layout),
+   * E.164 where recognisable, most-linked first. The business's own site is
+   * the best evidence of the number customers should call.
+   */
+  websitePhones?: string[];
   /** CTA labels actually seen on the homepage (desktop or mobile layout). */
   homepageCtaTexts?: string[];
   visibleAddressPresent: boolean;

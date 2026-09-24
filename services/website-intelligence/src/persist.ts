@@ -15,6 +15,7 @@
 
 import { randomUUID } from "node:crypto";
 import type { Database } from "@saltbox/database/client";
+import { upsertContactMethod } from "@saltbox/database/repositories/contact-methods";
 import { recordObservation, type ObservationValue } from "@saltbox/database/repositories/observations";
 import { ensureSource, upsertSourceRecord, linkSourceRecordToBusiness } from "@saltbox/database/repositories/sources";
 import { recordWebsiteAnalysis, recordWebsiteSnapshot } from "@saltbox/database/repositories/websites";
@@ -112,6 +113,13 @@ export async function persistIntelligenceRun(
 
   for (const [fieldKey, value] of intelligenceObservations(result)) {
     await observe(fieldKey, value);
+  }
+
+  // Numbers the business's own site links are contact methods in their own
+  // right (idempotent per business+value); demo facts prefer them over a
+  // possibly stale listing number.
+  for (const phone of result.conversion?.websitePhones ?? []) {
+    await upsertContactMethod(db, { businessId: input.businessId, channel: "phone", normalizedValue: phone, displayValue: phone });
   }
 
   return { analysisId, snapshotIds, observationCount, sourceRecordId: sourceRecord.id, observations };

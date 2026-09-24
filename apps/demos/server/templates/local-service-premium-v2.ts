@@ -23,6 +23,7 @@ import {
   esc,
   footerBlock,
   heroFactChips,
+  heroShowcase,
   improvementsLayer,
   aboutSectionV2,
   blocksCssV2,
@@ -162,7 +163,8 @@ h2.display{font-weight:600}
   ${hero ? `<img class="hero-photo" src="${esc(hero.url)}" alt="${esc(hero.alt)}" width="${hero.width}" height="${hero.height}" fetchpriority="high" decoding="async">` : ""}
   <div class="hero-overlay" aria-hidden="true"></div>
   <div class="container hero-content">
-    ${eyebrow ? `<span class="eyebrow">${esc(eyebrow)}</span>` : ""}
+    ${heroShowcase(content)}
+      ${eyebrow ? `<span class="eyebrow">${esc(eyebrow)}</span>` : ""}
     <h1 data-improve-anchor="hero" class="display">${esc(content.hero.headline)}</h1>
     <p class="sub">${esc(content.hero.subheadline)}</p>
     <div class="cta-row">

@@ -37,6 +37,8 @@ import {
   deriveColorCandidates,
   extractServices,
   logoConfidenceFor,
+  logoSourceUpgrades,
+  extractTagline,
   rankImageCandidates,
   rankLogoCandidates,
 } from "./derive.ts";
@@ -236,6 +238,8 @@ export async function analyzeBrandIntelligence(websiteUrl: string, options: Anal
     if (home) {
       base.identity.displayName = home.title;
       base.identity.metaDescription = home.metaDescription;
+      const tagline = extractTagline(home.headings, [options.businessName, new URL(homepage.finalUrl.toString()).hostname.replace(/^www\./, "").split(".")[0] ?? ""]);
+      if (tagline) base.identity.tagline = tagline;
       const selected = selectPages(homepage.finalUrl.toString(), home.internalHrefs, robots)
         .filter((page) => page.role !== "homepage")
         .slice(0, MAX_BRAND_PAGES - 1);
@@ -277,7 +281,21 @@ export async function analyzeBrandIntelligence(websiteUrl: string, options: Anal
     const confidence = logoConfidenceFor(candidate);
     if (confidence === "none") break;
     try {
-      const asset = await fetchImageAsset(candidate.src, safety);
+      // Prefer a full-size rendition of the same file (header copies are
+      // often 90px thumbnails, too small to feature the brand in a hero).
+      let asset: Awaited<ReturnType<typeof fetchImageAsset>> | null = null;
+      for (const upgrade of logoSourceUpgrades(candidate.src)) {
+        try {
+          const fetched = await fetchImageAsset(upgrade, safety);
+          if (fetched.bytes.byteLength <= budgetLeft()) {
+            asset = fetched;
+            break;
+          }
+        } catch {
+          /* fall through to the rendition the page actually used */
+        }
+      }
+      asset ??= await fetchImageAsset(candidate.src, safety);
       if (asset.bytes.byteLength > budgetLeft()) throw new AssetRejectedError("asset budget exhausted", "too_large");
       const minDimension = candidate.kind === "icon" ? MIN_ICON_LOGO_DIMENSION : MIN_LOGO_DIMENSION;
       const processed = await processLogoAsset(asset, artifactDir, "logo", minDimension);

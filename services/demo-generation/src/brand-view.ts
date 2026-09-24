@@ -56,6 +56,8 @@ export interface BrandProfileView {
   accessBlocked?: string;
   /** The homepage <title> as collected (brand-name evidence). */
   siteTitle?: string;
+  /** The business's own slogan, observed verbatim on its homepage. */
+  tagline?: string;
 }
 
 const CONFIDENCES = new Set(["high", "medium", "low", "none"]);
@@ -174,6 +176,9 @@ export function parseBrandProfile(
     ...foreignRedirectOf(asRecord(raw.identity)),
     ...(typeof asRecord(raw.identity)?.displayName === "string"
       ? { siteTitle: sanitizeText(asRecord(raw.identity)!.displayName as string, 160) }
+      : {}),
+    ...(typeof asRecord(raw.identity)?.tagline === "string"
+      ? { tagline: sanitizeText(asRecord(raw.identity)!.tagline as string, 60) }
       : {}),
     ...(typeof asRecord(raw.identity)?.accessBlocked === "string"
       ? { accessBlocked: sanitizeText(asRecord(raw.identity)!.accessBlocked as string, 200) }

@@ -523,3 +523,29 @@ test("unknown prospect ids report not_found", async () => {
     await ctx.destroy();
   }
 });
+
+test("the number the business's own website links wins over the listing number", async () => {
+  const ctx = await createTestDatabase();
+  try {
+    const url = "https://website-phone.test/";
+    const intelligence = poorSiteIntelligence(url);
+    intelligence.conversion = { ...intelligence.conversion!, phoneLinkPresent: true, websitePhones: ["+14356815665"] };
+    const outcome = await qualifyBusinessV2(
+      ctx.db,
+      {
+        name: "Website Phone Plumbing",
+        source: "demo_generation_fixture",
+        externalId: "website-phone",
+        industry: "roofing",
+        websiteUrl: url,
+        phone: "+1 385 837 1902",
+        sourceMetadata: { city: "Ogden", state: "UT" },
+      },
+      { analyze: async () => intelligence, currentYear: 2026 },
+    );
+    const facts = await collectDemoSourceFacts(ctx.db, outcome.prospectId);
+    assert.equal(facts?.phone?.e164, "+14356815665", "listing number +13858371902 must not win");
+  } finally {
+    await ctx.destroy();
+  }
+});

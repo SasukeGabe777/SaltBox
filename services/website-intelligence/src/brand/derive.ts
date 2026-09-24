@@ -149,6 +149,69 @@ export function rankLogoCandidates(pages: PageBrandEvidence[], businessName: str
     .slice(0, MAX_LOGO_CANDIDATES);
 }
 
+/**
+ * Larger renditions of the SAME logo file, best first. Site builders serve
+ * resized copies from predictable URLs (Wix /v1/fill/w_90..., WordPress
+ * -150x150.png, Squarespace ?format=100w), so the header thumbnail the
+ * ranking picked usually has a full-size original one URL away. Only the
+ * same asset is ever requested; callers fall back to the original src.
+ */
+export function logoSourceUpgrades(src: string): string[] {
+  let url: URL;
+  try {
+    url = new URL(src);
+  } catch {
+    return [];
+  }
+  const upgrades: string[] = [];
+  // Wix: https://static.wixstatic.com/media/<id>~mv2.png/v1/fill/w_90,h_90,.../<name>.png
+  if (/(^|\.)wixstatic\.com$/i.test(url.hostname)) {
+    const match = url.pathname.match(/^(\/media\/[^/]+)\/v1\//);
+    // A server-side 512px fit of the same media first (originals can be
+    // many MB), then the original itself.
+    const file = url.pathname.split("/").pop() ?? "logo.png";
+    if (match) upgrades.push(`${url.origin}${match[1]}/v1/fit/w_512,h_512,al_c,q_90/${file}`, `${url.origin}${match[1]}`);
+  }
+  // WordPress-style size suffix: logo-150x150.png -> logo.png
+  const sized = url.pathname.match(/^(.*)-\d{2,4}x\d{2,4}(\.(?:png|jpe?g|webp|gif))$/i);
+  if (sized) upgrades.push(`${url.origin}${sized[1]}${sized[2]}${url.search}`);
+  // Squarespace: ?format=100w -> ?format=1000w
+  if (/squarespace-cdn\.com$/i.test(url.hostname) && url.searchParams.has("format")) {
+    const larger = new URL(url.toString());
+    larger.searchParams.set("format", "1000w");
+    upgrades.push(larger.toString());
+  }
+  return upgrades.filter((candidate) => candidate !== src);
+}
+
+const TAGLINE_GENERIC = /^(welcome|home|services?|our services|contact( us)?|about( us)?|gallery|reviews?|testimonials|faq|menu|service areas?)\b/i;
+const TAGLINE_CATEGORY_TOKENS = new Set(["plumbing", "roofing", "electric", "electrical", "hvac", "heating", "cooling", "landscaping", "construction", "services", "service", "company"]);
+
+/**
+ * The business's own slogan, if its homepage opens with one ("Fast!
+ * Friendly! Froggy!"). Observed text only, never generated. Deliberately
+ * strict: one of the first four headings, 2-7 words, no digits or contact
+ * details, and it must read as a slogan (an exclamation or the brand's own
+ * name), so section titles like "Plumbing Services in Utah" never qualify.
+ */
+export function extractTagline(headings: Array<{ level: number; text: string }>, brandNames: string[]): string | null {
+  const nameTokens = new Set(
+    brandNames
+      .flatMap((name) => normalizeName(name).split(" "))
+      .filter((token) => token.length > 3 && !TAGLINE_CATEGORY_TOKENS.has(token)),
+  );
+  for (const heading of headings.slice(0, 4)) {
+    const text = heading.text.replace(/[\u200b\u00a0]/g, " ").replace(/\s+/g, " ").trim();
+    const words = text.split(" ").filter((word) => word !== "");
+    if (words.length < 2 || words.length > 7 || text.length > 48) continue;
+    if (/\d|@|https?:|\.com\b/i.test(text) || TAGLINE_GENERIC.test(text)) continue;
+    const normalized = normalizeName(text);
+    const namesBrand = normalized.split(" ").some((token) => nameTokens.has(token));
+    if (text.includes("!") || namesBrand) return text;
+  }
+  return null;
+}
+
 export function logoConfidenceFor(candidate: LogoCandidate): BrandConfidence {
   if (candidate.kind === "icon") return candidate.score >= 18 ? "low" : "none";
   if (candidate.score >= 55) return "high";

@@ -24,6 +24,7 @@ import {
   blocksCssV2,
   galleryStripV2,
   heroFactChips,
+  heroShowcase,
   improvementsLayer,
   inlineScriptV2,
   metaHead,
@@ -165,6 +166,7 @@ h2{font-size:clamp(1.6rem,3vw,2.3rem);line-height:1.15;letter-spacing:-.01em;fon
 <section class="hero" id="top" data-section="hero" data-improve-anchor="hero-section">
   <div class="container hero-grid">
     <div>
+      ${heroShowcase(content)}
       ${eyebrow ? `<span class="eyebrow">${esc(eyebrow)}</span>` : ""}
       <h1 data-improve-anchor="hero"><span class="underline">${esc(content.hero.headline)}</span></h1>
       <p class="sub">${esc(content.hero.subheadline)}</p>

@@ -51,6 +51,8 @@ export interface BuildDemoContentExtras {
 /** Fewer extracted services than this are topped up with typical ones. */
 const MIN_SERVICES = 3;
 const MAX_SERVICES = 6;
+/** Smallest logo side (px) that still looks crisp featured large in the hero. */
+const SHOWCASE_MIN_LOGO_PX = 160;
 
 export function buildDemoContent(facts: DemoSourceFacts, plan: DemoPlan, extras: BuildDemoContentExtras = {}): DemoContent {
   const category = facts.category ?? "contractor";
@@ -233,6 +235,16 @@ export function buildDemoContent(facts: DemoSourceFacts, plan: DemoPlan, extras:
   note("contact", "generated", "demo-copy-v3 phrase library over observed facts");
 
   // ---- Brand assets ---------------------------------------------------------
+  // Brand showcase: feature their own logo (and slogan) in the hero when the
+  // logo is confident and large enough to stay crisp at hero size.
+  const showcaseLogo =
+    brand?.logo && brand.logoConfidence !== "low" && brand.logoConfidence !== "none" && Math.min(brand.logo.width, brand.logo.height) >= SHOWCASE_MIN_LOGO_PX
+      ? brand.logo
+      : undefined;
+  if (showcaseLogo) {
+    note("hero.showcase", "extracted", `their own logo featured in the hero (${showcaseLogo.width}x${showcaseLogo.height})`, brand?.analysisId);
+    if (brand?.tagline) note("hero.showcase.tagline", "observed", "slogan observed verbatim on their homepage", brand.analysisId);
+  }
   if (brand?.logo) {
     note("brand.logo", "extracted", `logo from ${brand.logo.sourceUrl ?? "the business's website"}`, brand.analysisId);
   }
@@ -318,6 +330,14 @@ export function buildDemoContent(facts: DemoSourceFacts, plan: DemoPlan, extras:
       subheadline,
       primaryCta: plan.ctaStrategy.primary,
       ...(plan.ctaStrategy.secondary ? { secondaryCta: plan.ctaStrategy.secondary } : {}),
+      ...(showcaseLogo
+        ? {
+            showcase: {
+              logo: { url: showcaseLogo.assetUrl, width: showcaseLogo.width, height: showcaseLogo.height, alt: `${name} logo` },
+              ...(brand?.tagline ? { tagline: brand.tagline } : {}),
+            },
+          }
+        : {}),
     },
     services: {
       heading: `${label} Services`,

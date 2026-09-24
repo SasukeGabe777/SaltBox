@@ -325,3 +325,25 @@ test("asset pipeline: SSRF-safe fetch, type/size rejection, resize, SVG rasteriz
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test("taglines: only a short observed slogan qualifies, never a section title or phone number", async () => {
+  const { extractTagline } = await import("../src/brand/derive.ts");
+  const h = (...texts: string[]) => texts.map((text) => ({ level: 2, text }));
+  assert.equal(extractTagline(h("435-681-5665", "Fast! Friendly! Froggy!", "Plumbing Services in Northern Utah"), ["JC Plumbing LLC", "froggyplumbing"]), "Fast! Friendly! Froggy!");
+  assert.equal(extractTagline(h("Plumbing Services in Northern Utah", "Our Plumbing Services"), ["JC Plumbing LLC"]), null);
+  assert.equal(extractTagline(h("Welcome!", "Call 801-555-0100 today!"), ["Acme"]), null);
+  assert.equal(extractTagline(h("Riverfront Roofing Does It Right"), ["Riverfront Roofing"]), "Riverfront Roofing Does It Right");
+  assert.equal(extractTagline(h("a", "b", "c", "d", "Great Service!"), ["Acme"]), null, "only the first four headings");
+});
+
+test("logo upgrades request larger renditions of the same file only", async () => {
+  const { logoSourceUpgrades } = await import("../src/brand/derive.ts");
+  const wix = "https://static.wixstatic.com/media/7adb1c_abc~mv2.png/v1/fill/w_90,h_90,al_c/7adb1c_abc~mv2.png";
+  assert.deepEqual(logoSourceUpgrades(wix), [
+    "https://static.wixstatic.com/media/7adb1c_abc~mv2.png/v1/fit/w_512,h_512,al_c,q_90/7adb1c_abc~mv2.png",
+    "https://static.wixstatic.com/media/7adb1c_abc~mv2.png",
+  ]);
+  assert.deepEqual(logoSourceUpgrades("https://ex.com/wp-content/uploads/logo-150x150.png"), ["https://ex.com/wp-content/uploads/logo.png"]);
+  assert.deepEqual(logoSourceUpgrades("https://ex.com/logo.svg"), []);
+  assert.deepEqual(logoSourceUpgrades("not a url"), []);
+});

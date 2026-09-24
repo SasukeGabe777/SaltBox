@@ -101,6 +101,14 @@ export interface DemoHeroContent {
   subheadline: string;
   primaryCta: DemoCta;
   secondaryCta?: DemoCta;
+  /**
+   * Brand showcase (optional, demo-content-v3 superset): the business's own
+   * logo featured large in the hero, with its own observed slogan. Set only
+   * when a logo is confidently extracted at a size that stays crisp, so the
+   * redesign never looks less "theirs" than the site it replaces. Absent on
+   * older content, which therefore renders exactly as approved.
+   */
+  showcase?: { logo: DemoImage; tagline?: string };
 }
 
 export interface DemoServiceItem {

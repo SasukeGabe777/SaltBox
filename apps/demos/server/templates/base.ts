@@ -435,8 +435,27 @@ export function inlineScriptV2(): string {
 }
 
 /** Shared CSS for the 2.0.0 blocks (compositions layer their own styling). */
+/**
+ * Brand showcase: the business's own logo, large, with its own slogan. Only
+ * rendered when content.hero.showcase exists (newer content), so approved
+ * versions without it render byte-for-byte as before.
+ */
+export function heroShowcase(content: DemoContent): string {
+  const showcase = content.hero.showcase;
+  if (!showcase) return "";
+  const height = 168;
+  const width = Math.max(48, Math.round((showcase.logo.width / Math.max(1, showcase.logo.height)) * height));
+  return `<div class="showcase" data-qa="hero-showcase">
+        <img src="${esc(showcase.logo.url)}" alt="${esc(showcase.logo.alt)}" width="${width}" height="${height}">
+        ${showcase.tagline ? `<p class="tagline">${esc(showcase.tagline)}</p>` : ""}
+      </div>`;
+}
+
 export function blocksCssV2(): string {
-  return `.service-link{display:inline-flex;align-items:center;gap:6px;margin-top:14px;font-weight:600;font-size:.95rem;color:var(--primary);text-decoration:none}
+  return `.showcase{display:flex;align-items:center;gap:clamp(14px,2vw,22px);margin-bottom:22px}
+.showcase img{flex:none;height:clamp(136px,13vw,168px);width:auto;max-width:60%;object-fit:contain;background:#ffffff;border-radius:20px;padding:10px;box-shadow:0 12px 32px rgba(0,0,0,.22)}
+.showcase .tagline{font-weight:800;font-style:italic;font-size:clamp(1.15rem,2.2vw,1.5rem);line-height:1.2;letter-spacing:.01em;max-width:14ch}
+.service-link{display:inline-flex;align-items:center;gap:6px;margin-top:14px;font-weight:600;font-size:.95rem;color:var(--primary);text-decoration:none}
 .service-link:hover{text-decoration:underline}
 .thumb{overflow:hidden;background:var(--surface)}
 .thumb img{width:100%;height:100%;object-fit:cover}

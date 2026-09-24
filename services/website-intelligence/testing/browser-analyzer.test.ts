@@ -121,6 +121,7 @@ test("UA-switching builder: the phone layout is measured as a phone sees it, and
     assert.equal(result.conversion?.prominentCtaPresent, true, '"Call or Text Us" is a call to action');
     assert.equal(result.conversion?.bookingLinkPresent, true, "the phone-only Book Online button counts");
     assert.ok(result.conversion?.homepageCtaTexts?.includes("Book Online"));
+    assert.deepEqual(result.conversion?.websitePhones, ["+14355550100"]);
     assert.equal(result.content?.servicesPagePresent, false);
     assert.equal(result.content?.servicesSectionPresent, true);
 

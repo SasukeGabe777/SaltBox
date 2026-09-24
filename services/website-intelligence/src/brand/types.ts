@@ -267,6 +267,8 @@ export interface BrandProfile {
     foreignRedirect?: { requestedHost: string; finalHost: string };
     /** v2: the homepage served a bot-protection/WAF page instead of the site. */
     accessBlocked?: string;
+    /** v2: the business's own slogan, observed verbatim on its homepage. */
+    tagline?: string;
   };
   /** Run directory name under .data/demo-assets (null when nothing downloaded). */
   artifactRef: string | null;

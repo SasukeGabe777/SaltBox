@@ -98,3 +98,12 @@ test("malformed or empty findings support nothing", () => {
     assert.deepEqual([...supportedSiteClaims(findings)], []);
   }
 });
+
+test("website tel: links rank into E.164 numbers, most-linked first", async () => {
+  const { rankPhones } = await import("../src/analyze-website.ts");
+  assert.deepEqual(
+    rankPhones(["tel:435-681-5665", "tel:4356815665", "tel:+1 (385) 837-1902", "tel:4356815665", "tel:12", "TEL:1-801-555-0100"]),
+    ["+14356815665", "+13858371902", "+18015550100"],
+  );
+  assert.deepEqual(rankPhones([]), []);
+});

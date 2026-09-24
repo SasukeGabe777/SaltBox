@@ -106,7 +106,13 @@ export async function collectDemoSourceFacts(db: Database, prospectId: string): 
     activeQualificationSuppressions(db, header.business_id),
   ]);
 
-  const phone = contacts.find((contact) => contact.channel === "phone");
+  // The number the business's own website links wins over a listing number
+  // (listings go stale; the site is what customers already call).
+  const websitePhones = arrayOfStrings(asRecord(asRecord(intelligence?.structured_findings)?.conversion)?.websitePhones);
+  const phones = contacts.filter((contact) => contact.channel === "phone");
+  const phone =
+    websitePhones.map((value) => phones.find((contact) => contact.normalized_value === value)).find((contact) => contact !== undefined) ??
+    phones[0];
   const email = contacts.find((contact) => contact.channel === "email");
   const metadata = asRecord(discoveryRecord?.provider_metadata);
 
@@ -191,4 +197,8 @@ function stringOrUndefined(value: unknown): string | undefined {
 
 function toIso(value: Date | string): string {
   return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
+}
+
+function arrayOfStrings(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === "string") : [];
 }
