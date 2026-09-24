@@ -41,6 +41,13 @@ export interface MobileSignals {
   horizontalOverflow: boolean | null;
   contentWiderThanViewport: boolean | null;
   navigationPresent: boolean | null;
+  /**
+   * True when the mobile pass emulated a real phone (mobile UA + viewport).
+   * v1 analyses used a desktop UA in a narrow viewport, which makes
+   * UA-switched builders (Wix) report overflow no phone ever shows; claims
+   * about mobile layout must only be made when this is true.
+   */
+  emulatedMobileDevice?: boolean;
 }
 
 export interface TechnicalSignals {
@@ -86,6 +93,10 @@ export interface ConversionSignals {
   quoteCtaPresent: boolean;
   bookingCtaPresent: boolean;
   prominentCtaPresent: boolean;
+  /** A link to online booking/scheduling (booking platform or /book page). */
+  bookingLinkPresent?: boolean;
+  /** CTA labels actually seen on the homepage (desktop or mobile layout). */
+  homepageCtaTexts?: string[];
   visibleAddressPresent: boolean;
 }
 
@@ -93,6 +104,10 @@ export interface ContentSignals {
   homepageWordCount: number | null;
   servicesPagePresent: boolean;
   aboutPagePresent: boolean;
+  /** The homepage itself has a services section (single-page sites). */
+  servicesSectionPresent?: boolean;
+  /** The homepage itself has an about / who-we-are section. */
+  aboutSectionPresent?: boolean;
   copyrightYear: number | null;
   lastModifiedHeader: string | null;
 }

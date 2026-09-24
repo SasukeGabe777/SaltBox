@@ -29,6 +29,8 @@ import type {
 import {
   HTTP_FETCH_TIMEOUT_MS,
   INTELLIGENCE_HTTP_UA,
+  INTELLIGENCE_UA_SUFFIX,
+  MOBILE_USER_AGENT,
   MOBILE_VIEWPORT,
   DESKTOP_VIEWPORT,
   NAVIGATION_TIMEOUT_MS,
@@ -211,12 +213,15 @@ export async function analyzeWebsiteIntelligence(
     }
     result.pages = pages;
 
-    // 7. Mobile pass on the homepage.
+    // 7. Mobile pass on the homepage, as a real phone: mobile UA + viewport
+    // (UA-switched builders like Wix otherwise serve their desktop layout).
     let mobileDom: DomSignals | null = null;
     let mobileScreenshotTaken = false;
+    const desktopUserAgent = `${await session.browser.userAgent()} ${INTELLIGENCE_UA_SUFFIX}`;
     if (homepageDom) {
       try {
-        await page.setViewport({ ...MOBILE_VIEWPORT, isMobile: true, hasTouch: true });
+        await page.setUserAgent(`${MOBILE_USER_AGENT} ${INTELLIGENCE_UA_SUFFIX}`);
+        await page.setViewport({ ...MOBILE_VIEWPORT, isMobile: true, hasTouch: true, deviceScaleFactor: 3 });
         trace.reset();
         await page.goto(finalUrl.toString(), { waitUntil: "networkidle2", timeout: NAVIGATION_TIMEOUT_MS });
         mobileDom = await page.evaluate(extractDomSignals);
@@ -237,6 +242,7 @@ export async function analyzeWebsiteIntelligence(
     let desktopScreenshotTaken = false;
     if (homepageDom && options.artifactDir) {
       try {
+        await page.setUserAgent(desktopUserAgent);
         await page.setViewport({ ...DESKTOP_VIEWPORT });
         await page.goto(finalUrl.toString(), { waitUntil: "networkidle2", timeout: NAVIGATION_TIMEOUT_MS });
         mkdirSync(options.artifactDir, { recursive: true });
@@ -450,6 +456,10 @@ function pageRecord(
   };
 }
 
+/** Homepage section headings that mean "here is what we offer" / "who we are". */
+const SERVICES_HEADING = /\b(our\s+(\w+\s+)?services|services\s+(we\s+offer|offered)|what\s+we\s+(do|offer))\b|^services$/i;
+const ABOUT_HEADING = /\b(about\s+(us|the\s+company)|who\s+we\s+are|our\s+story|meet\s+(the|our)\s+(team|owner)|why\s+(choose|trust|homeowners|customers))\b/i;
+
 function aggregateSignals(
   result: WebsiteIntelligenceResult,
   input: {
@@ -468,7 +478,10 @@ function aggregateSignals(
   },
 ) {
   const { homepageDom, mobileDom, homepageTrace } = input;
-  const allDoms = [...input.domByRole.values()];
+  // The phone layout can differ from the desktop one (UA-switched builders),
+  // so conversion evidence counts wherever a visitor could actually see it.
+  const allDoms = [...input.domByRole.values(), ...(mobileDom ? [mobileDom] : [])];
+  const homepageDoms = [homepageDom, ...(mobileDom ? [mobileDom] : [])];
 
   const headingOrderValid = homepageDom.headingLevels.every(
     (level, index, levels) => index === 0 || level <= (levels[index - 1] ?? 6) + 1,
@@ -494,6 +507,7 @@ function aggregateSignals(
     horizontalOverflow: mobileDom?.horizontalOverflow ?? null,
     contentWiderThanViewport: mobileDom ? mobileDom.scrollWidth > mobileDom.clientWidth + 2 : null,
     navigationPresent: mobileDom?.navPresent ?? homepageDom.navPresent,
+    emulatedMobileDevice: mobileDom !== null,
   };
 
   const failedByType = (types: string[]) =>
@@ -537,7 +551,9 @@ function aggregateSignals(
     formHasSubmit: contactForms.some((form) => form.hasSubmit),
     quoteCtaPresent: quoteCta,
     bookingCtaPresent: bookingCta,
-    prominentCtaPresent: homepageDom.ctaTexts.length > 0,
+    prominentCtaPresent: homepageDoms.some((dom) => dom.ctaTexts.length > 0),
+    bookingLinkPresent: allDoms.some((dom) => dom.bookingLinks.length > 0),
+    homepageCtaTexts: Array.from(new Set(homepageDoms.flatMap((dom) => dom.ctaTexts))).slice(0, 10),
     visibleAddressPresent: allDoms.some((dom) => dom.addressSignal),
   };
 
@@ -545,6 +561,8 @@ function aggregateSignals(
     homepageWordCount: homepageDom.wordCount,
     servicesPagePresent: input.pages.some((pageEntry) => pageEntry.role === "services" && pageEntry.reachable),
     aboutPagePresent: input.pages.some((pageEntry) => pageEntry.role === "about" && pageEntry.reachable),
+    servicesSectionPresent: homepageDoms.some((dom) => dom.headingTexts.some((heading) => SERVICES_HEADING.test(heading))),
+    aboutSectionPresent: homepageDoms.some((dom) => dom.headingTexts.some((heading) => ABOUT_HEADING.test(heading))),
     copyrightYear: homepageDom.copyrightYear,
     lastModifiedHeader: input.lastModified,
   };

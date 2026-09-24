@@ -5,6 +5,7 @@
  * why, the CTA/contact strategy, and every fallback taken for missing data.
  */
 
+import { supportedSiteClaims } from "@saltbox/website-intelligence/claims";
 import { parseBrandProfile, type BrandProfileView } from "./brand-view.ts";
 import { COMPOSITIONS, DEMO_PLAN_VERSION, selectComposition, selectDemoTemplate, type CompositionKey } from "./config/demo-v1.ts";
 import { CTA_LABELS } from "./config/local-service-copy-v1.ts";
@@ -32,23 +33,25 @@ export function deriveDemoDeficiencies(facts: DemoSourceFacts): DemoDeficiency[]
   const ref = intelligence.analysisId;
   const conversion = asRecord(findings.conversion);
   const seo = asRecord(findings.seo);
-  const mobile = asRecord(findings.mobile);
   const lab = asRecord(findings.lab);
   const content = asRecord(findings.content);
   const deficiencies: DemoDeficiency[] = [];
   const add = (code: string, detail: string, addressedBy: string) =>
     deficiencies.push({ code, detail, addressedBy, evidenceRef: ref });
+  // Absence claims only when the analysis positively measured the absence
+  // (see website-intelligence claims.ts); "not recorded" is never "missing".
+  const claims = supportedSiteClaims(findings, { extractedServiceCount: brandViewFromFacts(facts)?.services.length ?? 0 });
 
-  if (conversion && conversion.prominentCtaPresent === false && conversion.quoteCtaPresent === false) {
-    add("CTA_MISSING", "No prominent or quote call-to-action was found.", 'Prominent hero and header "Get a Quote" CTAs plus a closing contact CTA.');
+  if (claims.has("CTA_MISSING")) {
+    add("CTA_MISSING", "No quote, booking, or call-to-action button was found (desktop or phone layout).", 'Prominent hero and header "Get a Quote" CTAs plus a closing contact CTA.');
   }
-  if (conversion && conversion.contactFormPresent === false) {
-    add("CONTACT_FORM_MISSING", "No contact form was found.", "A clear quote/contact form section (demo mode, non-submitting).");
+  if (claims.has("CONTACT_FORM_MISSING")) {
+    add("CONTACT_FORM_MISSING", "No contact form, online booking, or email link was found.", "A clear quote/contact form section (demo mode, non-submitting).");
   }
   if (conversion && conversion.phoneLinkPresent === false && facts.phone) {
     add("PHONE_LINK_MISSING", "The site never links its phone number.", "Click-to-call tel: links in the header, hero, and contact section.");
   }
-  if (conversion && conversion.contactPagePresent === false) {
+  if (claims.has("CONTACT_PATH_MISSING")) {
     add("CONTACT_PATH_MISSING", "No contact page was found.", "An always-visible contact section with every observed contact method.");
   }
   if (seo && seo.titlePresent === false) {
@@ -60,11 +63,11 @@ export function deriveDemoDeficiencies(facts: DemoSourceFacts): DemoDeficiency[]
   if (seo && typeof seo.h1Count === "number" && seo.h1Count === 0) {
     add("H1_MISSING", "The homepage has no <h1>.", "A semantic heading hierarchy starting at one clear <h1>.");
   }
-  if (mobile && mobile.viewportMetaPresent === false) {
+  if (claims.has("MOBILE_VIEWPORT_MISSING")) {
     add("MOBILE_VIEWPORT_MISSING", "No mobile viewport meta tag.", "A responsive mobile-first layout with a proper viewport.");
   }
-  if (mobile && mobile.horizontalOverflow === true) {
-    add("MOBILE_OVERFLOW", "The site overflows horizontally on mobile.", "A layout verified to render without horizontal overflow.");
+  if (claims.has("MOBILE_OVERFLOW")) {
+    add("MOBILE_OVERFLOW", "The site overflows horizontally on an emulated phone.", "A layout verified to render without horizontal overflow.");
   }
   const lcp = numberOrNull(lab?.largestContentfulPaintMs);
   if (lcp !== null && lcp > 2500) {
@@ -82,11 +85,11 @@ export function deriveDemoDeficiencies(facts: DemoSourceFacts): DemoDeficiency[]
   if (words !== null && words < 150) {
     add("THIN_CONTENT", `The homepage has only ~${words} words.`, "Substantive services, trust, about, and contact sections.");
   }
-  if (content && content.servicesPagePresent === false) {
-    add("SERVICES_CONTENT_MISSING", "No services page was found.", "A structured services section (typical category services, disclosed).");
+  if (claims.has("SERVICES_CONTENT_MISSING")) {
+    add("SERVICES_CONTENT_MISSING", "No services page or homepage services section was found.", "A structured services section (typical category services, disclosed).");
   }
-  if (content && content.aboutPagePresent === false) {
-    add("ABOUT_CONTENT_MISSING", "No about page was found.", "A business introduction built from observed identity facts.");
+  if (claims.has("ABOUT_CONTENT_MISSING")) {
+    add("ABOUT_CONTENT_MISSING", "No about page or homepage about section was found.", "A business introduction built from observed identity facts.");
   }
   const copyrightYear = numberOrNull(content?.copyrightYear);
   const analysisYear = new Date(intelligence.calculatedAt).getUTCFullYear();

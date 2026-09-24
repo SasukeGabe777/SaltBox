@@ -51,7 +51,7 @@ export function buildImprovements(facts: DemoSourceFacts, plan: DemoPlan, busine
       id: "quote",
       anchor: "header-cta",
       title: "An obvious way to get a quote",
-      before: "We didn't find a quote or estimate button on your current homepage.",
+      before: "We didn't find a quote, booking, or call button on your current homepage, on desktop or on a phone.",
       after: "\"Get a Quote\" is in the header, at the top of the page, and on every service.",
       evidence: ["CTA_MISSING"],
     });
@@ -64,7 +64,7 @@ export function buildImprovements(facts: DemoSourceFacts, plan: DemoPlan, busine
       anchor: "contact-form",
       title: "Customers can reach you without calling",
       before: codes.has("CONTACT_FORM_MISSING")
-        ? "We didn't find a contact form on your current site, so customers have to call."
+        ? "We didn't find a contact form, online booking, or email link on your current site, so customers have to call."
         : "We didn't find a contact page on your current site.",
       after: "An estimate request form, so customers can send their project details whenever it suits them.",
       evidence: contactCodes,
@@ -77,10 +77,10 @@ export function buildImprovements(facts: DemoSourceFacts, plan: DemoPlan, busine
   if (speedCodes.length > 0) {
     const measured =
       codes.has("SLOW_LCP") && lcpMs !== undefined
-        ? `In our test, your homepage's main content took ${(lcpMs / 1000).toFixed(1)} seconds to appear.`
+        ? `In Google's Lighthouse test, which simulates a typical phone on a mobile connection, your homepage's main content took ${(lcpMs / 1000).toFixed(1)} seconds to appear. Google recommends under 2.5.`
         : performance !== undefined
-          ? `Google's Lighthouse speed test scored your homepage ${Math.round(performance)} out of 100.`
-          : "In our test, your homepage loaded slowly.";
+          ? `Google's Lighthouse speed test, which simulates a typical phone on a mobile connection, scored your homepage ${Math.round(performance)} out of 100.`
+          : "In Google's Lighthouse test on a simulated phone connection, your homepage loaded slowly.";
     add({
       id: "speed",
       anchor: "hero",
@@ -110,7 +110,7 @@ export function buildImprovements(facts: DemoSourceFacts, plan: DemoPlan, busine
       anchor: "services",
       title: "Your services, clearly laid out",
       before: codes.has("SERVICES_CONTENT_MISSING")
-        ? "We didn't find a services page on your current site, so customers have to guess what you offer."
+        ? "We didn't find a list of your services on your current site, so customers have to guess what you offer."
         : `Your current homepage has only about ${words ?? "a few dozen"} words, not much for customers (or Google) to go on.`,
       after: "Each service gets its own card with a description and a direct way to ask about it.",
       evidence: serviceCodes,
@@ -146,7 +146,7 @@ export function buildImprovements(facts: DemoSourceFacts, plan: DemoPlan, busine
       id: "about",
       anchor: "about",
       title: "Customers know who they're hiring",
-      before: "We didn't find an about page on your current site.",
+      before: "We didn't find an about page or section on your current site.",
       after: "An about section that introduces the business and where it works.",
       evidence: ["ABOUT_CONTENT_MISSING"],
     });

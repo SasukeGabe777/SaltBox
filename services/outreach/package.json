@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "@saltbox/database": "workspace:*",
+    "@saltbox/website-intelligence": "workspace:*",
     "kysely": "^0.29.5"
   },
   "devDependencies": {

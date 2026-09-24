@@ -18,7 +18,8 @@
     "./brand/assets": "./src/brand/assets.ts",
     "./brand/image-classifier": "./src/brand/image-classifier.ts",
     "./snapshots": "./src/snapshots.ts",
-    "./brand/persistence": "./src/brand/persist-brand.ts"
+    "./brand/persistence": "./src/brand/persist-brand.ts",
+    "./claims": "./src/claims.ts"
   },
   "scripts": {
     "intelligence": "node scripts/intelligence.ts",

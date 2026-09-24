@@ -10,6 +10,7 @@ import { test } from "node:test";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { serveLocalSite } from "../../prospecting/testing/fixture-server.ts";
 import { analyzeWebsiteIntelligence } from "../src/analyze-website.ts";
+import { supportedSiteClaims } from "../src/claims.ts";
 import type { LabMetrics } from "../src/types.ts";
 
 const CANNED_LAB: LabMetrics = {
@@ -82,6 +83,56 @@ function overflowSiteHandler(_req: IncomingMessage, res: ServerResponse) {
   );
 }
 
+/**
+ * A UA-switching site builder (the Wix pattern behind a real false claim):
+ * desktop UAs get a fixed 1080px layout, phone UAs get a separate 320px
+ * layout with its own "Book Online" button. A phone never sees overflow.
+ */
+function uaSwitchingSiteHandler(req: IncomingMessage, res: ServerResponse) {
+  const path = (req.url ?? "/").split("?")[0]!;
+  const isPhone = /iPhone|Android.+Mobile/i.test(req.headers["user-agent"] ?? "");
+  res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+  if (path !== "/") {
+    res.end("<!doctype html><html><head><title>Book</title></head><body><h2>Book online</h2></body></html>");
+    return;
+  }
+  const services = `<h2>Our Plumbing Services</h2><h2>Leak Detection &amp; Repair</h2><h2>Water Heater Repair</h2>`;
+  res.end(
+    isPhone
+      ? `<!doctype html><html><head><title>HOME</title><meta name="viewport" content="width=320, user-scalable=yes"></head>
+         <body style="margin:0"><div style="width:320px"><a href="tel:4355550100">Call or Text Us</a>
+         <a href="/book-online">Book Online</a>${services}</div></body></html>`
+      : `<!doctype html><html><head><title>HOME</title><meta name="viewport" content="width=device-width, initial-scale=1"></head>
+         <body style="margin:0"><div style="width:1080px"><a href="tel:4355550100">Call or Text Us</a>${services}</div></body></html>`,
+  );
+}
+
+test("UA-switching builder: the phone layout is measured as a phone sees it, and no false absence claims follow", { timeout: 120_000 }, async () => {
+  const site = await serveLocalSite(uaSwitchingSiteHandler);
+  try {
+    const result = await analyzeWebsiteIntelligence(site.url, {
+      safety: { allowPrivateNetworks: true },
+      lighthouseRunner: stubLighthouse,
+    });
+
+    assert.equal(result.fatal, undefined);
+    assert.equal(result.mobile?.emulatedMobileDevice, true);
+    assert.equal(result.mobile?.horizontalOverflow, false, "the phone layout fits; the desktop layout must not be measured as mobile");
+    assert.equal(result.conversion?.prominentCtaPresent, true, '"Call or Text Us" is a call to action');
+    assert.equal(result.conversion?.bookingLinkPresent, true, "the phone-only Book Online button counts");
+    assert.ok(result.conversion?.homepageCtaTexts?.includes("Book Online"));
+    assert.equal(result.content?.servicesPagePresent, false);
+    assert.equal(result.content?.servicesSectionPresent, true);
+
+    const claims = supportedSiteClaims(result);
+    for (const code of ["MOBILE_OVERFLOW", "CTA_MISSING", "CONTACT_FORM_MISSING", "SERVICES_CONTENT_MISSING"] as const) {
+      assert.equal(claims.has(code), false, `${code} must not be claimed for this site`);
+    }
+  } finally {
+    await site.close();
+  }
+});
+
 test("rich fixture site: pages, conversion, SEO, assets, platform, robots, and console signals", { timeout: 120_000 }, async () => {
   const site = await serveLocalSite(richSiteHandler);
   try {
@@ -145,6 +196,8 @@ test("overflow fixture: missing title/meta, mobile overflow, and a Lighthouse fa
     assert.equal(result.seo?.metaDescriptionPresent, false);
     assert.equal(result.mobile?.viewportMetaPresent, false);
     assert.equal(result.mobile?.horizontalOverflow, true, "fixed 2000px content must overflow the mobile viewport");
+    assert.equal(result.mobile?.emulatedMobileDevice, true);
+    assert.ok(supportedSiteClaims(result).has("MOBILE_OVERFLOW"), "a real phone-width overflow is still claimed");
 
     // Analyzer-stage failure does not erase the successful DOM observations.
     assert.equal(result.stages.lighthouse.status, "failed");

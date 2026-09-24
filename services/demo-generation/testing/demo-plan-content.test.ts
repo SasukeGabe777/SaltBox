@@ -56,12 +56,13 @@ function poorSiteFindings(): Record<string, unknown> {
       quoteCtaPresent: false,
       bookingCtaPresent: false,
       prominentCtaPresent: false,
+      bookingLinkPresent: false,
       visibleAddressPresent: false,
     },
     seo: { titlePresent: false, metaDescriptionPresent: false, h1Count: 0 },
     mobile: { viewportMetaPresent: true, horizontalOverflow: false },
     lab: { performance: 73, largestContentfulPaintMs: 3895.33, cumulativeLayoutShift: 0.27 },
-    content: { homepageWordCount: 70, servicesPagePresent: false, aboutPagePresent: false, copyrightYear: 1999 },
+    content: { homepageWordCount: 70, servicesPagePresent: false, servicesSectionPresent: false, aboutPagePresent: false, aboutSectionPresent: false, copyrightYear: 1999 },
   };
 }
 

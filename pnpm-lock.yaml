@@ -224,6 +224,9 @@ importers:
       '@saltbox/database':
         specifier: workspace:*
         version: link:../../packages/database
+      '@saltbox/website-intelligence':
+        specifier: workspace:*
+        version: link:../website-intelligence
       kysely:
         specifier: ^0.29.5
         version: 0.29.5

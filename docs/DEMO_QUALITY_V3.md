@@ -128,6 +128,29 @@ The demo must show the owner WHY it beats their site, immediately.
   LLC") and the business's own site is `froggyplumbing.com` whose title
   confirms it, the demo and outreach use "Froggy Plumbing".
 
+## Accuracy fix: claims must survive the owner's own check (2026-09-24)
+
+The Froggy Plumbing preview told the owner their phone layout overflowed,
+that they had no quote button, no services list, and no way to reach them
+without calling. All four were false (the owner checked on their phone):
+
+| Claim | Reality | Cause |
+|---|---|---|
+| Phone layout overflows | Fits at 320px | Mobile pass used a desktop UA; Wix served its 1080px desktop layout |
+| No quote button | "Call or Text Us", "Book Online" | CTA pattern too narrow; "Book Online" exists only in the phone layout |
+| No services | Homepage "Our Plumbing Services" section | Only a separate /services page counted |
+| Customers have to call | Online booking (dispatch.me) | Booking links were not considered |
+
+Fix: `website-intelligence-v2` (see services/website-intelligence/README.md)
+plus one shared claim rule set (`claims.ts`) used by the demo plan and the
+outreach observation. Speed notes now say the number comes from Lighthouse's
+simulated phone connection (an owner on fast wifi will see a faster load; the
+lab LCP also varies between runs: 5.8 s then 3.7 s for the same site).
+Re-measured, Froggy's demo keeps only true notes (missing search description
+and main heading; slow simulated-phone load). Regression tests encode the
+case: `testing/claims.test.ts` and the UA-switching fixture in
+`testing/browser-analyzer.test.ts`.
+
 ## Known follow-ups
 
 - Few sites expose many usable photos; typography-led layouts carry most demos.

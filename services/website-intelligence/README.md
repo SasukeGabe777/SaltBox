@@ -23,9 +23,21 @@ business website
 
 ## Analyzer version
 
-`website-intelligence-v1` is persisted on every `website_analysis`,
-`website_snapshot` (capture tool), and observation (verification method).
-Future analyzers append new versions; history is never rewritten.
+The analyzer version (currently `website-intelligence-v2`) is persisted on
+every `website_analysis`, `website_snapshot` (capture tool), and observation
+(verification method). Future analyzers append new versions; history is never
+rewritten.
+
+v2 (2026-09-24) fixed false negatives an owner could disprove on their own
+phone: the mobile pass now emulates a real phone (iPhone UA, not just a narrow
+viewport; Wix serves its desktop layout to desktop UAs), CTA detection covers
+"Call or Text Us" / "Book Online" and booking-platform links, CTA/booking
+evidence from the phone layout counts, and homepage services/about SECTIONS
+are recorded. `src/claims.ts` (`@saltbox/website-intelligence/claims`) is
+the single rule set deciding which "your site lacks X" claims the evidence
+supports; demo notes and outreach both use it. Absence is only claimed when it
+was positively measured, so v1 analyses support no mobile/CTA/contact/
+services/about claims — re-run `pnpm website:intelligence` first.
 
 ## Tooling decision
 

@@ -1,4 +1,5 @@
 import type { Database } from "@saltbox/database/client";
+import { supportedSiteClaims } from "@saltbox/website-intelligence/claims";
 import {
   BODY_TEMPLATE_VERSION,
   BODY_TEMPLATE_VERSION_NEW_SITE,
@@ -108,13 +109,16 @@ export async function selectSupportedObservation(db: Database, businessId: strin
   const links = record(findings?.links);
   const evidenceRef = row.id;
 
-  if (conversion?.prominentCtaPresent === false && conversion?.quoteCtaPresent === false) {
+  // Same evidence rules as the demo's notes, so the email never claims
+  // something the demo (or the owner's own phone) contradicts.
+  const claims = supportedSiteClaims(findings);
+  if (claims.has("CTA_MISSING")) {
     return { code: "CTA_MISSING", text: "the site doesn't have a clear quote button", evidenceRef };
   }
-  if (conversion?.contactFormPresent === false) {
-    return { code: "CONTACT_FORM_MISSING", text: "the site doesn't offer a clear online contact form", evidenceRef };
+  if (claims.has("CONTACT_FORM_MISSING")) {
+    return { code: "CONTACT_FORM_MISSING", text: "the site doesn't offer a way to reach you online", evidenceRef };
   }
-  if (mobile?.horizontalOverflow === true || mobile?.contentWiderThanViewport === true) {
+  if (claims.has("MOBILE_OVERFLOW")) {
     return { code: "MOBILE_OVERFLOW", text: "some site content runs wider than a mobile screen", evidenceRef };
   }
   if (seo?.titlePresent === false) {

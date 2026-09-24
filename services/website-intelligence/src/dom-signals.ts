@@ -23,6 +23,10 @@ export interface DomSignals {
   emailLinks: string[];
   forms: Array<{ fieldCount: number; hasSubmit: boolean; looksLikeContact: boolean }>;
   ctaTexts: string[];
+  /** Links to online booking/scheduling (booking platforms or /book-style paths). */
+  bookingLinks: string[];
+  /** Bounded heading texts, used to recognise on-page services/about sections. */
+  headingTexts: string[];
   jsonLdTypes: string[];
   jsonLdPresent: boolean;
   socialLinks: string[];
@@ -78,7 +82,8 @@ export function extractDomSignals(): DomSignals {
       return { fieldCount: fields.length, hasSubmit, looksLikeContact };
     });
 
-  const ctaPattern = /(get|request|free)\s+(a\s+)?(quote|estimate|consultation)|book\s+(now|online|an appointment)|schedule\s+(service|now|appointment|a call)|call\s+(us\s+)?(now|today)|contact\s+us|get\s+started|request\s+service/i;
+  // Anchored to the start of the label so body copy ("service call fees") never counts.
+  const ctaPattern = /^(get|request)\s+(an?\s+|your\s+)?(free\s+)?(quote|estimate|consultation|bid)s?\b|\bfree\s+(quote|estimate|consultation)s?\b|^book\s+(now|online|today|service|an?\s+(appointment|visit|service))\b|^schedule\s+(online|now|today|service|an?\s+(appointment|service|visit|call))\b|^call\s+(or\s+text\s+)?(us\s*)?(now|today)?\s*!?$|^(call|text)\s+(or\s+(call|text)\s+)?us\b|^contact\s+us\b|^get\s+started\b|^request\s+(service|an?\s+appointment)\b/i;
   const ctaTexts: string[] = [];
   const clickable = Array.from(document.querySelectorAll("a, button"));
   for (const element of clickable.slice(0, 600)) {
@@ -87,6 +92,26 @@ export function extractDomSignals(): DomSignals {
       ctaTexts.push(label);
       if (ctaTexts.length >= 10) break;
     }
+  }
+
+  const bookingHosts = [
+    "dispatch.me", "housecallpro.com", "servicetitan.com", "getjobber.com", "clienthub.getjobber.com",
+    "calendly.com", "acuityscheduling.com", "setmore.com", "square.site", "squareup.com/appointments",
+    "schedulicity.com", "vagaro.com", "booksy.com", "workiz.com", "fieldedge.com", "servicefusion.com",
+  ];
+  const bookingLinks: string[] = [];
+  for (const href of hrefs) {
+    const lower = href.toLowerCase();
+    if (bookingHosts.some((host) => lower.includes(host)) || /\/(book|booking|book-online|schedule|appointments?)(\/|\?|#|$)/.test(lower)) {
+      if (!bookingLinks.includes(href)) bookingLinks.push(href.slice(0, 300));
+      if (bookingLinks.length >= 10) break;
+    }
+  }
+
+  const headingTexts: string[] = [];
+  for (const heading of Array.from(document.querySelectorAll("h1, h2, h3, h4")).slice(0, 80)) {
+    const label = (heading.textContent ?? "").trim().replace(/\s+/g, " ");
+    if (label !== "") headingTexts.push(label.slice(0, 120));
   }
 
   const jsonLdTypes: string[] = [];
@@ -140,6 +165,8 @@ export function extractDomSignals(): DomSignals {
     emailLinks: emailLinks.slice(0, 10),
     forms,
     ctaTexts,
+    bookingLinks,
+    headingTexts,
     jsonLdTypes: Array.from(new Set(jsonLdTypes)).slice(0, 15),
     jsonLdPresent,
     socialLinks: Array.from(new Set(socialLinks)).slice(0, 20),
