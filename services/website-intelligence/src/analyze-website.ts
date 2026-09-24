@@ -464,7 +464,9 @@ function pageRecord(
     role,
     selectedBecause,
     httpStatus,
-    reachable: httpStatus !== null && httpStatus < 400,
+    // Client-side-routed builders (Duda) can return no navigation response
+    // for a page that rendered fine; rendered content is proof of reach.
+    reachable: httpStatus !== null ? httpStatus < 400 : dom.wordCount > 0 && dom.title !== null,
     contentHash: createHash("sha256").update(`${finalUrl}:${dom.title ?? ""}:${dom.wordCount}`).digest("hex"),
     title: dom.title,
     wordCount: dom.wordCount,
