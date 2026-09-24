@@ -613,6 +613,8 @@ function aggregateSignals(
     aboutPagePresent: input.pages.some((pageEntry) => pageEntry.role === "about" && pageEntry.reachable),
     servicesSectionPresent: homepageDoms.some((dom) => dom.headingTexts.some((heading) => SERVICES_HEADING.test(heading))),
     leadHeadings: homepageDom.headingTexts.slice(0, 6),
+    unavailableNotice: homepageDom.unavailableNotice,
+    homepageExcerpt: homepageDom.textExcerpt,
     otherContentPages: input.pages.filter((pageEntry) => pageEntry.reachable && !["homepage", "contact", "about"].includes(pageEntry.role)).length,
     aboutSectionPresent: homepageDoms.some((dom) => dom.headingTexts.some((heading) => ABOUT_HEADING.test(heading))),
     copyrightYear: homepageDom.copyrightYear,

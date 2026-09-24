@@ -106,6 +106,11 @@ test("a sliver of carousel overflow is not claimed as a phone layout problem", (
   assert.equal(supportedSiteClaims(unmeasured).has("MOBILE_OVERFLOW"), false);
 });
 
+test("a dead site supports only the claim that it is dead", () => {
+  const dead = { ...WEAK_V2, content: { ...WEAK_V2.content, unavailableNotice: "Site not found" } };
+  assert.deepEqual([...supportedSiteClaims(dead)], ["WEBSITE_BROKEN"]);
+});
+
 test("malformed or empty findings support nothing", () => {
   for (const findings of [null, undefined, "x", [], {}, { conversion: [] }]) {
     assert.deepEqual([...supportedSiteClaims(findings)], []);

@@ -238,3 +238,10 @@ test("2.3.0: commercial-only contractors are not a fit; mixed or residential one
   assert.equal(fit(["Electricians for Salt Lake City Homes"]), "eligible");
   assert.equal(fit(["Fast! Friendly! Froggy!"]), "eligible");
 });
+
+test("2.3.0: landscape architecture and planning practices are not homeowner services", () => {
+  const intel = intelligenceFixture({
+    content: { homepageWordCount: 400, servicesPagePresent: true, aboutPagePresent: true, copyrightYear: null, lastModifiedHeader: null, leadHeadings: ["What We Do"], homepageExcerpt: "VODA is an urban design firm. We specialize in landscape architecture and community planning." },
+  });
+  assert.equal(deriveQualificationFeaturesV2({ name: "Voda Landscape and Planning", category: "landscaping", phone: "1", websiteUrl: "https://v.test/" }, intel).targetFit, "commercial_only");
+});

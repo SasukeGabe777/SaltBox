@@ -222,6 +222,9 @@ function isLocationPageUrl(websiteUrl: string | undefined): boolean {
   }
 }
 
+/** Design/planning practices: clients are developers and cities, not homeowners. */
+const PROFESSIONAL_FIRM_PATTERN = /\b(landscape architect(s|ure)?|urban design|community planning|land planning|civil engineering|architecture firm)\b/i;
+
 /** A site that sells to businesses, and says nothing about homes. */
 const COMMERCIAL_PATTERN = /\b(commercial|industrial)\b/i;
 const RESIDENTIAL_PATTERN = /\b(residential|homes?|homeowners?|house(hold)?s?|family|families)\b/i;
@@ -232,7 +235,8 @@ const SITE_SUPPLIER_PATTERN =
 
 function classifyTargetFit(input: QualificationV2BusinessInput, intelligence: WebsiteIntelligenceResult | null = null): TargetFitClassification {
   const name = input.name.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
-  const siteText = [intelligence?.pages[0]?.title ?? "", ...(intelligence?.content?.leadHeadings ?? [])].join(" | ");
+  const siteText = [intelligence?.pages[0]?.title ?? "", ...(intelligence?.content?.leadHeadings ?? []), intelligence?.content?.homepageExcerpt ?? ""].join(" | ");
+  if (PROFESSIONAL_FIRM_PATTERN.test(siteText)) return "commercial_only";
   if (siteText !== " | " && SITE_SUPPLIER_PATTERN.test(siteText)) return "supplier_manufacturer";
   if (siteText !== " | " && COMMERCIAL_PATTERN.test(siteText) && !RESIDENTIAL_PATTERN.test(siteText)) return "commercial_only";
   const context = `${name} ${input.category ?? ""} ${metadataCategory(input.sourceMetadata)}`;

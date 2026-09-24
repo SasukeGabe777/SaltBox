@@ -17,6 +17,7 @@
  */
 
 export type SiteClaimCode =
+  | "WEBSITE_BROKEN"
   | "CTA_MISSING"
   | "CONTACT_FORM_MISSING"
   | "CONTACT_PATH_MISSING"
@@ -37,6 +38,13 @@ export function supportedSiteClaims(findings: unknown, context: ClaimContext = {
   const mobile = record(root?.mobile);
   const content = record(root?.content);
   const claims = new Set<SiteClaimCode>();
+
+  // A "Site not found"/parked page is evidence of exactly one thing: the
+  // site is down. Every absence claim would be about an error page.
+  if (typeof content?.unavailableNotice === "string" && content.unavailableNotice !== "") {
+    claims.add("WEBSITE_BROKEN");
+    return claims;
+  }
 
   // "No way to ask for work": no CTA label of any kind AND no booking link.
   // bookingLinkPresent only exists from v2 on; without it we can't rule out a

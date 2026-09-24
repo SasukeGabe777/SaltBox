@@ -329,3 +329,37 @@ test("a listing category contradicted by the business name gives way to the name
   assert.deepEqual(categoryFromName("Positive Power LLC", "electrical"), { category: "electrical" }, "no trade in the name");
   assert.deepEqual(categoryFromName("Carpet & Paint Pros", "flooring"), { category: "flooring" }, "listed trade is named");
 });
+
+test("a homepage that never mentions the business is not evidence about it", async () => {
+  const { siteIdentityMismatch } = await import("../src/eligibility.ts");
+  const withSite = (excerpt: string, title: string, name: string, websiteUrl: string) =>
+    qualifiedFacts({
+      businessName: name,
+      websiteUrl,
+      intelligence: {
+        analysisId: "wa-x", analyzerVersion: "website-intelligence-v2", calculatedAt: "2026-09-24T00:00:00.000Z",
+        findings: { pages: [{ title }], content: { homepageExcerpt: excerpt, leadHeadings: [] } },
+      },
+    });
+  assert.ok(siteIdentityMismatch(withSite("Musangwin slot gacor malam ini", "MUSANGWIN", "Technical Building Systems", "http://saveandsmile.com/")));
+  assert.equal(siteIdentityMismatch(withSite("Fast! Friendly! Froggy! Plumbing in Northern Utah", "HOME | FroggyplumbingCom", "JC Plumbing LLC", "http://froggyplumbing.com/")), null);
+  assert.equal(siteIdentityMismatch(withSite("Painting in Layton", "Wilson And Sons Painting", "Wilson & Sons Painting", "http://www.wilsonandsonsut.com/")), null);
+});
+
+test("a dead website gets one true note and no absence claims", () => {
+  const facts = qualifiedFacts({
+    intelligence: {
+      analysisId: "wa-d", analyzerVersion: "website-intelligence-v2", calculatedAt: "2026-09-24T00:00:00.000Z",
+      findings: {
+        content: { unavailableNotice: "Site not found", homepageWordCount: 27, servicesPagePresent: false, servicesSectionPresent: false, otherContentPages: 0 },
+        conversion: { prominentCtaPresent: false, quoteCtaPresent: false, bookingCtaPresent: false, bookingLinkPresent: false, contactFormPresent: false, emailLinkPresent: false },
+        seo: { titlePresent: false, metaDescriptionPresent: false, h1Count: 0 },
+      },
+    },
+  });
+  const plan = buildDemoPlan(facts);
+  assert.deepEqual(plan.deficiencies.map((deficiency) => deficiency.code), ["WEBSITE_BROKEN"]);
+  const content = buildDemoContent(facts, plan);
+  assert.equal(content.improvements?.length, 1);
+  assert.match(content.improvements?.[0]?.before ?? "", /Site not found/);
+});

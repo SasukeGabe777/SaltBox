@@ -42,6 +42,14 @@ export function deriveDemoDeficiencies(facts: DemoSourceFacts): DemoDeficiency[]
   // (see website-intelligence claims.ts); "not recorded" is never "missing".
   const claims = supportedSiteClaims(findings, { extractedServiceCount: brandViewFromFacts(facts)?.services.length ?? 0 });
 
+  if (claims.has("WEBSITE_BROKEN")) {
+    add(
+      "WEBSITE_BROKEN",
+      `The website showed "${String(content?.unavailableNotice)}" instead of the business's site.`,
+      "A complete, working website built from the business's listing facts.",
+    );
+    return deficiencies;
+  }
   if (claims.has("CTA_MISSING")) {
     add("CTA_MISSING", "No quote, booking, or call-to-action button was found (desktop or phone layout).", 'Prominent hero and header "Get a Quote" CTAs plus a closing contact CTA.');
   }

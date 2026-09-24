@@ -27,6 +27,10 @@ export interface DomSignals {
   bookingLinks: string[];
   /** Bounded heading texts, used to recognise on-page services/about sections. */
   headingTexts: string[];
+  /** Builder/registrar error or parking text ("Site not found") on a near-empty page. */
+  unavailableNotice: string | null;
+  /** First ~600 characters of visible text (identity and fit checks). */
+  textExcerpt: string;
   jsonLdTypes: string[];
   jsonLdPresent: boolean;
   socialLinks: string[];
@@ -115,6 +119,11 @@ export function extractDomSignals(): DomSignals {
     if (label !== "") headingTexts.push(label.slice(0, 120));
   }
 
+  const unavailableMatch =
+    words.length < 250
+      ? bodyText.match(/site not found|this site (is not|isn't) (published|available)|domain (is )?(for sale|parked|expired)|this domain (may be|is) for sale|buy this domain|account (has been )?suspended|website (is )?(coming soon|under construction)|page not found|404 not found/i)
+      : null;
+
   const jsonLdTypes: string[] = [];
   let jsonLdPresent = false;
   for (const script of Array.from(document.querySelectorAll('script[type="application/ld+json"]')).slice(0, 10)) {
@@ -168,6 +177,8 @@ export function extractDomSignals(): DomSignals {
     ctaTexts,
     bookingLinks,
     headingTexts,
+    unavailableNotice: unavailableMatch ? unavailableMatch[0].slice(0, 60) : null,
+    textExcerpt: bodyText.replace(/\s+/g, " ").trim().slice(0, 600),
     jsonLdTypes: Array.from(new Set(jsonLdTypes)).slice(0, 15),
     jsonLdPresent,
     socialLinks: Array.from(new Set(socialLinks)).slice(0, 20),

@@ -124,6 +124,10 @@ export interface ContentSignals {
   aboutSectionPresent?: boolean;
   /** Reachable crawled pages that are not home/contact/about (e.g. per-service pages). */
   otherContentPages?: number;
+  /** The homepage is a builder/registrar error or parking page ("Site not found"). */
+  unavailableNotice?: string | null;
+  /** First ~600 visible characters of the homepage (identity/fit checks). */
+  homepageExcerpt?: string;
   /** First homepage headings, verbatim (how the site describes itself). */
   leadHeadings?: string[];
   copyrightYear: number | null;
