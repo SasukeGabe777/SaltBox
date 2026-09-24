@@ -33,12 +33,14 @@ export function buildImprovements(facts: DemoSourceFacts, plan: DemoPlan, busine
   }
 
   if (codes.has("WEBSITE_BROKEN")) {
-    const notice = typeof content?.unavailableNotice === "string" ? content.unavailableNotice : "an error page";
+    const notice = typeof content?.unavailableNotice === "string" && content.unavailableNotice !== "" ? content.unavailableNotice : undefined;
     add({
       id: "website",
       anchor: "hero",
       title: "A website that works",
-      before: `When we opened your website, it showed "${notice}", so customers who click through from Google or your listing hit a dead end.`,
+      before: notice
+        ? `When we opened your website, it showed "${notice}", so customers who click through from Google or your listing hit a dead end.`
+        : "When we tried the website address on your listing, it didn't load at all, so customers who click through hit a dead end.",
       after: "A complete site with your services, service area, and a clear way to request an estimate.",
       evidence: ["WEBSITE_BROKEN"],
     });

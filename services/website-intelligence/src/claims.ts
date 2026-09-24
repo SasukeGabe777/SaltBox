@@ -39,9 +39,12 @@ export function supportedSiteClaims(findings: unknown, context: ClaimContext = {
   const content = record(root?.content);
   const claims = new Set<SiteClaimCode>();
 
-  // A "Site not found"/parked page is evidence of exactly one thing: the
-  // site is down. Every absence claim would be about an error page.
-  if (typeof content?.unavailableNotice === "string" && content.unavailableNotice !== "") {
+  // A "Site not found"/parked page, or a domain that confirmed does not
+  // exist (non-transient DNS NXDOMAIN), is evidence of exactly one thing:
+  // the site is down. Every absence claim would be about an error page.
+  const fatal = record(root?.fatal);
+  const domainGone = fatal?.failureKind === "dns_not_found" && fatal.transient === false;
+  if (domainGone || (typeof content?.unavailableNotice === "string" && content.unavailableNotice !== "")) {
     claims.add("WEBSITE_BROKEN");
     return claims;
   }

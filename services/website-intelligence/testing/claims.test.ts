@@ -111,6 +111,11 @@ test("a dead site supports only the claim that it is dead", () => {
   assert.deepEqual([...supportedSiteClaims(dead)], ["WEBSITE_BROKEN"]);
 });
 
+test("a domain that confirmed does not exist is a dead site; a transient DNS error is not", () => {
+  assert.deepEqual([...supportedSiteClaims({ fatal: { failureKind: "dns_not_found", transient: false } })], ["WEBSITE_BROKEN"]);
+  assert.deepEqual([...supportedSiteClaims({ fatal: { failureKind: "dns_transient", transient: true } })], []);
+});
+
 test("malformed or empty findings support nothing", () => {
   for (const findings of [null, undefined, "x", [], {}, { conversion: [] }]) {
     assert.deepEqual([...supportedSiteClaims(findings)], []);

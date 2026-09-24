@@ -45,7 +45,9 @@ export function deriveDemoDeficiencies(facts: DemoSourceFacts): DemoDeficiency[]
   if (claims.has("WEBSITE_BROKEN")) {
     add(
       "WEBSITE_BROKEN",
-      `The website showed "${String(content?.unavailableNotice)}" instead of the business's site.`,
+      typeof content?.unavailableNotice === "string" && content.unavailableNotice !== ""
+        ? `The website showed "${content.unavailableNotice}" instead of the business's site.`
+        : "The website address does not exist (DNS lookup confirmed not found).",
       "A complete, working website built from the business's listing facts.",
     );
     return deficiencies;
