@@ -122,6 +122,8 @@ export interface ContentSignals {
   servicesSectionPresent?: boolean;
   /** The homepage itself has an about / who-we-are section. */
   aboutSectionPresent?: boolean;
+  /** Reachable crawled pages that are not home/contact/about (e.g. per-service pages). */
+  otherContentPages?: number;
   /** First homepage headings, verbatim (how the site describes itself). */
   leadHeadings?: string[];
   copyrightYear: number | null;

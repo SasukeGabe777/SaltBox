@@ -105,7 +105,7 @@ function poorSiteIntelligence(url: string): WebsiteIntelligenceResult {
       bookingLinkPresent: false,
       visibleAddressPresent: false,
     },
-    content: { homepageWordCount: 70, servicesPagePresent: false, servicesSectionPresent: false, aboutPagePresent: false, aboutSectionPresent: false, copyrightYear: 1999, lastModifiedHeader: null },
+    content: { homepageWordCount: 70, servicesPagePresent: false, servicesSectionPresent: false, otherContentPages: 0, aboutPagePresent: false, aboutSectionPresent: false, copyrightYear: 1999, lastModifiedHeader: null },
     links: { checked: 1, working: 1, redirecting: 0, broken: 0, timedOut: 0, blocked: 0, brokenExamples: [] },
     assets: { failedImages: 0, failedStylesheets: 0, failedScripts: 0, otherFailed: 11, examples: [] },
     platform: { platform: "GoDaddy Website Builder", confidence: "medium", evidence: [] },

@@ -62,7 +62,7 @@ function poorSiteFindings(): Record<string, unknown> {
     seo: { titlePresent: false, metaDescriptionPresent: false, h1Count: 0 },
     mobile: { viewportMetaPresent: true, horizontalOverflow: false },
     lab: { performance: 73, largestContentfulPaintMs: 3895.33, cumulativeLayoutShift: 0.27 },
-    content: { homepageWordCount: 70, servicesPagePresent: false, servicesSectionPresent: false, aboutPagePresent: false, aboutSectionPresent: false, copyrightYear: 1999 },
+    content: { homepageWordCount: 70, servicesPagePresent: false, servicesSectionPresent: false, otherContentPages: 0, aboutPagePresent: false, aboutSectionPresent: false, copyrightYear: 1999 },
   };
 }
 
@@ -134,7 +134,6 @@ test("deficiencies derive from persisted intelligence and the plan addresses eac
     "CLS_POOR",
     "THIN_CONTENT",
     "SERVICES_CONTENT_MISSING",
-    "ABOUT_CONTENT_MISSING",
     "COPYRIGHT_STALE",
   ]) {
     assert.ok(codes.includes(expected), `expected ${expected} in ${codes.join(",")}`);

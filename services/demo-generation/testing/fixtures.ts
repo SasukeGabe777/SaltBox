@@ -109,6 +109,7 @@ export function weakSiteIntelligence(url: string): WebsiteIntelligenceResult {
       aboutPagePresent: false,
       aboutSectionPresent: false,
       servicesSectionPresent: false,
+      otherContentPages: 0,
       copyrightYear: 1999,
       lastModifiedHeader: null,
     },

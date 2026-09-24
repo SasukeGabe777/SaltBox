@@ -68,15 +68,21 @@ export function supportedSiteClaims(findings: unknown, context: ClaimContext = {
   }
   if (mobile?.viewportMetaPresent === false) claims.add("MOBILE_VIEWPORT_MISSING");
 
-  // Services / about: a single-page site with a services section is not
-  // "missing services". Require the section check itself to have run.
+  // Services: a single-page site with a services section, or a site with
+  // per-service pages ("Floor Coatings", "General Painting"), is not
+  // "missing services". Require every check to have run and come up empty.
   const servicesExtracted = (context.extractedServiceCount ?? 0) >= 3;
-  if (content?.servicesPagePresent === false && content.servicesSectionPresent === false && !servicesExtracted) {
+  if (
+    content?.servicesPagePresent === false &&
+    content.servicesSectionPresent === false &&
+    content.otherContentPages === 0 &&
+    !servicesExtracted
+  ) {
     claims.add("SERVICES_CONTENT_MISSING");
   }
-  if (content?.aboutPagePresent === false && content.aboutSectionPresent === false) {
-    claims.add("ABOUT_CONTENT_MISSING");
-  }
+  // ABOUT_CONTENT_MISSING is never claimed: whether a site "introduces the
+  // business" is a judgment ("Experienced Team... 30 years") that headings
+  // cannot prove, and an owner can too easily point at the copy.
   return claims;
 }
 

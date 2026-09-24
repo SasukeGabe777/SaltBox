@@ -40,7 +40,7 @@ const FROGGY_V2 = {
 /** A genuinely weak site, fully measured by v2. */
 const WEAK_V2 = {
   mobile: { viewportMetaPresent: false, horizontalOverflow: true, emulatedMobileDevice: true, overflowVerifiedAsPlainDevice: true, mobileScrollWidth: 980, mobileClientWidth: 390 },
-  content: { servicesPagePresent: false, servicesSectionPresent: false, aboutPagePresent: false, aboutSectionPresent: false },
+  content: { servicesPagePresent: false, servicesSectionPresent: false, otherContentPages: 0, aboutPagePresent: false, aboutSectionPresent: false },
   conversion: {
     prominentCtaPresent: false,
     quoteCtaPresent: false,
@@ -65,7 +65,6 @@ test("a genuinely weak, fully measured site still gets every claim", () => {
   assert.deepEqual(
     [...supportedSiteClaims(WEAK_V2)].sort(),
     [
-      "ABOUT_CONTENT_MISSING",
       "CONTACT_FORM_MISSING",
       "CONTACT_PATH_MISSING",
       "CTA_MISSING",
@@ -85,6 +84,8 @@ test("each piece of counter-evidence withdraws exactly its own claim", () => {
   const withEmail = { ...WEAK_V2, conversion: { ...WEAK_V2.conversion, emailLinkPresent: true } };
   assert.equal(supportedSiteClaims(withEmail).has("CONTACT_FORM_MISSING"), false);
 
+  const withServicePages = { ...WEAK_V2, content: { ...WEAK_V2.content, otherContentPages: 2 } };
+  assert.equal(supportedSiteClaims(withServicePages).has("SERVICES_CONTENT_MISSING"), false, "per-service pages are services content");
   const withSection = { ...WEAK_V2, content: { ...WEAK_V2.content, servicesSectionPresent: true } };
   assert.equal(supportedSiteClaims(withSection).has("SERVICES_CONTENT_MISSING"), false);
   assert.equal(supportedSiteClaims(WEAK_V2, { extractedServiceCount: 4 }).has("SERVICES_CONTENT_MISSING"), false);
