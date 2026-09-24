@@ -5,7 +5,35 @@ quality / owner-tour work, on the Windows work PC in `C:\dev\SaltBox`. The commi
 This is the current cross-machine operational handoff; older phase handoffs
 are historical context only.
 
-## Latest work (2026-09-23): demo quality + owner tour — READ FIRST
+## Latest work (2026-09-24): claim accuracy + 10 verified demos — READ FIRST
+
+The owner of the Froggy preview could disprove four of its six notes on
+their phone. Everything a demo or email says about a prospect's site now
+goes through ONE rule set, `services/website-intelligence/src/claims.ts`
+(absence is claimed only when positively measured). Detail and the list of
+fixes: `docs/DEMO_QUALITY_V3.md` "Accuracy fix" and "Brand showcase".
+
+- website-intelligence-v2: real-phone measurement (mobile UA, clean
+  cookies/cache/storage, overflow re-confirmed as a plain iPhone because
+  Duda serves our suffixed UA a tablet layout), verb+noun CTAs, homepage
+  sections, per-service pages, website tel: numbers, dead/parked pages.
+- Qualification 2.3.0: suppliers and commercial-only / design-firm sites
+  (from their own text) are not fits; overflow scores only when real.
+- Demo: website phone beats listing phone, full-size logos, brand showcase
+  (logo + their own slogan), bold is the no-brand default, wordmark logos,
+  yellow brands never go olive, dead/NXDOMAIN sites get one true note.
+- NEVER claim "no website": 16 of 19 listings without a website link had
+  one. Demo note + new-site email (body v2) say "the map listing ... doesn't
+  link to a website".
+- `pnpm demo:rank` ranks prospects by true improvement notes.
+- 10 demos generated + QA 28/28, NOT approved (local only): see the final
+  report of the 2026-09-24 session / `pnpm demo:rank`. Froggy v8 is the
+  approved hosted preview (accurate). With accurate data Froggy scores 57.
+- Pool: Overture extracts for Ogden, Salt Lake City, Provo in `.data/overture`.
+- Most existing qualification decisions predate 2.3.0; re-run
+  `pnpm acquire ... ` (without --new-only) to re-score an area.
+
+## Earlier work (2026-09-23): demo quality + owner tour
 
 Committed after Phase 11 on the work PC. Full detail: `docs/DEMO_QUALITY_V3.md`.
 
