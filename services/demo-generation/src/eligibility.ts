@@ -61,14 +61,17 @@ export function siteIdentityMismatch(facts: DemoSourceFacts): string | null {
   const headings = Array.isArray(content.leadHeadings) ? content.leadHeadings.join(" ") : "";
   const haystack = `${title} ${headings} ${content.homepageExcerpt}`.toLowerCase();
   const compact = haystack.replace(/[^a-z0-9]/g, "");
-  const nameTokens = facts.businessName.toLowerCase().split(/[^a-z0-9]+/).filter((token) => token.length >= 4 && !IDENTITY_STOPWORDS.has(token));
+  // Apostrophes join words ("Amp'd" -> "ampd"); other punctuation separates.
+  const nameTokens = facts.businessName.toLowerCase().replace(/['’]/g, "").split(/[^a-z0-9]+/).filter((token) => token.length >= 4 && !IDENTITY_STOPWORDS.has(token));
   let domainLabel = "";
   try {
     domainLabel = new URL(facts.websiteUrl ?? "").hostname.replace(/^www\./, "").split(".")[0] ?? "";
   } catch {
     domainLabel = "";
   }
-  const candidates = [...nameTokens, ...(domainLabel.length >= 5 ? [domainLabel] : [])];
+  const domainCompact = domainLabel.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const domainTokens = domainLabel.toLowerCase().split(/[^a-z0-9]+/).filter((token) => token.length >= 4 && !IDENTITY_STOPWORDS.has(token));
+  const candidates = [...nameTokens, ...(domainCompact.length >= 5 ? [domainCompact] : []), ...domainTokens];
   if (candidates.length === 0) return null;
   if (candidates.some((token) => haystack.includes(token) || compact.includes(token))) return null;
   return `The homepage at ${facts.websiteUrl} never mentions "${facts.businessName}" or its domain; it may not be the business's site (expired or taken-over domain).`;

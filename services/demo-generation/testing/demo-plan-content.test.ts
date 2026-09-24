@@ -344,6 +344,7 @@ test("a homepage that never mentions the business is not evidence about it", asy
   assert.ok(siteIdentityMismatch(withSite("Musangwin slot gacor malam ini", "MUSANGWIN", "Technical Building Systems", "http://saveandsmile.com/")));
   assert.equal(siteIdentityMismatch(withSite("Fast! Friendly! Froggy! Plumbing in Northern Utah", "HOME | FroggyplumbingCom", "JC Plumbing LLC", "http://froggyplumbing.com/")), null);
   assert.equal(siteIdentityMismatch(withSite("Painting in Layton", "Wilson And Sons Painting", "Wilson & Sons Painting", "http://www.wilsonandsonsut.com/")), null);
+  assert.equal(siteIdentityMismatch(withSite("Amp'd Electric, electricians in Salt Lake City", "Electricians in Salt Lake City", "Amp'd Electric", "http://www.ampd-electric.com/")), null, "hyphenated domain, apostrophe name");
 });
 
 test("a dead website gets one true note and no absence claims", () => {
