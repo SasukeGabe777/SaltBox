@@ -39,7 +39,7 @@ const FROGGY_V2 = {
 
 /** A genuinely weak site, fully measured by v2. */
 const WEAK_V2 = {
-  mobile: { viewportMetaPresent: false, horizontalOverflow: true, emulatedMobileDevice: true },
+  mobile: { viewportMetaPresent: false, horizontalOverflow: true, emulatedMobileDevice: true, mobileScrollWidth: 980, mobileClientWidth: 390 },
   content: { servicesPagePresent: false, servicesSectionPresent: false, aboutPagePresent: false, aboutSectionPresent: false },
   conversion: {
     prominentCtaPresent: false,
@@ -91,6 +91,13 @@ test("each piece of counter-evidence withdraws exactly its own claim", () => {
 
   const desktopUaOverflow = { ...WEAK_V2, mobile: { ...WEAK_V2.mobile, emulatedMobileDevice: undefined } };
   assert.equal(supportedSiteClaims(desktopUaOverflow).has("MOBILE_OVERFLOW"), false);
+});
+
+test("a sliver of carousel overflow is not claimed as a phone layout problem", () => {
+  const sliver = { ...WEAK_V2, mobile: { ...WEAK_V2.mobile, mobileScrollWidth: 405, mobileClientWidth: 390 } };
+  assert.equal(supportedSiteClaims(sliver).has("MOBILE_OVERFLOW"), false);
+  const unmeasured = { ...WEAK_V2, mobile: { viewportMetaPresent: true, horizontalOverflow: true, emulatedMobileDevice: true } };
+  assert.equal(supportedSiteClaims(unmeasured).has("MOBILE_OVERFLOW"), false);
 });
 
 test("malformed or empty findings support nothing", () => {

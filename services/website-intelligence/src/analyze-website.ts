@@ -523,6 +523,7 @@ function aggregateSignals(
     contentWiderThanViewport: mobileDom ? mobileDom.scrollWidth > mobileDom.clientWidth + 2 : null,
     navigationPresent: mobileDom?.navPresent ?? homepageDom.navPresent,
     emulatedMobileDevice: mobileDom !== null,
+    ...(mobileDom ? { mobileScrollWidth: mobileDom.scrollWidth, mobileClientWidth: mobileDom.clientWidth } : {}),
   };
 
   const failedByType = (types: string[]) =>
@@ -578,6 +579,7 @@ function aggregateSignals(
     servicesPagePresent: input.pages.some((pageEntry) => pageEntry.role === "services" && pageEntry.reachable),
     aboutPagePresent: input.pages.some((pageEntry) => pageEntry.role === "about" && pageEntry.reachable),
     servicesSectionPresent: homepageDoms.some((dom) => dom.headingTexts.some((heading) => SERVICES_HEADING.test(heading))),
+    leadHeadings: homepageDom.headingTexts.slice(0, 6),
     aboutSectionPresent: homepageDoms.some((dom) => dom.headingTexts.some((heading) => ABOUT_HEADING.test(heading))),
     copyrightYear: homepageDom.copyrightYear,
     lastModifiedHeader: input.lastModified,

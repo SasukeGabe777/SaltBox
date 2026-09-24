@@ -82,8 +82,9 @@ export function extractDomSignals(): DomSignals {
       return { fieldCount: fields.length, hasSubmit, looksLikeContact };
     });
 
-  // Anchored to the start of the label so body copy ("service call fees") never counts.
-  const ctaPattern = /^(get|request)\s+(an?\s+|your\s+)?(free\s+)?(quote|estimate|consultation|bid)s?\b|\bfree\s+(quote|estimate|consultation)s?\b|^book\s+(now|online|today|service|an?\s+(appointment|visit|service))\b|^schedule\s+(online|now|today|service|an?\s+(appointment|service|visit|call))\b|^call\s+(or\s+text\s+)?(us\s*)?(now|today)?\s*!?$|^(call|text)\s+(or\s+(call|text)\s+)?us\b|^contact\s+us\b|^get\s+started\b|^request\s+(service|an?\s+appointment)\b/i;
+  // Anchored to the start of the label so body copy ("service call fees") never counts:
+  // a conversion verb followed closely by what the visitor gets.
+  const ctaPattern = /^(get|request|schedule|book|claim|reserve|start)\b[\w\s'’&-]{0,40}?\b(quotes?|estimates?|bids?|consultations?|inspections?|assessments?|appointments?|services?|visits?|calls?|repairs?|online|now|today|started)\b|\bfree\s+(quotes?|estimates?|consultations?|inspections?|assessments?)\b|^call\s+(or\s+text\s+)?(us\s*)?(now|today)?\s*!?$|^(call|text)\s+(or\s+(call|text)\s+)?us\b|^contact\s+us\b/i;
   const ctaTexts: string[] = [];
   const clickable = Array.from(document.querySelectorAll("a, button"));
   for (const element of clickable.slice(0, 600)) {

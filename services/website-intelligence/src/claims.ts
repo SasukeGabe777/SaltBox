@@ -58,8 +58,12 @@ export function supportedSiteClaims(findings: unknown, context: ClaimContext = {
   if (noOnlineContact) claims.add("CONTACT_FORM_MISSING");
   if (noOnlineContact && conversion?.contactPagePresent === false) claims.add("CONTACT_PATH_MISSING");
 
-  // Overflow is only real if we looked with an actual phone profile.
-  if (mobile?.emulatedMobileDevice === true && mobile.horizontalOverflow === true) claims.add("MOBILE_OVERFLOW");
+  // Overflow is only real if we looked with an actual phone profile, and
+  // only worth claiming ("visitors scroll sideways, some of it is cut off")
+  // when it is substantial: a carousel poking out 15px is not that.
+  if (mobile?.emulatedMobileDevice === true && mobile.horizontalOverflow === true && substantialOverflow(mobile)) {
+    claims.add("MOBILE_OVERFLOW");
+  }
   if (mobile?.viewportMetaPresent === false) claims.add("MOBILE_VIEWPORT_MISSING");
 
   // Services / about: a single-page site with a services section is not
@@ -72,6 +76,14 @@ export function supportedSiteClaims(findings: unknown, context: ClaimContext = {
     claims.add("ABOUT_CONTENT_MISSING");
   }
   return claims;
+}
+
+/** At least 8% of the screen (and 24px) wider than the phone viewport. */
+export function substantialOverflow(mobile: Record<string, unknown>): boolean {
+  const scroll = mobile.mobileScrollWidth;
+  const client = mobile.mobileClientWidth;
+  if (typeof scroll !== "number" || typeof client !== "number" || client <= 0) return false;
+  return scroll - client >= Math.max(24, client * 0.08);
 }
 
 function record(value: unknown): Record<string, unknown> | undefined {

@@ -103,7 +103,7 @@ function uaSwitchingSiteHandler(req: IncomingMessage, res: ServerResponse) {
          <body style="margin:0"><div style="width:320px"><a href="tel:4355550100">Call or Text Us</a>
          <a href="/book-online">Book Online</a>${services}</div></body></html>`
       : `<!doctype html><html><head><title>HOME</title><meta name="viewport" content="width=device-width, initial-scale=1"></head>
-         <body style="margin:0"><div style="width:1080px"><a href="tel:4355550100">Call or Text Us</a>${services}</div></body></html>`,
+         <body style="margin:0"><div style="width:1080px"><a href="tel:4355550100">Call or Text Us</a><a href="#">Schedule a Free Roof Inspection</a>${services}</div></body></html>`,
   );
 }
 
@@ -121,6 +121,7 @@ test("UA-switching builder: the phone layout is measured as a phone sees it, and
     assert.equal(result.conversion?.prominentCtaPresent, true, '"Call or Text Us" is a call to action');
     assert.equal(result.conversion?.bookingLinkPresent, true, "the phone-only Book Online button counts");
     assert.ok(result.conversion?.homepageCtaTexts?.includes("Book Online"));
+    assert.ok(result.conversion?.homepageCtaTexts?.includes("Schedule a Free Roof Inspection"), "verb + noun CTAs count");
     assert.deepEqual(result.conversion?.websitePhones, ["+14355550100"]);
     assert.equal(result.content?.servicesPagePresent, false);
     assert.equal(result.content?.servicesSectionPresent, true);

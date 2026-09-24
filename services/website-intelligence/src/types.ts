@@ -48,6 +48,9 @@ export interface MobileSignals {
    * about mobile layout must only be made when this is true.
    */
   emulatedMobileDevice?: boolean;
+  /** Phone-layout document width vs viewport width (px), when measured. */
+  mobileScrollWidth?: number;
+  mobileClientWidth?: number;
 }
 
 export interface TechnicalSignals {
@@ -114,6 +117,8 @@ export interface ContentSignals {
   servicesSectionPresent?: boolean;
   /** The homepage itself has an about / who-we-are section. */
   aboutSectionPresent?: boolean;
+  /** First homepage headings, verbatim (how the site describes itself). */
+  leadHeadings?: string[];
   copyrightYear: number | null;
   lastModifiedHeader: string | null;
 }

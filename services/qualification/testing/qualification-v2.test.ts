@@ -200,3 +200,29 @@ function intelligenceFixture(overrides: Partial<WebsiteIntelligenceResult> = {})
     ...overrides,
   };
 }
+
+test("2.2.0: a site that calls itself a supplier is a supplier, whatever its name", () => {
+  const content = (leadHeadings: string[]) => ({
+    homepageWordCount: 400, servicesPagePresent: true, aboutPagePresent: true, copyrightYear: null, lastModifiedHeader: null, leadHeadings,
+  });
+  const jerrys = intelligenceFixture({ content: content(["Ogden's Oldest Independent Plumbing Supplier", "In-Stock Guarantee"]) });
+  assert.equal(
+    deriveQualificationFeaturesV2({ name: "Jerry's Plumbing Specialties", category: "plumbing", phone: "1", websiteUrl: "https://jps.test/" }, jerrys).targetFit,
+    "supplier_manufacturer",
+  );
+  const contractor = intelligenceFixture({ content: content(["Fast! Friendly! Froggy!", "Our Plumbing Services"]) });
+  assert.equal(
+    deriveQualificationFeaturesV2({ name: "JC Plumbing LLC", category: "plumbing", phone: "1", websiteUrl: "https://froggy.test/" }, contractor).targetFit,
+    "eligible",
+  );
+});
+
+test("2.2.0: only substantial real-phone overflow scores as a mobile problem", () => {
+  const mobile = (scroll: number) => ({
+    viewportMetaPresent: true, horizontalOverflow: true, contentWiderThanViewport: true, navigationPresent: true,
+    emulatedMobileDevice: true, mobileScrollWidth: scroll, mobileClientWidth: 390,
+  });
+  const input = { name: "Some HVAC", category: "hvac", phone: "1", websiteUrl: "https://hvac.test/" };
+  assert.equal(deriveQualificationFeaturesV2(input, intelligenceFixture({ mobile: mobile(405) })).values["mobile_overflow"], false);
+  assert.equal(deriveQualificationFeaturesV2(input, intelligenceFixture({ mobile: mobile(980) })).values["mobile_overflow"], true);
+});

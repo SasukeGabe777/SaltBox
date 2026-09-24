@@ -12,7 +12,14 @@ export const SCORING_VERSION_V2 = "qualification-v2";
  * on brand domains, and trade suppliers ("Roofers Supply"); a website that
  * refuses automated analysis is "cannot evaluate", never a deficiency.
  */
-export const SCORING_ARTIFACT_VERSION_V2 = "2.1.0";
+/**
+ * 2.2.0: a site that describes itself as a supplier/wholesaler in its title
+ * or lead headings is a supplier (name-only detection missed "Jerry's
+ * Plumbing Specialties", "Ogden's Oldest Independent Plumbing Supplier");
+ * mobile overflow scores only when substantial and measured as a real phone
+ * (website-intelligence-v2), matching what a demo may claim.
+ */
+export const SCORING_ARTIFACT_VERSION_V2 = "2.2.0";
 export const DECISION_POLICY_VERSION_V2 = "qualification-policy-v2";
 export const PIPELINE_VERSION_V2 = "deep-intelligence-qualification-pipeline-v2";
 export const QUALIFICATION_THRESHOLD_V2 = 60;

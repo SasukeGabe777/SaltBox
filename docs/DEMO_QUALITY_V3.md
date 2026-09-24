@@ -151,6 +151,26 @@ and main heading; slow simulated-phone load). Regression tests encode the
 case: `testing/claims.test.ts` and the UA-switching fixture in
 `testing/browser-analyzer.test.ts`.
 
+## Brand showcase, website phone, target ranking (2026-09-24)
+
+- **Website phone wins.** Numbers the business's own homepage links (tel:,
+  desktop or phone layout) are recorded as `conversion.websitePhones` and
+  persisted as contact methods; demo facts prefer them over a listing number
+  (Froggy's listing had a different, likely stale, number).
+- **Full-size logos.** Header logos are often 90px thumbnails. Before
+  downloading, the brand extractor asks for a larger rendition of the SAME
+  file (Wix `/v1/fit/w_512`, WordPress `-WxH` suffix, Squarespace
+  `?format`), falling back to what the page used.
+- **Brand showcase.** When a confident logo is at least 160px, the hero
+  features it large (white card) with the business's own slogan, extracted
+  verbatim and strictly (first four headings, 2-7 words, an exclamation or the
+  brand's own name, no digits). Optional `hero.showcase` content, so approved
+  versions render unchanged. Goal: the redesign must never look less "theirs"
+  than the site it replaces while keeping the better conversion flow.
+- **`pnpm demo:rank`** lists eligible prospects by the number of true,
+  measured improvement notes their demo would carry (same plan/note code as
+  the demo), flagging analyses that predate website-intelligence-v2.
+
 ## Known follow-ups
 
 - Few sites expose many usable photos; typography-led layouts carry most demos.
