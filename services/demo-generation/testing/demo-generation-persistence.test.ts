@@ -144,7 +144,7 @@ test("full generation: qualified v2 prospect -> plan -> content -> Demo -> DemoV
     if (result.status !== "generated") return;
     const summary = result.summary;
     assert.equal(summary.versionNumber, 1);
-    assert.equal(summary.templateName, "local-service-clean", "no brand evidence: typography-led composition");
+    assert.equal(summary.templateName, "local-service-bold", "no brand evidence: high-contrast composition on category colors");
     assert.equal(summary.templateVersion, "2.0.0");
     assert.ok(summary.deficiencyCodes.includes("CTA_MISSING"));
     assert.ok(summary.deficiencyCodes.includes("CONTACT_FORM_MISSING"));
@@ -403,7 +403,7 @@ test("brand-enhanced regeneration: same Demo identity and locator, new v2 versio
     const before = await generateDemoForProspect(ctx.db, outcome.prospectId);
     assert.equal(before.status, "generated");
     if (before.status !== "generated") return;
-    assert.equal(before.summary.templateName, "local-service-clean", "no brand evidence selects the clean composition");
+    assert.equal(before.summary.templateName, "local-service-bold", "no brand evidence selects the bold composition");
 
     // Persist brand intelligence (as the extractor would) and regenerate.
     const facts = await collectDemoSourceFacts(ctx.db, outcome.prospectId);
@@ -508,7 +508,7 @@ test("the injected brand extractor runs only when needed and its failure is neve
     });
     assert.equal(degraded.status, "generated", "extractor failure still yields a high-quality fallback demo");
     if (degraded.status !== "generated") return;
-    assert.equal(degraded.summary.templateName, "local-service-clean");
+    assert.equal(degraded.summary.templateName, "local-service-bold");
   } finally {
     await ctx.destroy();
   }

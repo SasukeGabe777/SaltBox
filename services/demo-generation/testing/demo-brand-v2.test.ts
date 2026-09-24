@@ -175,8 +175,8 @@ test("composition selection is deterministic with inspectable reasons", () => {
     paletteConfidence: "none",
     extractedServiceCount: 0,
   });
-  assert.equal(clean.key, "clean");
-  assert.ok(clean.reasons.some((reason) => reason.includes("typography-led")));
+  assert.equal(clean.key, "bold", "no brand assets: the high-contrast layout on category colors");
+  assert.ok(clean.reasons.some((reason) => reason.includes("category colors")));
 
   // A small image (below hero grade) does not force premium.
   const smallImage = selectComposition({
@@ -186,7 +186,7 @@ test("composition selection is deterministic with inspectable reasons", () => {
     paletteConfidence: "none",
     extractedServiceCount: 0,
   });
-  assert.equal(smallImage.key, "clean");
+  assert.equal(smallImage.key, "bold");
 });
 
 test("demo-plan-v2 carries brand summary, composition reasoning, and gallery section", () => {
@@ -205,7 +205,7 @@ test("demo-plan-v2 carries brand summary, composition reasoning, and gallery sec
 
   const withoutBrand: DemoSourceFacts = { ...facts, brand: undefined as never };
   const fallbackPlan = buildDemoPlan(withoutBrand);
-  assert.equal(fallbackPlan.template.templateName, "local-service-clean");
+  assert.equal(fallbackPlan.template.templateName, "local-service-bold");
   assert.equal(fallbackPlan.brand, null);
   assert.ok(fallbackPlan.fallbacks.some((fallback) => fallback.includes("no brand intelligence")));
 });

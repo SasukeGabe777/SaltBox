@@ -167,6 +167,11 @@ case: `testing/claims.test.ts` and the UA-switching fixture in
   brand's own name, no digits). Optional `hero.showcase` content, so approved
   versions render unchanged. Goal: the redesign must never look less "theirs"
   than the site it replaces while keeping the better conversion flow.
+- **Bold is the no-brand default.** Without a usable logo/palette/photo the
+  plan now selects the high-contrast `bold` composition on category colors
+  (quote form above the fold) instead of the all-white `clean` layout, which
+  read as bland for no-website businesses. `clean` stays available as an
+  operator regeneration override.
 - **`pnpm demo:rank`** lists eligible prospects by the number of true,
   measured improvement notes their demo would carry (same plan/note code as
   the demo), flagging analyses that predate website-intelligence-v2.

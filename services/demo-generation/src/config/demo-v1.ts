@@ -133,10 +133,14 @@ export function selectComposition(evidence: CompositionEvidence): CompositionSel
     );
     return { key: "bold", ...pick("bold"), reasons };
   }
+  // Without brand assets the high-contrast layout still carries the page on
+  // category colors and puts the quote form above the fold; the all-white
+  // typography-led "clean" layout read as bland next to real sites, so it is
+  // kept for explicit operator regeneration only.
   reasons.push(
-    `no hero-grade photograph and brand extraction is weak (logo ${evidence.logoConfidence}, palette ${evidence.paletteConfidence}) — the typography-led layout needs no assets`,
+    `no hero-grade photograph and brand extraction is weak (logo ${evidence.logoConfidence}, palette ${evidence.paletteConfidence}) — the high-contrast layout works on category colors alone, quote form above the fold`,
   );
-  return { key: "clean", ...pick("clean"), reasons };
+  return { key: "bold", ...pick("bold"), reasons };
 }
 
 function pick(key: CompositionKey): { templateName: string; templateVersion: string } {

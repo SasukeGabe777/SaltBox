@@ -248,7 +248,7 @@ test("no-website businesses get a WEBSITE_MISSING plan and clean listing-fact co
   const facts = qualifiedFacts({ intelligence: undefined as never, websiteUrl: undefined as never });
   const plan = buildDemoPlan(facts);
   assert.deepEqual(plan.deficiencies.map((deficiency) => deficiency.code), ["WEBSITE_MISSING"]);
-  assert.equal(plan.template.templateName, "local-service-clean");
+  assert.equal(plan.template.templateName, "local-service-bold");
   assert.ok(plan.fallbacks.some((fallback) => fallback.startsWith("no website exists")));
   const content = buildDemoContent(facts, plan);
   assert.ok(content.services.items.length >= 3, "typical services fill the page");
