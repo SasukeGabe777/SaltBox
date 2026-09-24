@@ -268,6 +268,18 @@ export interface BuildPaletteInput {
  * Build a constrained, contrast-safe palette. Returns a fallback-status
  * palette when no defensible brand colors exist — never a broken one.
  */
+/** Saturated yellows (roughly 40-72 degrees) that only work under dark text. */
+function isYellowish(color: Rgb): boolean {
+  const hsl = toHsl(color);
+  return hsl.h >= 40 && hsl.h <= 72 && hsl.s >= 0.35 && hsl.l >= 0.3;
+}
+
+/** The yellow as a rich gold: same hue family, saturated, mid lightness (never olive). */
+function goldFrom(color: Rgb): Rgb {
+  const hsl = toHsl(color);
+  return fromHsl({ h: Math.min(Math.max(hsl.h, 40), 48), s: Math.max(hsl.s, 0.8), l: 0.47 });
+}
+
 export function buildBrandPalette(input: BuildPaletteInput): BrandPalette {
   const weighted: ColorCandidate[] = [
     ...(input.logoColors ?? []).map((color, index) => ({
@@ -293,6 +305,15 @@ export function buildBrandPalette(input: BuildPaletteInput): BrandPalette {
   groups.sort((a, b) => b.weight - a.weight || toHex(a.color).localeCompare(toHex(b.color)));
 
   const considered = weighted.length;
+  // A yellow can only carry dark text: darkened until white text passes it
+  // turns olive (American Plumbing's #f5e400 -> #6d6503). When another real
+  // brand color exists, it leads and the yellow becomes a gold accent.
+  const yellowLead = groups[0] !== undefined && isYellowish(groups[0].color);
+  const altLead = yellowLead ? groups.find((group) => !isYellowish(group.color) && group.weight >= 15) : undefined;
+  if (yellowLead && altLead) {
+    groups.splice(groups.indexOf(altLead), 1);
+    groups.unshift(altLead);
+  }
   const primaryGroup = groups[0];
   if (!primaryGroup || primaryGroup.weight < 26) {
     return {
@@ -312,7 +333,7 @@ export function buildBrandPalette(input: BuildPaletteInput): BrandPalette {
   );
   // Accent falls back to a deterministic lightened/rotated primary.
   const accentBase = accentGroup?.color ?? deriveAccentFrom(primaryGroup.color);
-  const accent = ensureContrastWithWhite(accentBase);
+  const accent = isYellowish(accentBase) ? goldFrom(accentBase) : ensureContrastWithWhite(accentBase);
   const secondary = ensureContrastWithWhite(
     groups.find((group) => group !== primaryGroup && group !== accentGroup)?.color ?? deepen(primaryGroup.color),
   );

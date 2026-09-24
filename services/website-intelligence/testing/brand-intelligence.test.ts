@@ -347,3 +347,13 @@ test("logo upgrades request larger renditions of the same file only", async () =
   assert.deepEqual(logoSourceUpgrades("https://ex.com/logo.svg"), []);
   assert.deepEqual(logoSourceUpgrades("not a url"), []);
 });
+
+test("a yellow-led brand keeps its blue as primary and its yellow as gold, never olive", async () => {
+  const { buildBrandPalette } = await import("../src/brand/derive.ts");
+  const { parseColor } = await import("../src/brand/color.ts");
+  const c = (hex: string, weight: number, source: string) => ({ color: parseColor(hex)!, weight, source });
+  const palette = buildBrandPalette({ cssCandidates: [c("#f5e400", 60, "button/CTA background"), c("#1b3f8f", 30, "header"), c("#2c6ea3", 20, "link")] });
+  assert.equal(palette.colors?.primary, "#1b3f8f");
+  assert.equal(palette.colors?.accent, "#f0c000");
+  assert.equal(palette.colors?.onAccent, "#1a1e24", "dark text on the gold");
+});
