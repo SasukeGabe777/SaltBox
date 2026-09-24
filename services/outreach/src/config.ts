@@ -11,7 +11,8 @@ export const BODY_TEMPLATE_VERSION = "outreach-body-demo-v1";
  * false, so the message says a site was built for them instead.
  */
 export const SUBJECT_TEMPLATE_VERSION_NEW_SITE = "outreach-subject-built-v1";
-export const BODY_TEMPLATE_VERSION_NEW_SITE = "outreach-body-new-site-v1";
+/** v2: says the map listing has no website link, never "I couldn't find a website" (most such listings omit a real site). */
+export const BODY_TEMPLATE_VERSION_NEW_SITE = "outreach-body-new-site-v2";
 export const SENDER_PROFILE_VERSION = "saltbox-sender-v1";
 export const RECENT_OUTREACH_DAYS = 30;
 export const MAX_BULK_PREPARATION = 10;

@@ -57,7 +57,7 @@ export function renderOutreachMessage(input: RenderOutreachMessageInput): Render
     ? `I came across ${businessName} while looking at ${category} businesses in ${location}.`
     : `I came across ${businessName} while looking at ${category} businesses.`;
   const bridge = newSite
-    ? `I couldn't find a website for ${businessName}, so I put one together to show what it could look like:`
+    ? `The map listing I found for ${businessName} doesn't link to a website, so I put one together to show what it could look like:`
     : input.observation
       ? `I noticed ${input.observation.text}, so I put together a redesigned version of the site:`
       : "I put together a redesigned direction for the site so you could see the idea instead of reading a generic pitch:";

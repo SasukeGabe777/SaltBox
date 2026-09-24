@@ -176,8 +176,8 @@ test("a business with no website is told a site was built, never 'rebuilt'", () 
   const message = renderOutreachMessage(input);
   assert.equal(message.subject, "I built a website for Champion Services");
   assert.equal(message.subjectTemplateVersion, "outreach-subject-built-v1");
-  assert.equal(message.bodyTemplateVersion, "outreach-body-new-site-v1");
-  assert.ok(message.body.includes("I couldn't find a website for Champion Services"));
+  assert.equal(message.bodyTemplateVersion, "outreach-body-new-site-v2");
+  assert.ok(message.body.includes("The map listing I found for Champion Services doesn't link to a website"));
   assert.ok(!/rebuil|redesign|what I changed/i.test(message.body), "no claims about an existing site");
   assert.equal(message.observation, null, "site observations never apply without a site");
   assert.equal(renderOutreachMessage({ ...input, hasWebsite: true }).subject, "I rebuilt the Champion Services website");

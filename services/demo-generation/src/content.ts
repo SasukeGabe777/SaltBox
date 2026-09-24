@@ -84,7 +84,7 @@ export function buildDemoContent(facts: DemoSourceFacts, plan: DemoPlan, extras:
   if (websiteBrand) {
     note("business.displayName", "extracted", `brand name from the business's own website domain (listing name "${facts.businessName}")`, brand?.analysisId);
   } else if (name !== facts.businessName) {
-    note("business.displayName", "generated", `observed name "${facts.businessName}" without its location suffix`);
+    note("business.displayName", "generated", `observed name "${facts.businessName}" without its location suffix or appended keywords`);
   }
   note("business.category", "observed", observedSource, facts.discoverySourceRecordId);
   if (facts.phone) note("business.phone", "observed", "contact_method", facts.phone.contactMethodId);
@@ -389,7 +389,12 @@ export function buildDemoContent(facts: DemoSourceFacts, plan: DemoPlan, extras:
  * Removes a trailing location suffix (" - Ogden", " | Ogden, UT", " (Utah)")
  * when it matches the observed city or state. Anything else is kept verbatim.
  */
-export function displayBusinessName(observed: string, city?: string, state?: string): string {
+export function displayBusinessName(rawObserved: string, city?: string, state?: string): string {
+  // Listing names stuffed with SEO text ("Epic Electric - Salt Lake City |
+  // Professional Electricians & Electrical Contractor"): the name is what
+  // precedes the first " | ".
+  const pipe = rawObserved.indexOf(" | ");
+  const observed = pipe >= 3 ? rawObserved.slice(0, pipe).trim() : rawObserved;
   const match = /^(.*?\S)\s*(?:[-–—|:]\s*|\()\s*([^()|]+?)\)?\s*$/.exec(observed);
   if (!match) return observed;
   const [, base, suffix] = match;

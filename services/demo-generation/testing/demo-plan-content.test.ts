@@ -364,3 +364,9 @@ test("a dead website gets one true note and no absence claims", () => {
   assert.equal(content.improvements?.length, 1);
   assert.match(content.improvements?.[0]?.before ?? "", /Site not found/);
 });
+
+test("SEO keywords appended to a listing name are not part of the displayed name", async () => {
+  const { displayBusinessName } = await import("../src/content.ts");
+  assert.equal(displayBusinessName("Epic Electric - Salt Lake City | Professional Electricians & Electrical Contractor", "Salt Lake City", "UT"), "Epic Electric");
+  assert.equal(displayBusinessName("Aloha Plumbing, Sewers & Drains", "Provo", "UT"), "Aloha Plumbing, Sewers & Drains");
+});

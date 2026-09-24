@@ -26,7 +26,10 @@ export function buildImprovements(facts: DemoSourceFacts, plan: DemoPlan, busine
       id: "website",
       anchor: "hero",
       title: "A website customers can find",
-      before: `We couldn't find a website for ${businessName}, so customers searching online only see a listing.`,
+      // Only the listing is verified: map listings often omit a site the
+      // business does have (16 of 19 checked on 2026-09-24), so never claim
+      // "you have no website".
+      before: `The map listing we found for ${businessName} doesn't link to a website, so customers who find you there have nowhere to click through to.`,
       after: "A complete site with your services, service area, and a clear way to request an estimate.",
       evidence: ["WEBSITE_MISSING"],
     });
