@@ -147,6 +147,11 @@ export function ctaHref(kind: "phone" | "email" | "contact", content: DemoConten
 }
 
 /** The business's real logo when available, else the initials mark. */
+/** Header name next to the mark, omitted when the logo is a wordmark (newer content). */
+export function brandName(content: DemoContent): string {
+  return content.brand.logo && content.brand.logoIsWordmark ? "" : `<span class="name">${esc(content.business.name)}</span>`;
+}
+
 export function brandMark(content: DemoContent, options: { markClass?: string; logoClass?: string } = {}): string {
   const logo = content.brand.logo;
   if (logo) {

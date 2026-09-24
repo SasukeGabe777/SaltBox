@@ -80,6 +80,11 @@ export interface DemoBrandContent {
   palette?: DemoPalette;
   /** The business's actual logo, locally stored and validated (v2). */
   logo?: DemoImage;
+  /**
+   * The logo is a wide wordmark that already spells the name; the header
+   * shows it alone instead of repeating (and truncating) the name beside it.
+   */
+  logoIsWordmark?: boolean;
 }
 
 /** Real business photography selected by brand intelligence (v2). */

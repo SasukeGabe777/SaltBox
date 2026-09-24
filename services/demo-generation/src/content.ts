@@ -53,6 +53,8 @@ const MIN_SERVICES = 3;
 const MAX_SERVICES = 6;
 /** Smallest logo side (px) that still looks crisp featured large in the hero. */
 const SHOWCASE_MIN_LOGO_PX = 160;
+/** Width/height at which a logo reads as a wordmark carrying the name. */
+const WORDMARK_MIN_ASPECT = 2.4;
 
 export function buildDemoContent(facts: DemoSourceFacts, plan: DemoPlan, extras: BuildDemoContentExtras = {}): DemoContent {
   const category = facts.category ?? "contractor";
@@ -323,6 +325,7 @@ export function buildDemoContent(facts: DemoSourceFacts, plan: DemoPlan, extras:
               height: brand.logo.height,
               alt: `${name} logo`,
             },
+            ...(brand.logo.width / Math.max(1, brand.logo.height) >= WORDMARK_MIN_ASPECT ? { logoIsWordmark: true } : {}),
           }
         : {}),
     },

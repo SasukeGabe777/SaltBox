@@ -362,3 +362,12 @@ test("the brand showcase renders only for content that carries it", () => {
     assert.equal(render(base).includes('data-qa="hero-showcase"'), false, `${name}: absent without content`);
   }
 });
+
+test("a wordmark logo replaces the header name only when content says so", () => {
+  const base = brandedContent();
+  const wordmark: DemoContent = { ...base, brand: { ...base.brand, logoIsWordmark: true } };
+  for (const render of [renderLocalServiceCleanV2, renderLocalServiceBoldV2, renderLocalServicePremiumV2]) {
+    assert.ok(render(base).includes('<span class="name">'), "name shown by default");
+    assert.equal(render(wordmark).includes('<span class="name">'), false, "wordmark stands alone");
+  }
+});

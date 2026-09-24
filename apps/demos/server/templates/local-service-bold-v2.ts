@@ -15,6 +15,7 @@ import {
   ICONS,
   baseCss,
   brandMark,
+  brandName,
   contactInfoRows,
   ctaHref,
   demoIndicator,
@@ -148,7 +149,7 @@ h2{font-size:clamp(1.6rem,3vw,2.3rem);line-height:1.15;letter-spacing:-.01em;fon
   <div class="container header-row">
     <a class="brand" href="#top" aria-label="${esc(business.name)} home">
       ${brandMark(content)}
-      <span class="name">${esc(business.name)}</span>
+      ${brandName(content)}
     </a>
     <input type="checkbox" id="nav-toggle" class="nav-toggle" aria-hidden="true">
     <label for="nav-toggle" class="nav-toggle-label" aria-label="Toggle navigation">${ICONS.menu}</label>
