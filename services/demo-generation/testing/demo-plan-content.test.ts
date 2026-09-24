@@ -370,3 +370,11 @@ test("SEO keywords appended to a listing name are not part of the displayed name
   assert.equal(displayBusinessName("Epic Electric - Salt Lake City | Professional Electricians & Electrical Contractor", "Salt Lake City", "UT"), "Epic Electric");
   assert.equal(displayBusinessName("Aloha Plumbing, Sewers & Drains", "Provo", "UT"), "Aloha Plumbing, Sewers & Drains");
 });
+
+test("an email on a website domain that does not exist is not shown", async () => {
+  const { onDeadDomain } = await import("../src/facts.ts");
+  const dead = { fatal: { failureKind: "dns_not_found", transient: false } };
+  assert.equal(onDeadDomain("info@jenkins-plumbing.com", "http://www.jenkins-plumbing.com/", dead), true);
+  assert.equal(onDeadDomain("jenkins@gmail.com", "http://www.jenkins-plumbing.com/", dead), false);
+  assert.equal(onDeadDomain("info@jenkins-plumbing.com", "http://www.jenkins-plumbing.com/", { fatal: { failureKind: "dns_transient", transient: true } }), false);
+});

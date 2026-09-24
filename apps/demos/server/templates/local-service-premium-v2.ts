@@ -78,7 +78,7 @@ nav.site-nav a:hover{color:#fff}
 .hero{position:relative;color:#fff;min-height:min(88vh,760px);display:flex;align-items:center;overflow:hidden;background:linear-gradient(150deg,var(--primary-deep) 0%,var(--primary) 100%)}
 .hero-photo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0}
 .hero-overlay{position:absolute;inset:0;z-index:1;background:linear-gradient(100deg,rgba(8,12,18,.82) 0%,rgba(8,12,18,.55) 55%,rgba(8,12,18,.25) 100%)}
-.hero-content{position:relative;z-index:2;padding:clamp(90px,14vw,150px) 0 clamp(64px,9vw,110px)}
+.hero-content{position:relative;z-index:2;padding-top:clamp(90px,14vw,150px);padding-bottom:clamp(64px,9vw,110px)}
 .hero .eyebrow{display:inline-block;font-size:.82rem;font-weight:700;letter-spacing:.24em;text-transform:uppercase;color:rgba(255,255,255,.92);border-bottom:2px solid var(--accent);padding-bottom:6px;margin-bottom:20px}
 .hero h1{font-size:clamp(2.5rem,5.8vw,4.2rem);line-height:1.06;max-width:18ch;font-weight:600}
 .hero .sub{margin-top:22px;font-size:clamp(1.05rem,1.6vw,1.3rem);color:rgba(255,255,255,.92);max-width:50ch}

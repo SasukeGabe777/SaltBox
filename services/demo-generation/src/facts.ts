@@ -131,7 +131,12 @@ export async function collectDemoSourceFacts(db: Database, prospectId: string): 
       contactMethodId: phone.id,
     };
   }
-  if (email) facts.email = { value: email.display_value ?? email.normalized_value, contactMethodId: email.id };
+  // An address on a domain confirmed not to exist cannot receive mail;
+  // showing it would hand customers a dead end (Jenkins Plumbing).
+  const emailValue = email ? (email.display_value ?? email.normalized_value) : undefined;
+  if (email && emailValue && !onDeadDomain(emailValue, website?.canonical_url, intelligence?.structured_findings)) {
+    facts.email = { value: emailValue, contactMethodId: email.id };
+  }
   const city = stringOrUndefined(metadata?.city);
   const state = stringOrUndefined(metadata?.state);
   const street = stringOrUndefined(metadata?.street);
@@ -227,4 +232,18 @@ export function categoryFromName(name: string, category: string | null): { categ
 
 function arrayOfStrings(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === "string") : [];
+}
+
+/** True when the email's domain is the website domain that confirmed does not exist. */
+export function onDeadDomain(email: string, websiteUrl: string | null | undefined, findings: unknown): boolean {
+  const fatal = asRecord(asRecord(findings)?.fatal);
+  if (fatal?.failureKind !== "dns_not_found" || fatal.transient !== false || !websiteUrl) return false;
+  const emailDomain = email.split("@")[1]?.toLowerCase().trim();
+  let siteDomain = "";
+  try {
+    siteDomain = new URL(websiteUrl).hostname.toLowerCase().replace(/^www\./, "");
+  } catch {
+    return false;
+  }
+  return emailDomain !== undefined && (emailDomain === siteDomain || emailDomain.endsWith(`.${siteDomain}`));
 }
