@@ -76,6 +76,9 @@ export function buildDemoContent(facts: DemoSourceFacts, plan: DemoPlan, extras:
     provenance.push({ field, kind, source, ...(ref !== undefined ? { ref } : {}) });
 
   note("business.name", "observed", observedSource, facts.discoverySourceRecordId);
+  if (facts.categoryCorrectedFrom) {
+    note("business.categoryKey", "generated", `trade stated in the business name ("${facts.businessName}") over the listing category "${facts.categoryCorrectedFrom}"`);
+  }
   if (websiteBrand) {
     note("business.displayName", "extracted", `brand name from the business's own website domain (listing name "${facts.businessName}")`, brand?.analysisId);
   } else if (name !== facts.businessName) {

@@ -321,3 +321,12 @@ test("improvement notes come only from measured deficiencies, and the comparison
   assert.deepEqual(findUnsupportedClaims(content), []);
   assert.equal(buildDemoContent(facts, plan).comparison, undefined, "no captures, no slider");
 });
+
+test("a listing category contradicted by the business name gives way to the named trade", async () => {
+  const { categoryFromName } = await import("../src/facts.ts");
+  assert.deepEqual(categoryFromName("Wilson & Sons Painting", "flooring"), { category: "painting", categoryCorrectedFrom: "flooring" });
+  assert.deepEqual(categoryFromName("Northmen Concrete", "flooring"), { category: "concrete", categoryCorrectedFrom: "flooring" });
+  assert.deepEqual(categoryFromName("Royal Plumbing Heating & Air Conditioning", "hvac"), { category: "hvac" }, "name states the listed trade too");
+  assert.deepEqual(categoryFromName("Positive Power LLC", "electrical"), { category: "electrical" }, "no trade in the name");
+  assert.deepEqual(categoryFromName("Carpet & Paint Pros", "flooring"), { category: "flooring" }, "listed trade is named");
+});

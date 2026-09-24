@@ -345,6 +345,8 @@ export interface DemoSourceFacts {
   websiteId?: string;
   businessName: string;
   category: string | null;
+  /** Set when the listing's category was replaced by the trade the name states. */
+  categoryCorrectedFrom?: string;
   lifecycleState: string;
   phone?: { display: string; e164: string; contactMethodId: string };
   email?: { value: string; contactMethodId: string };

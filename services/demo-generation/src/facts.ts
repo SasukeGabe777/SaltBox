@@ -120,7 +120,7 @@ export async function collectDemoSourceFacts(db: Database, prospectId: string): 
     prospectId: header.prospect_id,
     businessId: header.business_id,
     businessName: header.canonical_name,
-    category: header.category,
+    ...categoryFromName(header.canonical_name, header.category),
     lifecycleState: header.lifecycle_state,
     activeSuppressionIds: suppressionIds,
   };
@@ -197,6 +197,32 @@ function stringOrUndefined(value: unknown): string | undefined {
 
 function toIso(value: Date | string): string {
   return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
+}
+
+/** Trades a business name can state outright. */
+const NAME_TRADES: ReadonlyArray<[string, RegExp]> = [
+  ["painting", /\bpaint(ing|ers?)?\b/i],
+  ["concrete", /\b(concrete|masonry|cement)\b/i],
+  ["roofing", /\broof(ing|ers?)?\b/i],
+  ["plumbing", /\bplumb(ing|ers?)?\b/i],
+  ["electrical", /\belectric(al|ians?)?\b/i],
+  ["hvac", /\b(hvac|heating|cooling|air conditioning|furnace)\b/i],
+  ["landscaping", /\b(landscap\w*|lawn)\b/i],
+  ["tree_service", /\btrees?\b/i],
+  ["flooring", /\b(floor(s|ing)?|carpet)\b/i],
+  ["pest_control", /\b(pest|exterminat\w*)\b/i],
+];
+
+/**
+ * Listings sometimes carry a neighbouring trade ("Wilson & Sons Painting"
+ * tagged flooring_contractors). When the name states exactly one different
+ * supported trade and nothing about the listed one, the demo presents the
+ * trade the business names itself by; the database category is untouched.
+ */
+export function categoryFromName(name: string, category: string | null): { category: string | null; categoryCorrectedFrom?: string } {
+  const stated = NAME_TRADES.filter(([, pattern]) => pattern.test(name)).map(([trade]) => trade);
+  if (category === null || stated.length !== 1 || stated[0] === category || stated.includes(category)) return { category };
+  return { category: stated[0]!, categoryCorrectedFrom: category };
 }
 
 function arrayOfStrings(value: unknown): string[] {
