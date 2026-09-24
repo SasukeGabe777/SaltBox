@@ -216,15 +216,31 @@ export async function analyzeWebsiteIntelligence(
     // 7. Mobile pass on the homepage, as a real phone: mobile UA + viewport
     // (UA-switched builders like Wix otherwise serve their desktop layout).
     let mobileDom: DomSignals | null = null;
+    let mobileVerifiedAsPlainDevice = false;
     let mobileScreenshotTaken = false;
     const desktopUserAgent = `${await session.browser.userAgent()} ${INTELLIGENCE_UA_SUFFIX}`;
     if (homepageDom) {
       try {
         await page.setUserAgent(`${MOBILE_USER_AGENT} ${INTELLIGENCE_UA_SUFFIX}`);
         await page.setViewport({ ...MOBILE_VIEWPORT, isMobile: true, hasTouch: true, deviceScaleFactor: 3 });
+        // Builders remember the device class in a cookie (and serve cached
+        // HTML) from the desktop loads; a phone arriving fresh has neither.
+        await clearSiteState(page, finalUrl);
         trace.reset();
         await page.goto(finalUrl.toString(), { waitUntil: "networkidle2", timeout: NAVIGATION_TIMEOUT_MS });
         mobileDom = await page.evaluate(extractDomSignals);
+        // Some builders (Duda/hibu) key their layout off an exact device UA
+        // and serve a 768px tablet layout to our honestly-suffixed one. Before
+        // recording a phone-layout problem, confirm it once exactly as a real
+        // iPhone requests the page; what a real phone sees is what counts.
+        if (mobileDom.horizontalOverflow) {
+          await clearSiteState(page, finalUrl);
+          await page.setUserAgent(MOBILE_USER_AGENT);
+          await page.goto(finalUrl.toString(), { waitUntil: "networkidle2", timeout: NAVIGATION_TIMEOUT_MS });
+          mobileDom = await page.evaluate(extractDomSignals);
+          mobileVerifiedAsPlainDevice = true;
+          await page.setUserAgent(`${MOBILE_USER_AGENT} ${INTELLIGENCE_UA_SUFFIX}`);
+        }
         result.stages.mobile = { status: "ok" };
         if (options.artifactDir) {
           mkdirSync(options.artifactDir, { recursive: true });
@@ -309,6 +325,7 @@ export async function analyzeWebsiteIntelligence(
       aggregateSignals(result, {
         homepageDom,
         mobileDom,
+        mobileVerifiedAsPlainDevice,
         homepageHtml,
         homepageTrace: trace,
         homepageStatus,
@@ -456,6 +473,18 @@ function pageRecord(
   };
 }
 
+async function clearSiteState(page: Page, origin: URL): Promise<void> {
+  const client = await page.createCDPSession();
+  try {
+    await client.send("Network.clearBrowserCookies");
+    await client.send("Network.clearBrowserCache");
+    // Storage and service workers too (a worker can replay the cached layout).
+    await client.send("Storage.clearDataForOrigin", { origin: origin.origin, storageTypes: "all" });
+  } finally {
+    await client.detach().catch(() => {});
+  }
+}
+
 /** tel: hrefs -> distinct E.164-ish numbers, most frequently linked first (max 3). */
 export function rankPhones(telHrefs: string[]): string[] {
   const counts = new Map<string, number>();
@@ -480,6 +509,7 @@ function aggregateSignals(
   input: {
     homepageDom: DomSignals;
     mobileDom: DomSignals | null;
+    mobileVerifiedAsPlainDevice: boolean;
     homepageHtml: string;
     homepageTrace: PageLoadTrace;
     homepageStatus: number | null;
@@ -523,6 +553,7 @@ function aggregateSignals(
     contentWiderThanViewport: mobileDom ? mobileDom.scrollWidth > mobileDom.clientWidth + 2 : null,
     navigationPresent: mobileDom?.navPresent ?? homepageDom.navPresent,
     emulatedMobileDevice: mobileDom !== null,
+    ...(input.mobileVerifiedAsPlainDevice ? { overflowVerifiedAsPlainDevice: true } : {}),
     ...(mobileDom ? { mobileScrollWidth: mobileDom.scrollWidth, mobileClientWidth: mobileDom.clientWidth } : {}),
   };
 

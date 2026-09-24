@@ -90,7 +90,9 @@ export function deriveQualificationFeaturesV2(
           // real-phone overflow counts. v1 (desktop UA) keeps its old value.
           const measured = intelligence.mobile.emulatedMobileDevice === true;
           const overflow = measured
-            ? intelligence.mobile.horizontalOverflow && substantialOverflow(intelligence.mobile as unknown as Record<string, unknown>)
+            ? intelligence.mobile.horizontalOverflow &&
+              intelligence.mobile.overflowVerifiedAsPlainDevice === true &&
+              substantialOverflow(intelligence.mobile as unknown as Record<string, unknown>)
             : intelligence.mobile.horizontalOverflow;
           set("mobile_overflow", overflow, refs("website.mobile.horizontal_overflow"));
         }
@@ -220,6 +222,10 @@ function isLocationPageUrl(websiteUrl: string | undefined): boolean {
   }
 }
 
+/** A site that sells to businesses, and says nothing about homes. */
+const COMMERCIAL_PATTERN = /\b(commercial|industrial)\b/i;
+const RESIDENTIAL_PATTERN = /\b(residential|homes?|homeowners?|house(hold)?s?|family|families)\b/i;
+
 /** How a site describes itself when it is a supplier, not a contractor. */
 const SITE_SUPPLIER_PATTERN =
   /\b(plumbing|roofing|electrical|hvac|building|lumber|landscape|irrigation|trade)\s+(suppl(y|ier|iers|ies)|wholesale(r)?|distributor)\b|\bsupply house\b|\bwholesale (supplier|distributor|pricing)\b|\b(parts|supply) counter\b/i;
@@ -228,6 +234,7 @@ function classifyTargetFit(input: QualificationV2BusinessInput, intelligence: We
   const name = input.name.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
   const siteText = [intelligence?.pages[0]?.title ?? "", ...(intelligence?.content?.leadHeadings ?? [])].join(" | ");
   if (siteText !== " | " && SITE_SUPPLIER_PATTERN.test(siteText)) return "supplier_manufacturer";
+  if (siteText !== " | " && COMMERCIAL_PATTERN.test(siteText) && !RESIDENTIAL_PATTERN.test(siteText)) return "commercial_only";
   const context = `${name} ${input.category ?? ""} ${metadataCategory(input.sourceMetadata)}`;
   if (NATIONAL_BRAND_PATTERN.test(name) || isLocationPageUrl(input.websiteUrl)) return "national_chain";
   if (/\b(roof(ing|ers)?|plumbing|electric(al)?|hvac|building|lumber|landscape|irrigation) suppl(y|ies)\b|\bsupply (co|company|inc|house|center)\b|\bdistribution\b/.test(name)) {

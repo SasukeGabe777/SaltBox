@@ -48,6 +48,11 @@ export interface MobileSignals {
    * about mobile layout must only be made when this is true.
    */
   emulatedMobileDevice?: boolean;
+  /**
+   * The suffixed-UA phone pass saw overflow, so the page was re-measured once
+   * exactly as a real iPhone requests it; the widths below are that result.
+   */
+  overflowVerifiedAsPlainDevice?: boolean;
   /** Phone-layout document width vs viewport width (px), when measured. */
   mobileScrollWidth?: number;
   mobileClientWidth?: number;

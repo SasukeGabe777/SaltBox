@@ -61,7 +61,9 @@ export function supportedSiteClaims(findings: unknown, context: ClaimContext = {
   // Overflow is only real if we looked with an actual phone profile, and
   // only worth claiming ("visitors scroll sideways, some of it is cut off")
   // when it is substantial: a carousel poking out 15px is not that.
-  if (mobile?.emulatedMobileDevice === true && mobile.horizontalOverflow === true && substantialOverflow(mobile)) {
+  // (Overflow is re-confirmed with a plain device UA before it is recorded:
+  // UA-sniffing builders serve bots a tablet layout.)
+  if (mobile?.emulatedMobileDevice === true && mobile.overflowVerifiedAsPlainDevice === true && mobile.horizontalOverflow === true && substantialOverflow(mobile)) {
     claims.add("MOBILE_OVERFLOW");
   }
   if (mobile?.viewportMetaPresent === false) claims.add("MOBILE_VIEWPORT_MISSING");

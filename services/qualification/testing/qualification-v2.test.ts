@@ -220,9 +220,21 @@ test("2.2.0: a site that calls itself a supplier is a supplier, whatever its nam
 test("2.2.0: only substantial real-phone overflow scores as a mobile problem", () => {
   const mobile = (scroll: number) => ({
     viewportMetaPresent: true, horizontalOverflow: true, contentWiderThanViewport: true, navigationPresent: true,
-    emulatedMobileDevice: true, mobileScrollWidth: scroll, mobileClientWidth: 390,
+    emulatedMobileDevice: true, overflowVerifiedAsPlainDevice: true, mobileScrollWidth: scroll, mobileClientWidth: 390,
   });
   const input = { name: "Some HVAC", category: "hvac", phone: "1", websiteUrl: "https://hvac.test/" };
   assert.equal(deriveQualificationFeaturesV2(input, intelligenceFixture({ mobile: mobile(405) })).values["mobile_overflow"], false);
   assert.equal(deriveQualificationFeaturesV2(input, intelligenceFixture({ mobile: mobile(980) })).values["mobile_overflow"], true);
+});
+
+test("2.3.0: commercial-only contractors are not a fit; mixed or residential ones are", () => {
+  const withHeadings = (leadHeadings: string[]) => intelligenceFixture({
+    content: { homepageWordCount: 400, servicesPagePresent: true, aboutPagePresent: true, copyrightYear: null, lastModifiedHeader: null, leadHeadings },
+  });
+  const fit = (headings: string[]) =>
+    deriveQualificationFeaturesV2({ name: "Some Electric", category: "electrical", phone: "1", websiteUrl: "https://e.test/" }, withHeadings(headings)).targetFit;
+  assert.equal(fit(["Utah's Commercial Electrical Contractor", "Our Commercial Electrical Projects"]), "commercial_only");
+  assert.equal(fit(["Commercial & Residential Roofing"]), "eligible");
+  assert.equal(fit(["Electricians for Salt Lake City Homes"]), "eligible");
+  assert.equal(fit(["Fast! Friendly! Froggy!"]), "eligible");
 });

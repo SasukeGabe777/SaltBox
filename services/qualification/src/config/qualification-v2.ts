@@ -19,7 +19,12 @@ export const SCORING_VERSION_V2 = "qualification-v2";
  * mobile overflow scores only when substantial and measured as a real phone
  * (website-intelligence-v2), matching what a demo may claim.
  */
-export const SCORING_ARTIFACT_VERSION_V2 = "2.2.0";
+/**
+ * 2.3.0: a contractor whose site presents it as commercial/industrial only
+ * (no residential/home language) is not a fit: SaltBox demos speak to
+ * homeowners ("for homes across Ogden"), which would be false for it.
+ */
+export const SCORING_ARTIFACT_VERSION_V2 = "2.3.0";
 export const DECISION_POLICY_VERSION_V2 = "qualification-policy-v2";
 export const PIPELINE_VERSION_V2 = "deep-intelligence-qualification-pipeline-v2";
 export const QUALIFICATION_THRESHOLD_V2 = 60;
@@ -32,6 +37,7 @@ export type TargetFitClassification =
   | "education"
   | "major_institution"
   | "supplier_manufacturer"
+  | "commercial_only"
   | "directory_aggregator";
 
 export const DIMENSION_WEIGHTS_V2 = {
@@ -129,6 +135,7 @@ export const TARGET_FIT_REASON_CODES: Readonly<Record<Exclude<TargetFitClassific
   education: "NON_TARGET_EDUCATION",
   major_institution: "NON_TARGET_MAJOR_INSTITUTION",
   supplier_manufacturer: "NON_TARGET_SUPPLIER_MANUFACTURER",
+  commercial_only: "NON_TARGET_COMMERCIAL_ONLY",
   directory_aggregator: "NON_TARGET_DIRECTORY_AGGREGATOR",
 };
 

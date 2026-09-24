@@ -107,6 +107,31 @@ function uaSwitchingSiteHandler(req: IncomingMessage, res: ServerResponse) {
   );
 }
 
+/**
+ * The Duda/hibu pattern: an exact device UA gets the phone layout, anything
+ * else (including our honestly-suffixed iPhone UA) gets a 768px tablet one.
+ */
+function dudaLikeHandler(req: IncomingMessage, res: ServerResponse) {
+  const ua = req.headers["user-agent"] ?? "";
+  const tablet = /SaltBoxWebsiteIntelligence/.test(ua) || !/iPhone/.test(ua);
+  res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+  res.end(`<!doctype html><html><head><title>Roofing</title><meta name="viewport" content="${tablet ? "" : "width=device-width, "}initial-scale=1"></head>
+    <body style="margin:0"><div style="width:${tablet ? 768 : 390}px"><h2>Our Roofing Services</h2><a href="/contact">Contact</a></div></body></html>`);
+}
+
+test("Duda-style UA sniffing: overflow our suffixed UA sees is re-checked as a real phone and dropped", { timeout: 120_000 }, async () => {
+  const site = await serveLocalSite(dudaLikeHandler);
+  try {
+    const result = await analyzeWebsiteIntelligence(site.url, { safety: { allowPrivateNetworks: true }, lighthouseRunner: stubLighthouse });
+    assert.equal(result.mobile?.overflowVerifiedAsPlainDevice, true, "overflow triggered the plain-device confirmation");
+    assert.equal(result.mobile?.horizontalOverflow, false, "a real phone gets the fitting layout");
+    assert.equal(supportedSiteClaims(result).has("MOBILE_OVERFLOW"), false);
+    assert.ok(result.conversion?.homepageCtaTexts?.includes("Contact"), "a bare Contact button is a call to action");
+  } finally {
+    await site.close();
+  }
+});
+
 test("UA-switching builder: the phone layout is measured as a phone sees it, and no false absence claims follow", { timeout: 120_000 }, async () => {
   const site = await serveLocalSite(uaSwitchingSiteHandler);
   try {
